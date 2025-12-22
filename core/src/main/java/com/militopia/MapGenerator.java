@@ -1,20 +1,22 @@
 package com.militopia;
 
 import com.badlogic.gdx.math.MathUtils;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class MapGenerator {
-    
+
     public enum TerrainType {
         DEEP_WATER, WATER, SAND, GRASS, FOREST
     }
 
     public enum ObjectType {
-        NONE, 
-        BASE_P1, BASE_P2, BASE_NEUTRAL, // Cities
-        OIL, RUINS, CACTUS, TREE        // Resources/Decor
+        NONE,
+        BASE_P1, BASE_P2, BASE_NEUTRAL,
+        OIL, RUINS, CACTUS, TREE
     }
 
-    // A container class to hold both terrain and objects
     public static class GameMap {
         public TerrainType[][] terrain;
         public ObjectType[][] objects;
@@ -28,26 +30,29 @@ public class MapGenerator {
         }
     }
 
+    // A simple helper class to store coordinates
+    private static class Point {
+        int x, y;
+        Point(int x, int y) { this.x = x; this.y = y; }
+    }
+
     public GameMap generateMap(int width, int height, long seed) {
         GameMap map = new GameMap(width, height);
         SimpleNoise noise = new SimpleNoise(seed);
-        
-        // Use a separate random for objects so terrain stays smooth
-        MathUtils.random.setSeed(seed); 
+        MathUtils.random.setSeed(seed);
 
-        float scale = 0.15f; 
+        float scale = 0.15f;
 
-        // 1. GENERATE TERRAIN (With Mirroring for Balance)
-        // We only generate the TOP LEFT half, then copy it to the BOTTOM RIGHT.
-        // This ensures Player 2 has the exact same terrain as Player 1.
-        
+        // Lists to track where we can put Bases and Ruins
+        List<Point> grassTiles = new ArrayList<>();
+        List<Point> forestTiles = new ArrayList<>();
+
+        // 1. GENERATE TERRAIN
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                // Get noise value
                 double value = noise.eval(x * scale, y * scale);
-
-                // Assign Biome
                 TerrainType type;
+                
                 if (value < -0.4) type = TerrainType.DEEP_WATER;
                 else if (value < -0.15) type = TerrainType.WATER;
                 else if (value < 0.1) type = TerrainType.SAND;
@@ -55,43 +60,105 @@ public class MapGenerator {
                 else type = TerrainType.FOREST;
 
                 map.terrain[x][y] = type;
-                map.objects[x][y] = ObjectType.NONE; // Default empty
+                map.objects[x][y] = ObjectType.NONE;
+
+                // Collect candidate spots for later
+                if (type == TerrainType.GRASS) grassTiles.add(new Point(x, y));
+                if (type == TerrainType.FOREST) forestTiles.add(new Point(x, y));
             }
         }
 
-        // 2. POPULATE OBJECTS
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                TerrainType terrain = map.terrain[x][y];
-                float chance = MathUtils.random(); // 0.0 to 1.0
-
-                if (terrain == TerrainType.SAND) {
-                    if (chance < 0.05f) map.objects[x][y] = ObjectType.CACTUS;
-                    else if (chance > 0.98f) map.objects[x][y] = ObjectType.OIL; // Rare!
-                } 
-                else if (terrain == TerrainType.GRASS) {
-                    if (chance < 0.02f) map.objects[x][y] = ObjectType.BASE_NEUTRAL;
-                }
-                else if (terrain == TerrainType.FOREST) {
-                    if (chance < 0.05f) map.objects[x][y] = ObjectType.RUINS;
-                }
-            }
-        }
-
-        // 3. FORCE STARTING BASES (P1 Top-Left, P2 Bottom-Right)
-        // We force the ground under the base to be GRASS so they don't spawn in water.
+        // 2. PLACE PLAYER BASES (Priority #1)
+        // We place these first to ensure they aren't overwritten
         setBase(map, 2, 2, ObjectType.BASE_P1);
         setBase(map, width - 3, height - 3, ObjectType.BASE_P2);
+
+        // Remove P1/P2 spots from our candidate lists so we don't put Ruins on top of them
+        removeFromList(grassTiles, 2, 2);
+        removeFromList(grassTiles, width - 3, height - 3);
+
+        // 3. GENERATE FLORA (Trees/Cacti/Oil)
+        // We do this BEFORE Neutral Bases/Ruins, so Bases/Ruins can "overwrite" trees if needed.
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                // Skip if this tile is already occupied (by Player Bases)
+                if (map.objects[x][y] != ObjectType.NONE) continue;
+
+                TerrainType t = map.terrain[x][y];
+                float chance = MathUtils.random();
+
+                if (t == TerrainType.FOREST) {
+                    // Rule 3: Forest is filled with trees (Let's say 50% so it's not a solid wall)
+                    if (chance < 0.50f) map.objects[x][y] = ObjectType.TREE;
+                } 
+                else if (t == TerrainType.GRASS) {
+                    // Rule 4: Trees in GRASS 1/3 of the time
+                    if (chance < 0.33f) map.objects[x][y] = ObjectType.TREE;
+                }
+                else if (t == TerrainType.SAND) {
+                    if (chance < 0.05f) map.objects[x][y] = ObjectType.CACTUS;
+                    else if (chance > 0.98f) map.objects[x][y] = ObjectType.OIL;
+                }
+            }
+        }
+
+        // 4. PLACE EXACTLY 8 NEUTRAL BASES
+        // Rule 1: There should always be 8 BASE_NEUTRAL
+        Collections.shuffle(grassTiles, new java.util.Random(seed)); // Shuffle the list of grass spots
+        int basesPlaced = 0;
+        for (Point p : grassTiles) {
+            if (basesPlaced >= 8) break;
+            
+            // Only place if not water (already checked by list) and not P1/P2 base
+            if (map.objects[p.x][p.y] != ObjectType.BASE_P1 && map.objects[p.x][p.y] != ObjectType.BASE_P2) {
+                map.objects[p.x][p.y] = ObjectType.BASE_NEUTRAL;
+                basesPlaced++;
+            }
+        }
+
+        // 5. PLACE EXACTLY 8 RUINS
+        // Rule 2: There should always be 8 RUINS
+        // Ruins usually look best in Forests, but can spill into Grass if needed.
+        // We'll prioritize Forest tiles first.
+        List<Point> ruinCandidates = new ArrayList<>(forestTiles);
+        ruinCandidates.addAll(grassTiles); // Add grass as backup
+        Collections.shuffle(ruinCandidates, new java.util.Random(seed));
+
+        int ruinsPlaced = 0;
+        for (Point p : ruinCandidates) {
+            if (ruinsPlaced >= 8) break;
+
+            // Ensure we don't overwrite a Base we just placed
+            ObjectType currentObj = map.objects[p.x][p.y];
+            if (currentObj != ObjectType.BASE_P1 && 
+                currentObj != ObjectType.BASE_P2 && 
+                currentObj != ObjectType.BASE_NEUTRAL) {
+                
+                map.objects[p.x][p.y] = ObjectType.RUINS;
+                ruinsPlaced++;
+            }
+        }
 
         return map;
     }
 
     private void setBase(GameMap map, int x, int y, ObjectType type) {
-        map.terrain[x][y] = TerrainType.GRASS; // Force safe ground
+        map.terrain[x][y] = TerrainType.GRASS; 
         map.objects[x][y] = type;
-        
-        // Clear obstacles around base
-        if(x+1 < map.width) map.objects[x+1][y] = ObjectType.NONE;
-        if(y+1 < map.height) map.objects[x][y+1] = ObjectType.NONE;
+        // Clear obstacles around base so units can spawn
+        clearObj(map, x+1, y);
+        clearObj(map, x-1, y);
+        clearObj(map, x, y+1);
+        clearObj(map, x, y-1);
+    }
+
+    private void clearObj(GameMap map, int x, int y) {
+        if(x >= 0 && x < map.width && y >= 0 && y < map.height) {
+            map.objects[x][y] = ObjectType.NONE;
+        }
+    }
+
+    private void removeFromList(List<Point> list, int x, int y) {
+        list.removeIf(p -> p.x == x && p.y == y);
     }
 }

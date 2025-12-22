@@ -93,7 +93,7 @@ public class GameScreen extends InputAdapter implements Screen {
                 if (obj != MapGenerator.ObjectType.NONE) {
                     
                     switch (obj) {
-                        case BASE_P1:      game.batch.setColor(Color.BLUE); break;
+                        case BASE_P1:      game.batch.setColor(Color.SALMON); break;
                         case BASE_P2:      game.batch.setColor(Color.RED); break;
                         case BASE_NEUTRAL: game.batch.setColor(Color.GRAY); break;
                         case OIL:          game.batch.setColor(Color.BLACK); break;
@@ -103,7 +103,7 @@ public class GameScreen extends InputAdapter implements Screen {
                     }
 
                     // Draw the object slightly smaller than the tile
-                    float objSize = TILE_WIDTH * 0.5f;
+                    float objSize = TILE_WIDTH * 1.2f;
                     float objOffX = (TILE_WIDTH - objSize) / 2;
                     float objOffY = (TILE_WIDTH - objSize) / 2;
                     

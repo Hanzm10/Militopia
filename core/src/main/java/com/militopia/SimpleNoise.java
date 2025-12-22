@@ -36,4 +36,4 @@ public class SimpleNoise {
     private double grad(int hash, double x, double y) {
         return ((hash & 1) == 0 ? x : -x) + ((hash & 2) == 0 ? y : -y);
     }
-}
+}   
