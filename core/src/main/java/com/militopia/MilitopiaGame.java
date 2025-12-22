@@ -15,13 +15,35 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
 public class MilitopiaGame extends Game {
+
     public SpriteBatch batch;
     public Skin skin;
+
+    public Texture texGrass, texWater, texDeepWater, texSand, texForest;
+    public Texture texBaseP1, texBaseP2, texBaseNeutral;
+    public Texture texTree, texRuins, texOil, texCactus;
 
     @Override
     public void create() {
         batch = new SpriteBatch();
         skin = createBasicSkin(); // Generate skin programmatically
+
+        // LOAD TEXTURES ONCE
+        texGrass = new Texture("tile_grass.png");
+        texWater = new Texture("tile_water.png");
+        texDeepWater = new Texture("tile_deepwater.png");
+        texSand = new Texture("tile_sand.png");
+        texForest = new Texture("tile_forest.png"); // Darker grass usually
+
+        // Load Objects (You can find specific sprites for these later)
+        texBaseP1 = new Texture("struct_base_blue.png");
+        texBaseP2 = new Texture("struct_base_red.png");
+        texBaseNeutral = new Texture("struct_base_neutral.png");
+        texTree = new Texture("obj_tree.png");
+        texRuins = new Texture("obj_ruins.png");
+        texOil = new Texture("obj_oil.png");
+        texCactus = new Texture("obj_cactus.png");
+
         this.setScreen(new MenuScreen(this));
     }
 
@@ -58,7 +80,7 @@ public class MilitopiaGame extends Game {
         textFieldStyle.selection = skin.newDrawable("white", Color.BLUE);
         textFieldStyle.cursor = skin.newDrawable("white", Color.WHITE);
         skin.add("default", textFieldStyle);
-        
+
         // 6. Configure ScrollPane Style
         ScrollPane.ScrollPaneStyle scrollStyle = new ScrollPane.ScrollPaneStyle();
         // (Optional: add knobs if you want visible scrollbars)
@@ -68,11 +90,28 @@ public class MilitopiaGame extends Game {
     }
 
     @Override
-    public void render() { super.render(); }
+    public void render() {
+        super.render();
+    }
 
     @Override
     public void dispose() {
         batch.dispose();
         skin.dispose();
+
+        texGrass.dispose();
+        texWater.dispose();
+        texDeepWater.dispose();
+        texSand.dispose();
+        texForest.dispose(); // Darker grass usually
+
+        // Load Objects (You can find specific sprites for these later)
+        texBaseP1.dispose();
+        texBaseP2.dispose();
+        texBaseNeutral.dispose();
+        texTree.dispose();
+        texRuins.dispose();
+        texOil.dispose();
+        texCactus.dispose();
     }
-}   
+}

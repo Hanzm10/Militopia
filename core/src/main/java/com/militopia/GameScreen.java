@@ -24,6 +24,9 @@ public class GameScreen extends InputAdapter implements Screen {
     final int TILE_WIDTH = 32;
     final int TILE_HEIGHT = 16;
 
+    final float DRAW_WIDTH = 70f;
+    final float DRAW_HEIGHT = 38f;
+
     // Input Variables
     float lastTouchX, lastTouchY;
 
@@ -65,7 +68,7 @@ public class GameScreen extends InputAdapter implements Screen {
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0, 0, 0, 1);
+        ScreenUtils.clear(0.4f, 0.7f, 1.0f, 1);
         handleInput(delta);
         updateHoveredTile();
 
@@ -73,81 +76,142 @@ public class GameScreen extends InputAdapter implements Screen {
         game.batch.setProjectionMatrix(camera.combined);
 
         game.batch.begin();
+        game.batch.setColor(Color.WHITE);
 
         for (int x = MAP_WIDTH - 1; x >= 0; x--) {
             for (int y = MAP_HEIGHT - 1; y >= 0; y--) {
+
                 float isoX = (x - y) * (TILE_WIDTH / 2.0f);
                 float isoY = (x + y) * (TILE_HEIGHT / 2.0f);
 
-                // --- 1. DRAW TERRAIN (The Missing Part) ---
-                MapGenerator.TerrainType type = gameMap.terrain[x][y];
+                // --- DRAWING MATH (Uses the flexible DRAW size) ---
+                // We calculate an offset to keep the image centered as we change its size
+                float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2;
+                float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2;
 
-                switch (type) {
-                    case DEEP_WATER:
-                        game.batch.setColor(0, 0, 0.5f, 1);
-                        break; // Dark Blue
-                    case WATER:
-                        game.batch.setColor(0, 0, 1, 1);
-                        break;    // Blue
-                    case SAND:
-                        game.batch.setColor(1, 1, 0, 1);
-                        break;    // Yellow
+//                // --- 1. DRAW TERRAIN (The Missing Part) ---
+//                MapGenerator.TerrainType type = gameMap.terrain[x][y];
+//
+//                switch (type) {
+//                    case DEEP_WATER:
+//                        game.batch.setColor(0, 0, 0.5f, 1);
+//                        break; // Dark Blue
+//                    case WATER:
+//                        game.batch.setColor(0, 0, 1, 1);
+//                        break;    // Blue
+//                    case SAND:
+//                        game.batch.setColor(1, 1, 0, 1);
+//                        break;    // Yellow
+//                    case GRASS:
+//                        game.batch.setColor(0, 1, 0, 1);
+//                        break;    // Green
+//                    case FOREST:
+//                        game.batch.setColor(0, 0.5f, 0, 1);
+//                        break; // Dark Green
+//                }
+//
+//                // Draw the base tile with the specific biome color
+//                game.batch.draw(tileTexture, isoX, isoY, TILE_WIDTH, TILE_WIDTH);
+//
+//                // --- 2. DRAW SELECTION HIGHLIGHT ---
+//                if (x == selectedX && y == selectedY) {
+//                    game.batch.setColor(1, 1, 1, 0.5f);
+//                    game.batch.draw(highlightTexture, isoX, isoY, TILE_WIDTH, TILE_WIDTH);
+//                }
+//
+//                // --- 3. DRAW OBJECTS (On top of terrain) ---
+//                MapGenerator.ObjectType obj = gameMap.objects[x][y];
+//                if (obj != MapGenerator.ObjectType.NONE) {
+//
+//                    switch (obj) {
+//                        case BASE_P1:
+//                            game.batch.setColor(Color.SALMON);
+//                            break;
+//                        case BASE_P2:
+//                            game.batch.setColor(Color.RED);
+//                            break;
+//                        case BASE_NEUTRAL:
+//                            game.batch.setColor(Color.GRAY);
+//                            break;
+//                        case OIL:
+//                            game.batch.setColor(Color.BLACK);
+//                            break;
+//                        case RUINS:
+//                            game.batch.setColor(Color.PURPLE);
+//                            break;
+//                        case CACTUS:
+//                            game.batch.setColor(Color.OLIVE);
+//                            break;
+//                        case TREE:
+//                            game.batch.setColor(Color.BROWN);
+//                            break;
+//                    }
+//
+//                    // Draw the object slightly smaller than the tile
+//                    float objSize = TILE_WIDTH * 1.2f;
+//                    float objOffX = (TILE_WIDTH - objSize) / 2;
+//                    float objOffY = (TILE_WIDTH - objSize) / 2;
+//
+//                    game.batch.draw(tileTexture, isoX + objOffX, isoY + objOffY, objSize, objSize);
+//                }
+//            }
+//        }
+//
+//        game.batch.setColor(Color.WHITE); // Reset color at the end
+//        game.batch.end();
+                // 1. PICK THE TERRAIN TEXTURE
+                Texture t = null;
+                switch (gameMap.terrain[x][y]) {
                     case GRASS:
-                        game.batch.setColor(0, 1, 0, 1);
-                        break;    // Green
+                        t = game.texGrass;
+                        break;
+                    case WATER:
+                        t = game.texWater;
+                        break;
+                    case DEEP_WATER:
+                        t = game.texDeepWater;
+                        break;
+                    case SAND:
+                        t = game.texSand;
+                        break;
                     case FOREST:
-                        game.batch.setColor(0, 0.5f, 0, 1);
-                        break; // Dark Green
+                        t = game.texForest;
+                        break;
                 }
 
-                // Draw the base tile with the specific biome color
-                game.batch.draw(tileTexture, isoX, isoY, TILE_WIDTH, TILE_WIDTH);
-
-                // --- 2. DRAW SELECTION HIGHLIGHT ---
-                if (x == selectedX && y == selectedY) {
-                    game.batch.setColor(1, 1, 1, 0.5f);
-                    game.batch.draw(highlightTexture, isoX, isoY, TILE_WIDTH, TILE_WIDTH);
+                // 2. DRAW THE TILE
+                // Note: We might need to adjust y slightly if the image is tall (like a block)
+                if (t != null) {
+                    // Draw using the DRAW variables, shifted by the offset
+                    game.batch.draw(t, isoX - xOffset, isoY - yOffset, DRAW_WIDTH, DRAW_HEIGHT);
                 }
 
-                // --- 3. DRAW OBJECTS (On top of terrain) ---
-                MapGenerator.ObjectType obj = gameMap.objects[x][y];
-                if (obj != MapGenerator.ObjectType.NONE) {
+                // 3. DRAW OBJECTS (Layered on top)
+                Texture o = null;
+                switch (gameMap.objects[x][y]) {
+                    case BASE_P1:
+                        o = game.texBaseP1;
+                        break;
+                    case BASE_P2:
+                        o = game.texBaseP2;
+                        break;
+                    case BASE_NEUTRAL:
+                        o = game.texBaseNeutral;
+                        break;
+                    case TREE:
+                        o = game.texTree;
+                        break;
+                    // ... etc ...
+                }
 
-                    switch (obj) {
-                        case BASE_P1:
-                            game.batch.setColor(Color.SALMON);
-                            break;
-                        case BASE_P2:
-                            game.batch.setColor(Color.RED);
-                            break;
-                        case BASE_NEUTRAL:
-                            game.batch.setColor(Color.GRAY);
-                            break;
-                        case OIL:
-                            game.batch.setColor(Color.BLACK);
-                            break;
-                        case RUINS:
-                            game.batch.setColor(Color.PURPLE);
-                            break;
-                        case CACTUS:
-                            game.batch.setColor(Color.OLIVE);
-                            break;
-                        case TREE:
-                            game.batch.setColor(Color.BROWN);
-                            break;
-                    }
-
-                    // Draw the object slightly smaller than the tile
-                    float objSize = TILE_WIDTH * 1.2f;
-                    float objOffX = (TILE_WIDTH - objSize) / 2;
-                    float objOffY = (TILE_WIDTH - objSize) / 2;
-
-                    game.batch.draw(tileTexture, isoX + objOffX, isoY + objOffY, objSize, objSize);
+                if (o != null) {
+                    // Draw object centered on the tile
+                    // Adjust offsets based on your image size! 
+                    // Usually objects need to be drawn slightly higher (y + 8) to look like they sit ON the tile.
+                    game.batch.draw(o, isoX, isoY+13, TILE_WIDTH*2, TILE_HEIGHT*2);
                 }
             }
         }
-
-        game.batch.setColor(Color.WHITE); // Reset color at the end
         game.batch.end();
     }
 
