@@ -34,8 +34,17 @@ public class GameScreen extends InputAdapter implements Screen {
     //to store map data
     MapGenerator.GameMap gameMap; // Replace the old TerrainType[][] array
 
-    public GameScreen(final MilitopiaGame game) {
+    //user input for new game
+    long seed;
+    String p1Name;
+    String p2Name;
+
+    public GameScreen(final MilitopiaGame game, long seed, String p1, String p2) {
         this.game = game;
+        this.seed = seed;
+        this.p1Name = p1;
+        this.p2Name = p2;
+
         tileTexture = new Texture("square.png");
         highlightTexture = new Texture("square.png"); // Re-using square for now
 
@@ -50,9 +59,11 @@ public class GameScreen extends InputAdapter implements Screen {
         Gdx.input.setInputProcessor(this);
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(MAP_WIDTH, MAP_HEIGHT, System.currentTimeMillis());
+
+        System.out.println("Started match: " + p1 + " vs " + p2);
     }
 
-@Override
+    @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
         handleInput(delta);
@@ -72,11 +83,21 @@ public class GameScreen extends InputAdapter implements Screen {
                 MapGenerator.TerrainType type = gameMap.terrain[x][y];
 
                 switch (type) {
-                    case DEEP_WATER: game.batch.setColor(0, 0, 0.5f, 1); break; // Dark Blue
-                    case WATER:      game.batch.setColor(0, 0, 1, 1); break;    // Blue
-                    case SAND:       game.batch.setColor(1, 1, 0, 1); break;    // Yellow
-                    case GRASS:      game.batch.setColor(0, 1, 0, 1); break;    // Green
-                    case FOREST:     game.batch.setColor(0, 0.5f, 0, 1); break; // Dark Green
+                    case DEEP_WATER:
+                        game.batch.setColor(0, 0, 0.5f, 1);
+                        break; // Dark Blue
+                    case WATER:
+                        game.batch.setColor(0, 0, 1, 1);
+                        break;    // Blue
+                    case SAND:
+                        game.batch.setColor(1, 1, 0, 1);
+                        break;    // Yellow
+                    case GRASS:
+                        game.batch.setColor(0, 1, 0, 1);
+                        break;    // Green
+                    case FOREST:
+                        game.batch.setColor(0, 0.5f, 0, 1);
+                        break; // Dark Green
                 }
 
                 // Draw the base tile with the specific biome color
@@ -91,30 +112,45 @@ public class GameScreen extends InputAdapter implements Screen {
                 // --- 3. DRAW OBJECTS (On top of terrain) ---
                 MapGenerator.ObjectType obj = gameMap.objects[x][y];
                 if (obj != MapGenerator.ObjectType.NONE) {
-                    
+
                     switch (obj) {
-                        case BASE_P1:      game.batch.setColor(Color.SALMON); break;
-                        case BASE_P2:      game.batch.setColor(Color.RED); break;
-                        case BASE_NEUTRAL: game.batch.setColor(Color.GRAY); break;
-                        case OIL:          game.batch.setColor(Color.BLACK); break;
-                        case RUINS:        game.batch.setColor(Color.PURPLE); break;
-                        case CACTUS:       game.batch.setColor(Color.OLIVE); break;
-                        case TREE:         game.batch.setColor(Color.BROWN); break; 
+                        case BASE_P1:
+                            game.batch.setColor(Color.SALMON);
+                            break;
+                        case BASE_P2:
+                            game.batch.setColor(Color.RED);
+                            break;
+                        case BASE_NEUTRAL:
+                            game.batch.setColor(Color.GRAY);
+                            break;
+                        case OIL:
+                            game.batch.setColor(Color.BLACK);
+                            break;
+                        case RUINS:
+                            game.batch.setColor(Color.PURPLE);
+                            break;
+                        case CACTUS:
+                            game.batch.setColor(Color.OLIVE);
+                            break;
+                        case TREE:
+                            game.batch.setColor(Color.BROWN);
+                            break;
                     }
 
                     // Draw the object slightly smaller than the tile
                     float objSize = TILE_WIDTH * 1.2f;
                     float objOffX = (TILE_WIDTH - objSize) / 2;
                     float objOffY = (TILE_WIDTH - objSize) / 2;
-                    
+
                     game.batch.draw(tileTexture, isoX + objOffX, isoY + objOffY, objSize, objSize);
                 }
             }
         }
-        
+
         game.batch.setColor(Color.WHITE); // Reset color at the end
         game.batch.end();
     }
+
     /**
      * * THE MAGIC MATH: Converts Mouse Pixels -> Camera World -> Isometric
      * Grid
