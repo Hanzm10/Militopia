@@ -1,11 +1,26 @@
 package com.militopia;
 
-import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Game; // Note: We extend 'Game', not 'ApplicationAdapter'
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class MilitopiaGame extends Game {
+    // The SpriteBatch is heavy, so we create it once here and share it with all screens
+    public SpriteBatch batch;
+
     @Override
     public void create() {
-        setScreen(new FirstScreen());
+        batch = new SpriteBatch();
+        // INSTANTLY switch to the GameScreen for testing (skip menu for now)
+        this.setScreen(new GameScreen(this));
+    }
+
+    @Override
+    public void render() {
+        super.render(); // This delegates the render method to the active screen
+    }
+
+    @Override
+    public void dispose() {
+        batch.dispose();
     }
 }
