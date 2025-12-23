@@ -1,5 +1,9 @@
 package com.militopia;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
@@ -17,7 +21,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import com.badlogic.gdx.InputAdapter; // Import this!
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import static com.militopia.MapGenerator.ObjectType.BASE_NEUTRAL;
 import static com.militopia.MapGenerator.ObjectType.BASE_P1;
 import static com.militopia.MapGenerator.ObjectType.BASE_P2;
@@ -30,6 +35,11 @@ import static com.militopia.MapGenerator.TerrainType.FOREST;
 import static com.militopia.MapGenerator.TerrainType.GRASS;
 import static com.militopia.MapGenerator.TerrainType.SAND;
 import static com.militopia.MapGenerator.TerrainType.WATER;
+import com.militopia.components.GridPositionComponent;
+import com.militopia.components.TextureComponent;
+import com.militopia.components.TypeComponent;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameScreen extends InputAdapter implements Screen { // Extend InputAdapter
 
@@ -37,8 +47,12 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
     MapGenerator.GameMap gameMap;
     OrthographicCamera camera;
 
+    PooledEngine engine;
+    EntityFactory factory;
+
     // UI (HUD)
     Stage hudStage;
+    Table summonMenu;
 
     // Logic Vars
     long seed;
@@ -47,22 +61,35 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
     // Grid settings (Same as before)
     final int MAP_WIDTH = 32;
     final int MAP_HEIGHT = 32;
-    final int TILE_WIDTH = 28;
-    final int TILE_HEIGHT = 18;
-    final float DRAW_WIDTH = 64f;
-    final float DRAW_HEIGHT = 40f;
+    final int TILE_WIDTH = 27;
+    final int TILE_HEIGHT = 17;
+    final float DRAW_WIDTH = 30f;
+    final float DRAW_HEIGHT = 30f;
 
     // Input Vars
     float lastTouchX, lastTouchY;
     int selectedX = -1, selectedY = -1;
 
-    public GameScreen(final MilitopiaGame game, long seed, String p1, String p2, String saveName) {
+    // BOUNCE ANIMATION VARIABLES
+    int bouncingX = -1;
+    int bouncingY = -1;
+    float bounceTimer = 0;
+
+    final float BOUNCE_DURATION = 0.25f; // Duration in seconds (fast bounce)
+    final float BOUNCE_HEIGHT = 5f;     // How high it jumps in pixels
+
+    int lastClickedX = -1;
+    int lastClickedY = -1;
+
+    Entity selectedUnitEntity = null;
+
+    public GameScreen(final MilitopiaGame game, GameState loadedState) {
         this.game = game;
-        this.seed = seed;
-        this.p1Name = p1;
-        this.p2Name = p2;
+        this.seed = loadedState.seed;
+        this.p1Name = loadedState.p1Name;
+        this.p2Name = loadedState.p2Name;
         // Create a filename based on P1 vs P2 (e.g., "P1_vs_P2.json")
-        this.saveName = saveName;
+        this.saveName = loadedState.saveName;
 
         // 1. Setup Camera
         camera = new OrthographicCamera();
@@ -70,8 +97,10 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         camera.position.set(0, 0, 0);
         camera.update();
 
-        // 2. Setup HUD (The Save Button)
-        hudStage = new Stage(new ScreenViewport());
+        // 1. Setup ECS
+        engine = new PooledEngine();
+        factory = new EntityFactory(engine, game);
+
         setupHUD();
 
         // 3. Setup Input (Handle BOTH Map clicks and Button clicks)
@@ -83,37 +112,94 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         // 4. Generate Map
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(MAP_WIDTH, MAP_HEIGHT, seed);
+
+        // --- NEW: RESTORE UNITS ---
+        if (loadedState.units != null) {
+            for (UnitData u : loadedState.units) {
+                // Re-create the entity at the saved spot
+                if (u.type.equals("RECRUIT")) {
+                    factory.createRecruit(u.x, u.y);
+                }
+            }
+            System.out.println("Restored " + loadedState.units.size() + " units.");
+        }
     }
 
     private void setupHUD() {
+        // 1. Initialize the Stage (if not already done in constructor)
+        if (hudStage == null) {
+            hudStage = new Stage(new ScreenViewport());
+        }
+
+        // --- PART A: THE SAVE BUTTON (Top Left) ---
         TextButton saveBtn = new TextButton("Save & Exit", game.skin);
-        saveBtn.setPosition(20, Gdx.graphics.getHeight() - 50); // Top Left
+        saveBtn.setPosition(20, Gdx.graphics.getHeight() - 50);
         saveBtn.setSize(120, 40);
 
         saveBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                saveGame();
-                game.setScreen(new MenuScreen(game)); // Go back to menu
+                // Call your save function
+                saveGame(); // Ensure you still have the saveGame() method in your class!
+                game.setScreen(new MenuScreen(game));
             }
         });
 
         hudStage.addActor(saveBtn);
+
+        // --- PART B: THE SUMMON MENU (Bottom Center) ---
+        summonMenu = new Table();
+        summonMenu.bottom();
+        summonMenu.setFillParent(true);
+
+        TextButton summonBtn = new TextButton("Summon Recruit", game.skin);
+        summonBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // Use locked coordinates
+                if (lastClickedX != -1 && lastClickedY != -1) {
+                    System.out.println("Spawning at: " + lastClickedX + "," + lastClickedY);
+                    factory.createRecruit(lastClickedX, lastClickedY);
+
+                    summonMenu.setVisible(false);
+                    lastClickedX = -1;
+                    lastClickedY = -1;
+                }
+            }
+        });
+
+        summonMenu.add(summonBtn).padBottom(20);
+        summonMenu.setVisible(false); // Start hidden
+
+        hudStage.addActor(summonMenu);
     }
 
     private void saveGame() {
-        // Create the Data Object
         GameState state = new GameState(seed, p1Name, p2Name, saveName);
 
-        // Convert to JSON
+        // --- NEW: SAVE UNITS ---
+        // 1. Get all Units from the Engine
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TypeComponent.class).get());
+
+        for (Entity e : entities) {
+            TypeComponent type = e.getComponent(TypeComponent.class);
+
+            // Only save UNITs (Ignore markers)
+            if (type.type == TypeComponent.Type.UNIT) {
+                GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+
+                // Add to the list
+                state.units.add(new UnitData(pos.x, pos.y, "RECRUIT"));
+            }
+        }
+        // -----------------------
+
         Json json = new Json();
         String text = json.toJson(state);
 
-        // Write to File (In a "saves" folder)
         FileHandle file = Gdx.files.local("saves/" + saveName + ".json");
         file.writeString(text, false);
-
-        System.out.println("Game Saved to: " + file.path());
+        System.out.println("Saved " + state.units.size() + " units.");
     }
 
     @Override
@@ -127,7 +213,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         game.batch.setProjectionMatrix(camera.combined);
 
         game.batch.begin();
-        renderMapLoop(); 
+        renderMapLoop(delta);
         game.batch.end();
 
         // 2. Draw UI on top
@@ -136,7 +222,15 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
     }
 
     // Copy your existing loop logic here
-    private void renderMapLoop() {
+    private void renderMapLoop(float delta) {
+        //  UPDATE BOUNCE TIMER
+        if (bouncingX != -1) {
+            bounceTimer += delta;
+            if (bounceTimer >= BOUNCE_DURATION) {
+                bouncingX = -1; // Animation finished
+                bouncingY = -1;
+            }
+        }
         game.batch.setColor(Color.WHITE);
 
         for (int x = MAP_WIDTH - 1; x >= 0; x--) {
@@ -149,6 +243,15 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
                 // We calculate an offset to keep the image centered as we change its size
                 float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2;
                 float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2;
+
+                // --- CALCULATE BOUNCE OFFSET ---
+                float animY = 0;
+                if (x == bouncingX && y == bouncingY) {
+                    // Normalize time from 0.0 to 1.0
+                    float progress = bounceTimer / BOUNCE_DURATION;
+                    // Math.sin(PI * progress) creates a curve: 0 -> 1 -> 0
+                    animY = (float) Math.sin(progress * Math.PI) * BOUNCE_HEIGHT;
+                }
 
                 // 1. PICK THE TERRAIN TEXTURE
                 Texture t = null;
@@ -174,7 +277,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
                 // Note: We might need to adjust y slightly if the image is tall (like a block)
                 if (t != null) {
                     // Draw using the DRAW variables, shifted by the offset
-                    game.batch.draw(t, isoX - xOffset, isoY - yOffset, DRAW_WIDTH, DRAW_HEIGHT);
+                    game.batch.draw(t, isoX - xOffset, isoY - yOffset + animY, DRAW_WIDTH, DRAW_HEIGHT);
                 }
 
                 // 3. DRAW OBJECTS (Layered on top)
@@ -208,9 +311,49 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
                     // Draw object centered on the tile
                     // Adjust offsets based on your image size! 
                     // Usually objects need to be drawn slightly higher (y + 8) to look like they sit ON the tile.
-                    game.batch.draw(o, isoX, isoY + 12, TILE_WIDTH, TILE_HEIGHT);
+                    game.batch.draw(o, isoX - 2, isoY + 7 + animY, DRAW_WIDTH, DRAW_HEIGHT);
+                }
+
+                // --- DRAW "WHITEN" EFFECT (HOVER) ---
+                if (x == selectedX && y == selectedY) {
+                    // 1. Change Blend Mode to "ADDITIVE" (This adds brightness)
+                    // GL_ONE means: "Add the pixel color to what's already on screen"
+                    Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
+                    game.batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
+
+                    // 2. Set the "Brightness" power
+                    // Dark Gray = Low brightness added. White = Maximum brightness added.
+                    game.batch.setColor(0.4f, 0.4f, 0.4f, 1f);
+
+                    // 3. Draw the SAME texture we just drew for the terrain (t)
+                    // Since 't' is the grass/sand texture, the highlight fits perfectly!
+                    if (t != null) {
+                        game.batch.draw(t, isoX - xOffset, isoY - yOffset + animY, DRAW_WIDTH, DRAW_HEIGHT);
+                    }
+
+                    // 4. RESET Blend Mode to Normal (Crucial!)
+                    game.batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+                    game.batch.setColor(Color.WHITE);
                 }
             }
+        }
+
+        // DRAW ECS ENTITIES (Units & Markers) ON TOP
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TextureComponent.class).get());
+        for (Entity e : entities) {
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+            TextureComponent tex = e.getComponent(TextureComponent.class);
+
+            // Calculate ISO position for this entity
+            float isoX = (pos.x - pos.y) * (TILE_WIDTH / 2.0f);
+            float isoY = (pos.x + pos.y) * (TILE_HEIGHT / 2.0f);
+
+            // Adjust offsets
+            float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2f;
+            float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2f;
+
+            // DRAW
+            game.batch.draw(tex.region, isoX - xOffset, isoY - yOffset + 12, DRAW_WIDTH, DRAW_HEIGHT);
         }
     }
 
@@ -221,31 +364,27 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         if (Gdx.input.isKeyPressed(Input.Keys.E)) {
             camera.zoom -= 0.02f;
         }
-        camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 3.0f);
+        camera.zoom = MathUtils.clamp(camera.zoom, 0.1f, 3.0f);
     }
 
-    // ... (Keep updateHoveredTile, touchDown, touchDragged, etc.) ...
     private void updateHoveredTile() {
-        // 1. Get Mouse pixels
         int mouseX = Gdx.input.getX();
         int mouseY = Gdx.input.getY();
 
-        // 2. Unproject (Account for Camera Zoom and Position)
         Vector3 worldCoords = camera.unproject(new Vector3(mouseX, mouseY, 0));
 
-        // 3. Isometric Math Inversion
-        // We reverse the (x-y) and (x+y) logic
+        float heightOffset = 10f;
+
+        float adjustedY = worldCoords.y - heightOffset;
+        // -----------------------
+
         float halfW = TILE_WIDTH / 2.0f;
         float halfH = TILE_HEIGHT / 2.0f;
 
-        // Adjust worldY because textures draw from bottom-left
-        float adjustedY = worldCoords.y;
-
-        // Formula derived from solving the system of equations
+        // Use 'adjustedY' instead of 'worldCoords.y'
         int gridX = MathUtils.floor((adjustedY / halfH + worldCoords.x / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - worldCoords.x / halfW) / 2);
 
-        // 4. Bounds Check (Am I actually on the map?)
         if (gridX >= 0 && gridX < MAP_WIDTH && gridY >= 0 && gridY < MAP_HEIGHT) {
             selectedX = gridX;
             selectedY = gridY;
@@ -257,12 +396,143 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        // 1. UPDATE LAST TOUCH (For camera dragging)
         lastTouchX = screenX;
         lastTouchY = screenY;
-        if (selectedX != -1) {
-            System.out.println("CLICKED TILE: " + selectedX + ", " + selectedY);
+
+        // 2. CONVERT MOUSE CLICKS TO GRID COORDINATES (The "Math")
+        Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+
+        // Height correction: Subtract ~12 pixels from Y to account for the "dirt" block height
+        // This fixes the issue where you click the roof but select the tile behind it
+        float heightOffset = 12f;
+        float adjustedY = worldCoords.y - heightOffset;
+
+        float halfW = TILE_WIDTH / 2.0f;
+        float halfH = TILE_HEIGHT / 2.0f;
+
+        // Solve for Isometric X and Y
+        int gridX = MathUtils.floor((adjustedY / halfH + worldCoords.x / halfW) / 2);
+        int gridY = MathUtils.floor((adjustedY / halfH - worldCoords.x / halfW) / 2);
+
+        // 3. BOUNDS CHECK (Are we inside the map?)
+        if (gridX >= 0 && gridX < MAP_WIDTH && gridY >= 0 && gridY < MAP_HEIGHT) {
+            selectedX = gridX;
+            selectedY = gridY;
+
+            // --- PRIORITY 1: DID WE CLICK A MOVEMENT MARKER? ---
+            // (This means we are moving the unit we selected previously)
+            Entity clickedMarker = getEntityAt(selectedX, selectedY, TypeComponent.Type.MARKER);
+
+            if (clickedMarker != null && selectedUnitEntity != null) {
+                System.out.println("Moving Unit to " + selectedX + "," + selectedY);
+                moveUnit(selectedUnitEntity, selectedX, selectedY);
+                return true;
+            }
+
+            // --- RESET STATE ---
+            // If we didn't click a marker, we are starting a new action.
+            clearMarkers();
+            selectedUnitEntity = null; // Deselect old unit
+            summonMenu.setVisible(false);
+
+            // --- PRIORITY 2: DID WE CLICK A UNIT? ---
+            Entity clickedUnit = getEntityAt(selectedX, selectedY, TypeComponent.Type.UNIT);
+
+            if (clickedUnit != null) {
+                System.out.println("Unit Selected!");
+                selectedUnitEntity = clickedUnit; // REMEMBER THIS UNIT!
+                showMovementMarkers(selectedX, selectedY);
+                return true;
+            }
+
+            // --- PRIORITY 3: DID WE CLICK A BASE? ---
+            MapGenerator.ObjectType obj = gameMap.objects[selectedX][selectedY];
+            if (obj == MapGenerator.ObjectType.BASE_P1) {
+                lastClickedX = selectedX; // Lock target
+                lastClickedY = selectedY;
+                summonMenu.setVisible(true);
+                return true;
+            }
+
+        } else {
+            // Clicked outside map
+            clearMarkers();
+            selectedUnitEntity = null;
+            summonMenu.setVisible(false);
         }
         return true;
+    }
+
+    // --- HELPER LOGIC ---
+    private void moveUnit(Entity unit, int targetX, int targetY) {
+        // 1. Get the Position Component of the unit
+        GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+
+        // 2. Update coordinates
+        pos.x = targetX;
+        pos.y = targetY;
+
+        // 3. Cleanup
+        clearMarkers();
+        selectedUnitEntity = null; // Deselect after moving
+
+        System.out.println("Unit moved successfully.");
+    }
+
+    private void showMovementMarkers(int cx, int cy) {
+        // Loop through all 8 neighbors
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                if (x == 0 && y == 0) {
+                    continue; // Skip self
+                }
+                int targetX = cx + x;
+                int targetY = cy + y;
+
+                // Bounds check
+                if (targetX >= 0 && targetX < MAP_WIDTH && targetY >= 0 && targetY < MAP_HEIGHT) {
+                    factory.createMovementMarker(targetX, targetY);
+                }
+            }
+        }
+    }
+
+    private void clearMarkers() {
+        // 1. Get all entities that have a TypeComponent
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(TypeComponent.class).get());
+
+        // 2. Create a temporary list to hold the ones we want to kill
+        List<Entity> toRemove = new ArrayList<>();
+
+        // 3. Find the Markers
+        for (Entity e : entities) {
+            TypeComponent type = e.getComponent(TypeComponent.class);
+            if (type.type == TypeComponent.Type.MARKER) {
+                toRemove.add(e); // Don't delete yet! Just remember it.
+            }
+        }
+
+        // 4. NOW delete them safely
+        for (Entity e : toRemove) {
+            engine.removeEntity(e);
+        }
+
+        System.out.println("Markers cleared: " + toRemove.size());
+    }
+
+    private Entity getEntityAt(int x, int y, TypeComponent.Type targetType) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TypeComponent.class).get());
+
+        for (Entity e : entities) {
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+            TypeComponent type = e.getComponent(TypeComponent.class);
+
+            if (pos.x == x && pos.y == y && type.type == targetType) {
+                return e;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -290,6 +560,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         camera.update();
+        hudStage.getViewport().update(width, height, true);
     }
 
     @Override

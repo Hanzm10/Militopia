@@ -10,9 +10,10 @@ public class GameState {
     public String p2Name;
     public String saveName; // The filename
     public String timestamp; // e.g., "2023-10-27 10:00"
+    public ArrayList<UnitData> units = new ArrayList<>();
     
     // Later you will add unit positions here like:
-    // public ArrayList<UnitData> units;
+    
     
     // Empty constructor is required for JSON deserialization
     public GameState() {} 

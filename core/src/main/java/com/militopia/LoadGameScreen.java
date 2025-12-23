@@ -58,7 +58,7 @@ public class LoadGameScreen implements Screen {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             // LOAD THE GAME with the saved seed
-                            game.setScreen(new GameScreen(game, state.seed, state.p1Name, state.p2Name, state.saveName));
+                            game.setScreen(new GameScreen(game, state));
                         }
                     });
 

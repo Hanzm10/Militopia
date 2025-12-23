@@ -55,7 +55,7 @@ public class MapGenerator {
                 
                 if (value < -0.4) type = TerrainType.DEEP_WATER;
                 else if (value < -0.15) type = TerrainType.WATER;
-                else if (value < 0.1) type = TerrainType.SAND;
+                else if (value < 0.001) type = TerrainType.SAND;
                 else if (value < 0.5) type = TerrainType.GRASS;
                 else type = TerrainType.FOREST;
 
