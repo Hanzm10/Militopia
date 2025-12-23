@@ -396,32 +396,33 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        // 1. UPDATE LAST TOUCH (For camera dragging)
+        // 1. UPDATE LAST TOUCH
         lastTouchX = screenX;
         lastTouchY = screenY;
 
-        // 2. CONVERT MOUSE CLICKS TO GRID COORDINATES (The "Math")
+        // 2. CONVERT MOUSE CLICKS
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
 
-        // Height correction: Subtract ~12 pixels from Y to account for the "dirt" block height
-        // This fixes the issue where you click the roof but select the tile behind it
-        float heightOffset = 12f;
+        float heightOffset = 10f;
         float adjustedY = worldCoords.y - heightOffset;
-
         float halfW = TILE_WIDTH / 2.0f;
         float halfH = TILE_HEIGHT / 2.0f;
 
-        // Solve for Isometric X and Y
         int gridX = MathUtils.floor((adjustedY / halfH + worldCoords.x / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - worldCoords.x / halfW) / 2);
 
-        // 3. BOUNDS CHECK (Are we inside the map?)
+        // 3. BOUNDS CHECK
         if (gridX >= 0 && gridX < MAP_WIDTH && gridY >= 0 && gridY < MAP_HEIGHT) {
             selectedX = gridX;
             selectedY = gridY;
 
-            // --- PRIORITY 1: DID WE CLICK A MOVEMENT MARKER? ---
-            // (This means we are moving the unit we selected previously)
+            // --- RE-ADDED BOUNCE TRIGGER (THE FIX) ---
+            bouncingX = gridX;
+            bouncingY = gridY;
+            bounceTimer = 0; // Reset animation to start immediately
+            // -----------------------------------------
+
+            // --- PRIORITY 1: CLICKED MARKER? (Move Unit) ---
             Entity clickedMarker = getEntityAt(selectedX, selectedY, TypeComponent.Type.MARKER);
 
             if (clickedMarker != null && selectedUnitEntity != null) {
@@ -431,22 +432,21 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
             }
 
             // --- RESET STATE ---
-            // If we didn't click a marker, we are starting a new action.
             clearMarkers();
-            selectedUnitEntity = null; // Deselect old unit
+            selectedUnitEntity = null;
             summonMenu.setVisible(false);
 
-            // --- PRIORITY 2: DID WE CLICK A UNIT? ---
+            // --- PRIORITY 2: CLICKED UNIT? (Select Unit) ---
             Entity clickedUnit = getEntityAt(selectedX, selectedY, TypeComponent.Type.UNIT);
 
             if (clickedUnit != null) {
                 System.out.println("Unit Selected!");
-                selectedUnitEntity = clickedUnit; // REMEMBER THIS UNIT!
+                selectedUnitEntity = clickedUnit;
                 showMovementMarkers(selectedX, selectedY);
                 return true;
             }
 
-            // --- PRIORITY 3: DID WE CLICK A BASE? ---
+            // --- PRIORITY 3: CLICKED BASE? (Summon Menu) ---
             MapGenerator.ObjectType obj = gameMap.objects[selectedX][selectedY];
             if (obj == MapGenerator.ObjectType.BASE_P1) {
                 lastClickedX = selectedX; // Lock target
