@@ -339,21 +339,40 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         }
 
         // DRAW ECS ENTITIES (Units & Markers) ON TOP
+        
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TextureComponent.class).get());
+
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TextureComponent tex = e.getComponent(TextureComponent.class);
 
-            // Calculate ISO position for this entity
+            // 1. Check the Type
+            TypeComponent typeC = e.getComponent(TypeComponent.class);
+            boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
+
             float isoX = (pos.x - pos.y) * (TILE_WIDTH / 2.0f);
             float isoY = (pos.x + pos.y) * (TILE_HEIGHT / 2.0f);
 
-            // Adjust offsets
             float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2f;
             float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2f;
 
-            // DRAW
-            game.batch.draw(tex.region, isoX - xOffset, isoY - yOffset + 12, DRAW_WIDTH, DRAW_HEIGHT);
+            // 2. Calculate Vertical Offset
+            // Units need to stand up (+12), Markers need to lie flat (+0 or even -4)
+            float verticalOffset = isMarker ? 7f : 12f;
+
+            // 3. Bounce Logic (Optional: Do you want markers to bounce?)
+            float unitAnimY = 0;
+            if (pos.x == bouncingX && pos.y == bouncingY) {
+                float progress = bounceTimer / BOUNCE_DURATION;
+                unitAnimY = (float) Math.sin(progress * Math.PI) * BOUNCE_HEIGHT;
+            }
+
+            // 4. Draw with specific offset
+            game.batch.draw(tex.region,
+                    isoX - xOffset,
+                    isoY - yOffset + verticalOffset + unitAnimY,
+                    DRAW_WIDTH,
+                    DRAW_HEIGHT);
         }
     }
 
