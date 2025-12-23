@@ -36,6 +36,7 @@ import static com.militopia.MapGenerator.TerrainType.GRASS;
 import static com.militopia.MapGenerator.TerrainType.SAND;
 import static com.militopia.MapGenerator.TerrainType.WATER;
 import com.militopia.components.GridPositionComponent;
+import com.militopia.components.MovementComponent;
 import com.militopia.components.TextureComponent;
 import com.militopia.components.TypeComponent;
 import java.util.ArrayList;
@@ -245,7 +246,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
                 float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2;
 
                 // --- CALCULATE BOUNCE OFFSET ---
-                float animY = 0;
+                float animY = 2;
                 if (x == bouncingX && y == bouncingY) {
                     // Normalize time from 0.0 to 1.0
                     float progress = bounceTimer / BOUNCE_DURATION;
@@ -339,35 +340,61 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         }
 
         // DRAW ECS ENTITIES (Units & Markers) ON TOP
-        
+        // --- 3. RENDER ECS ENTITIES ---
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TextureComponent.class).get());
 
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TextureComponent tex = e.getComponent(TextureComponent.class);
-
-            // 1. Check the Type
             TypeComponent typeC = e.getComponent(TypeComponent.class);
-            boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
 
-            float isoX = (pos.x - pos.y) * (TILE_WIDTH / 2.0f);
-            float isoY = (pos.x + pos.y) * (TILE_HEIGHT / 2.0f);
+            // CHECK FOR ANIMATION
+            MovementComponent move = e.getComponent(MovementComponent.class);
 
+            float isoX, isoY;
+
+            if (move != null) {
+                // --- MOVING LOGIC ---
+                move.time += delta; // Advance timer
+
+                // Calculate percentage (0.0 to 1.0)
+                float alpha = Math.min(move.time / move.duration, 1.0f);
+
+                // Optional: Smooth Step makes it start slow and end slow (Ease-In-Out)
+                // alpha = MathUtils.smoothstep(0, 1, alpha); 
+                // Calc Start & End ISO positions
+                float startIsoX = (move.startX - move.startY) * (TILE_WIDTH / 2.0f);
+                float startIsoY = (move.startX + move.startY) * (TILE_HEIGHT / 2.0f);
+                float endIsoX = (move.targetX - move.targetY) * (TILE_WIDTH / 2.0f);
+                float endIsoY = (move.targetX + move.targetY) * (TILE_HEIGHT / 2.0f);
+
+                // INTERPOLATE (LERP) current position
+                isoX = MathUtils.lerp(startIsoX, endIsoX, alpha);
+                isoY = MathUtils.lerp(startIsoY, endIsoY, alpha);
+
+                // If finished, remove the component so it becomes static again
+                if (alpha >= 1.0f) {
+                    e.remove(MovementComponent.class);
+                }
+            } else {
+                // --- STATIC LOGIC (Standard) ---
+                isoX = (pos.x - pos.y) * (TILE_WIDTH / 2.0f);
+                isoY = (pos.x + pos.y) * (TILE_HEIGHT / 2.0f);
+            }
+
+            // --- DRAWING ---
             float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2f;
             float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2f;
+            boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
+            float verticalOffset = isMarker ? 7.5f : 15f;
 
-            // 2. Calculate Vertical Offset
-            // Units need to stand up (+12), Markers need to lie flat (+0 or even -4)
-            float verticalOffset = isMarker ? 7f : 12f;
-
-            // 3. Bounce Logic (Optional: Do you want markers to bounce?)
-            float unitAnimY = 0;
-            if (pos.x == bouncingX && pos.y == bouncingY) {
+            // Only bounce if NOT moving (and if it's the selected unit)
+            float unitAnimY = 2;
+            if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
                 float progress = bounceTimer / BOUNCE_DURATION;
                 unitAnimY = (float) Math.sin(progress * Math.PI) * BOUNCE_HEIGHT;
             }
 
-            // 4. Draw with specific offset
             game.batch.draw(tex.region,
                     isoX - xOffset,
                     isoY - yOffset + verticalOffset + unitAnimY,
@@ -488,6 +515,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         // 1. Get the Position Component of the unit
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
 
+        unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
         // 2. Update coordinates
         pos.x = targetX;
         pos.y = targetY;
@@ -496,7 +524,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         clearMarkers();
         selectedUnitEntity = null; // Deselect after moving
 
-        System.out.println("Unit moved successfully.");
+        System.out.println("Unit moving to " + targetX + "," + targetY);
     }
 
     private void showMovementMarkers(int cx, int cy) {
