@@ -22,6 +22,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import static com.militopia.MapGenerator.ObjectType.BASE_NEUTRAL;
 import static com.militopia.MapGenerator.ObjectType.BASE_P1;
@@ -37,10 +38,13 @@ import static com.militopia.MapGenerator.TerrainType.SAND;
 import static com.militopia.MapGenerator.TerrainType.WATER;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.MovementComponent;
+import com.militopia.components.StatsComponent;
 import com.militopia.components.TextureComponent;
 import com.militopia.components.TypeComponent;
 import java.util.ArrayList;
 import java.util.List;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.Texture;
 
 public class GameScreen extends InputAdapter implements Screen { // Extend InputAdapter
 
@@ -49,11 +53,13 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
     OrthographicCamera camera;
 
     PooledEngine engine;
-    EntityFactory factory;
+    EntityFactory entityFactory;
+    UnitFactory unitFactory;
 
     // UI (HUD)
     Stage hudStage;
     Table summonMenu;
+    BitmapFont font;
 
     // Logic Vars
     long seed;
@@ -62,8 +68,8 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
     // Grid settings (Same as before)
     final int MAP_WIDTH = 32;
     final int MAP_HEIGHT = 32;
-    final int TILE_WIDTH = 27;
-    final int TILE_HEIGHT = 17;
+    final int TILE_WIDTH = 25;
+    final int TILE_HEIGHT = 15;
     final float DRAW_WIDTH = 30f;
     final float DRAW_HEIGHT = 30f;
 
@@ -100,9 +106,13 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
 
         // 1. Setup ECS
         engine = new PooledEngine();
-        factory = new EntityFactory(engine, game);
+        entityFactory = new EntityFactory(engine);
+        unitFactory = new UnitFactory(engine);
 
         setupHUD();
+
+        font = game.skin.getFont("default");
+        font.getData().setScale(0.8f); // Make text slightly smaller to fit
 
         // 3. Setup Input (Handle BOTH Map clicks and Button clicks)
         InputMultiplexer multiplexer = new InputMultiplexer();
@@ -119,7 +129,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
             for (UnitData u : loadedState.units) {
                 // Re-create the entity at the saved spot
                 if (u.type.equals("RECRUIT")) {
-                    factory.createRecruit(u.x, u.y);
+                    unitFactory.createRecruit(u.x, u.y);
                 }
             }
             System.out.println("Restored " + loadedState.units.size() + " units.");
@@ -160,7 +170,7 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
                 // Use locked coordinates
                 if (lastClickedX != -1 && lastClickedY != -1) {
                     System.out.println("Spawning at: " + lastClickedX + "," + lastClickedY);
-                    factory.createRecruit(lastClickedX, lastClickedY);
+                    unitFactory.createRecruit(lastClickedX, lastClickedY);
 
                     summonMenu.setVisible(false);
                     lastClickedX = -1;
@@ -173,6 +183,47 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         summonMenu.setVisible(false); // Start hidden
 
         hudStage.addActor(summonMenu);
+    }
+
+    private void drawBaseHUD(float x, float y, String name, Color baseColor) {
+        // 1. GET THE WHITE TEXTURE CORRECTLY
+        // We use get(Texture.class) because we added it as a raw Texture, not a Region
+        Texture whiteTex = game.skin.get("white", Texture.class);
+
+        // 2. SETUP DIMENSIONS
+        float barWidth = 40f;
+        float barHeight = 6f;
+
+        // Center the bar relative to the Tile Width (DRAW_WIDTH is 64)
+        float xOffset = (DRAW_WIDTH - barWidth) / 2f;
+
+        // Move the HUD UP so it sits on the base, not under the dirt
+        // +10 puts it near the "feet" of the base on top of the block
+        float yOffset = 15f;
+
+        // 3. DRAW XP BAR BACKGROUND (Black Border)
+        game.batch.setColor(Color.BLACK);
+        game.batch.draw(whiteTex, x + xOffset, y + yOffset, barWidth, barHeight);
+
+        // 4. DRAW XP BAR FILL (Colored)
+        float fillPercent = 0.5f;
+        game.batch.setColor(baseColor);
+        game.batch.draw(whiteTex, x + xOffset + 1, y + yOffset + 1, (barWidth - 2) * fillPercent, barHeight - 2);
+
+        // 5. DRAW PLAYER NAME (Perfectly Centered)
+        font.setColor(Color.WHITE);
+
+        // Use GlyphLayout to measure the exact width of this specific name
+        GlyphLayout layout = new GlyphLayout(font, name);
+
+        // Math: (TileCenter) - (TextHalfWidth)
+        float textX = x + (DRAW_WIDTH / 2f) - (layout.width / 2f);
+        float textY = y + yOffset + 40; // 40px above the bar
+
+        font.draw(game.batch, layout, textX, textY);
+
+        // 6. RESET COLOR
+        game.batch.setColor(Color.WHITE);
     }
 
     private void saveGame() {
@@ -222,187 +273,154 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
         hudStage.draw();
     }
 
-    // Copy your existing loop logic here
     private void renderMapLoop(float delta) {
-        //  UPDATE BOUNCE TIMER
+        // --- 1. UPDATE BOUNCE TIMER ---
         if (bouncingX != -1) {
             bounceTimer += delta;
             if (bounceTimer >= BOUNCE_DURATION) {
-                bouncingX = -1; // Animation finished
+                bouncingX = -1;
                 bouncingY = -1;
             }
         }
-        game.batch.setColor(Color.WHITE);
 
+        // Common offsets for centering images
+        float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2f;
+        float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2f;
+
+        // --- 2. PASS 1: DRAW WORLD (Terrain, Objects) ---
         for (int x = MAP_WIDTH - 1; x >= 0; x--) {
             for (int y = MAP_HEIGHT - 1; y >= 0; y--) {
-
                 float isoX = (x - y) * (TILE_WIDTH / 2.0f);
                 float isoY = (x + y) * (TILE_HEIGHT / 2.0f);
 
-                // --- DRAWING MATH (Uses the flexible DRAW size) ---
-                // We calculate an offset to keep the image centered as we change its size
-                float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2;
-                float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2;
-
-                // --- CALCULATE BOUNCE OFFSET ---
-                float animY = 2;
+                float animY = 0;
                 if (x == bouncingX && y == bouncingY) {
-                    // Normalize time from 0.0 to 1.0
                     float progress = bounceTimer / BOUNCE_DURATION;
-                    // Math.sin(PI * progress) creates a curve: 0 -> 1 -> 0
                     animY = (float) Math.sin(progress * Math.PI) * BOUNCE_HEIGHT;
                 }
 
-                // 1. PICK THE TERRAIN TEXTURE
+                // A. Draw Terrain
                 Texture t = null;
                 switch (gameMap.terrain[x][y]) {
-                    case GRASS:
-                        t = game.texGrass;
-                        break;
-                    case WATER:
-                        t = game.texWater;
-                        break;
-                    case DEEP_WATER:
-                        t = game.texDeepWater;
-                        break;
-                    case SAND:
-                        t = game.texSand;
-                        break;
-                    case FOREST:
-                        t = game.texForest;
-                        break;
+                    case GRASS:      t = game.texGrass; break;
+                    case WATER:      t = game.texWater; break;
+                    case DEEP_WATER: t = game.texDeepWater; break;
+                    case SAND:       t = game.texSand; break;
+                    case FOREST:     t = game.texForest; break;
                 }
+                if (t != null) game.batch.draw(t, isoX - xOffset, isoY - yOffset + animY, DRAW_WIDTH, DRAW_HEIGHT);
 
-                // 2. DRAW THE TILE
-                // Note: We might need to adjust y slightly if the image is tall (like a block)
-                if (t != null) {
-                    // Draw using the DRAW variables, shifted by the offset
-                    game.batch.draw(t, isoX - xOffset, isoY - yOffset + animY, DRAW_WIDTH, DRAW_HEIGHT);
-                }
-
-                // 3. DRAW OBJECTS (Layered on top)
+                // B. Draw Objects
                 Texture o = null;
                 switch (gameMap.objects[x][y]) {
-                    case BASE_P1:
-                        o = game.texBaseP1;
-                        break;
-                    case BASE_P2:
-                        o = game.texBaseP2;
-                        break;
-                    case BASE_NEUTRAL:
-                        o = game.texBaseNeutral;
-                        break;
-                    case TREE:
-                        o = game.texTree;
-                        break;
-                    case RUINS:
-                        o = game.texRuins;
-                        break;
-                    case OIL:
-                        o = game.texOil;
-                        break;
-                    case CACTUS:
-                        o = game.texCactus;
-                        break;
-
+                    case BASE_P1:      o = game.texBaseP1; break;
+                    case BASE_P2:      o = game.texBaseP2; break;
+                    case BASE_NEUTRAL: o = game.texBaseNeutral; break;
+                    case TREE:         o = game.texTree; break;
+                    case RUINS:        o = game.texRuins; break;
+                    case OIL:          o = game.texOil; break;
+                    case CACTUS:       o = game.texCactus; break;
                 }
-
+                
                 if (o != null) {
-                    // Draw object centered on the tile
-                    // Adjust offsets based on your image size! 
-                    // Usually objects need to be drawn slightly higher (y + 8) to look like they sit ON the tile.
-                    game.batch.draw(o, isoX - 2, isoY + 7 + animY, DRAW_WIDTH, DRAW_HEIGHT);
+                    // Use calculated alignment fixes we discussed
+                    float objOffsetX = (DRAW_WIDTH - TILE_WIDTH) / 2f; 
+                    float surfaceLift = 15f; 
+                    
+                    game.batch.draw(o, 
+                       isoX - objOffsetX, 
+                       isoY - yOffset + surfaceLift + animY, 
+                       DRAW_WIDTH, DRAW_HEIGHT);
                 }
 
-                // --- DRAW "WHITEN" EFFECT (HOVER) ---
+                // C. Selection Highlight
                 if (x == selectedX && y == selectedY) {
-                    // 1. Change Blend Mode to "ADDITIVE" (This adds brightness)
-                    // GL_ONE means: "Add the pixel color to what's already on screen"
                     Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
                     game.batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-
-                    // 2. Set the "Brightness" power
-                    // Dark Gray = Low brightness added. White = Maximum brightness added.
                     game.batch.setColor(0.4f, 0.4f, 0.4f, 1f);
-
-                    // 3. Draw the SAME texture we just drew for the terrain (t)
-                    // Since 't' is the grass/sand texture, the highlight fits perfectly!
-                    if (t != null) {
-                        game.batch.draw(t, isoX - xOffset, isoY - yOffset + animY, DRAW_WIDTH, DRAW_HEIGHT);
-                    }
-
-                    // 4. RESET Blend Mode to Normal (Crucial!)
+                    if (t != null) game.batch.draw(t, isoX - xOffset, isoY - yOffset + animY, DRAW_WIDTH, DRAW_HEIGHT);
                     game.batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
                     game.batch.setColor(Color.WHITE);
                 }
             }
         }
 
-        // DRAW ECS ENTITIES (Units & Markers) ON TOP
-        // --- 3. RENDER ECS ENTITIES ---
+        // --- 3. PASS 2: DRAW UNITS (With Animation Restored!) ---
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TextureComponent.class).get());
-
+        
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TextureComponent tex = e.getComponent(TextureComponent.class);
             TypeComponent typeC = e.getComponent(TypeComponent.class);
-
-            // CHECK FOR ANIMATION
             MovementComponent move = e.getComponent(MovementComponent.class);
 
             float isoX, isoY;
 
+            // --- RESTORED ANIMATION LOGIC ---
             if (move != null) {
-                // --- MOVING LOGIC ---
-                move.time += delta; // Advance timer
-
-                // Calculate percentage (0.0 to 1.0)
+                move.time += delta;
                 float alpha = Math.min(move.time / move.duration, 1.0f);
-
-                // Optional: Smooth Step makes it start slow and end slow (Ease-In-Out)
-                // alpha = MathUtils.smoothstep(0, 1, alpha); 
-                // Calc Start & End ISO positions
+                
+                // Calculate Start and End pixels
                 float startIsoX = (move.startX - move.startY) * (TILE_WIDTH / 2.0f);
                 float startIsoY = (move.startX + move.startY) * (TILE_HEIGHT / 2.0f);
                 float endIsoX = (move.targetX - move.targetY) * (TILE_WIDTH / 2.0f);
                 float endIsoY = (move.targetX + move.targetY) * (TILE_HEIGHT / 2.0f);
 
-                // INTERPOLATE (LERP) current position
+                // Slide between them
                 isoX = MathUtils.lerp(startIsoX, endIsoX, alpha);
                 isoY = MathUtils.lerp(startIsoY, endIsoY, alpha);
 
-                // If finished, remove the component so it becomes static again
                 if (alpha >= 1.0f) {
-                    e.remove(MovementComponent.class);
+                    e.remove(MovementComponent.class); // Stop moving
                 }
             } else {
-                // --- STATIC LOGIC (Standard) ---
+                // Static Position
                 isoX = (pos.x - pos.y) * (TILE_WIDTH / 2.0f);
                 isoY = (pos.x + pos.y) * (TILE_HEIGHT / 2.0f);
             }
+            // --------------------------------
 
-            // --- DRAWING ---
-            float xOffset = (DRAW_WIDTH - TILE_WIDTH) / 2f;
-            float yOffset = (DRAW_HEIGHT - TILE_HEIGHT) / 2f;
             boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
             float verticalOffset = isMarker ? 7.5f : 15f;
 
-            // Only bounce if NOT moving (and if it's the selected unit)
-            float unitAnimY = 2;
+            // Unit Bounce (only if NOT moving)
+            float unitAnimY = 0;
             if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
                 float progress = bounceTimer / BOUNCE_DURATION;
                 unitAnimY = (float) Math.sin(progress * Math.PI) * BOUNCE_HEIGHT;
             }
 
-            game.batch.draw(tex.region,
-                    isoX - xOffset,
-                    isoY - yOffset + verticalOffset + unitAnimY,
-                    DRAW_WIDTH,
-                    DRAW_HEIGHT);
+            game.batch.draw(tex.region, 
+                            isoX - xOffset, 
+                            isoY - yOffset + verticalOffset + unitAnimY, 
+                            DRAW_WIDTH, DRAW_HEIGHT);
+        }
+
+        // --- 4. PASS 3: DRAW UI OVERLAYS (XP Bars) ---
+        for (int x = MAP_WIDTH - 1; x >= 0; x--) {
+            for (int y = MAP_HEIGHT - 1; y >= 0; y--) {
+                MapGenerator.ObjectType obj = gameMap.objects[x][y];
+                
+                if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
+                    float isoX = (x - y) * (TILE_WIDTH / 2.0f);
+                    float isoY = (x + y) * (TILE_HEIGHT / 2.0f);
+                    
+                    float animY = 0;
+                    if (x == bouncingX && y == bouncingY) {
+                         float progress = bounceTimer / BOUNCE_DURATION;
+                         animY = (float) Math.sin(progress * Math.PI) * BOUNCE_HEIGHT;
+                    }
+
+                    String baseName = (obj == MapGenerator.ObjectType.BASE_P1) ? p1Name : p2Name;
+                    Color baseColor = (obj == MapGenerator.ObjectType.BASE_P1) ? Color.BLUE : Color.RED;
+
+                    drawBaseHUD(isoX - xOffset, isoY - yOffset + animY, baseName, baseColor);
+                }
+            }
         }
     }
-
+    
     private void handleInput(float delta) {
         if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
             camera.zoom += 0.02f;
@@ -528,21 +546,66 @@ public class GameScreen extends InputAdapter implements Screen { // Extend Input
     }
 
     private void showMovementMarkers(int cx, int cy) {
-        // Loop through all 8 neighbors
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
+        // 1. Get the Unit's Stats (so we know its Range and MoveType)
+        if (selectedUnitEntity == null) {
+            return;
+        }
+        StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
+
+        if (stats == null) {
+            return; // Safety check
+        }
+        int range = stats.moveRange; // Use the unit's actual range!
+
+        // 2. Loop through the range
+        // This simple loop creates a square box of valid moves. 
+        // For a diamond shape, add logic: Math.abs(x) + Math.abs(y) <= range
+        for (int x = -range; x <= range; x++) {
+            for (int y = -range; y <= range; y++) {
                 if (x == 0 && y == 0) {
-                    continue; // Skip self
+                    continue; // Skip standing still
                 }
                 int targetX = cx + x;
                 int targetY = cy + y;
 
-                // Bounds check
+                // 3. Check Bounds (Inside Map?)
                 if (targetX >= 0 && targetX < MAP_WIDTH && targetY >= 0 && targetY < MAP_HEIGHT) {
-                    factory.createMovementMarker(targetX, targetY);
+
+                    // --- 4. TERRAIN CHECK (The Logic You Asked For) ---
+                    if (isValidMove(targetX, targetY, stats.moveType)) {
+
+                        // Check if another unit is blocking the way
+                        if (getEntityAt(targetX, targetY, TypeComponent.Type.UNIT) == null) {
+                            // Only spawn marker if valid!
+                            // Note: You still use the generic EntityFactory for markers
+                            entityFactory.createMovementMarker(targetX, targetY);
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private boolean isValidMove(int x, int y, StatsComponent.MoveType moveType) {
+        MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+
+        // RULE: LAND units cannot walk on WATER
+        if (moveType == StatsComponent.MoveType.LAND) {
+            if (terrain == MapGenerator.TerrainType.WATER
+                    || terrain == MapGenerator.TerrainType.DEEP_WATER) {
+                return false;
+            }
+        }
+
+        // RULE: SEA units cannot walk on LAND (Future proofing)
+        if (moveType == StatsComponent.MoveType.SEA) {
+            if (terrain != MapGenerator.TerrainType.WATER
+                    && terrain != MapGenerator.TerrainType.DEEP_WATER) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void clearMarkers() {
