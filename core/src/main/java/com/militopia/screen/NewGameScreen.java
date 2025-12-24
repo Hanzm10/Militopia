@@ -48,7 +48,7 @@ public class NewGameScreen implements Screen {
         p2Field.setMessageText("Enter Player 2 Name");
 
         // 2. Create Error Label (Initially hidden/empty)
-        Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default"), Color.RED);
+        Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default-font"), Color.RED);
         errorLabel = new Label("", errorStyle); // Start empty
 
         TextButton startBtn = new TextButton("Start Game", game.skin);

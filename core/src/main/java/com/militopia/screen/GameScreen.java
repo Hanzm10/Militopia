@@ -127,8 +127,8 @@ public class GameScreen implements Screen {
         }
 
         // 6. Setup Fonts & UI
-        font = game.skin.getFont("default");
-        font.getData().setScale(0.8f);
+        font = game.skin.getFont("default-font"); // Use the name you added in MilitopiaGame
+        font.getData().setScale(0.5f); // Scale down if 24px is too big for the map names
         setupHUD(); // Creates 'hudStage' and 'summonMenu'
 
         // 7. Setup Input Controller (Connects everything)

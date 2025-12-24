@@ -2,11 +2,14 @@ package com.militopia;
 
 import com.militopia.screen.MenuScreen;
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -27,7 +30,34 @@ public class MilitopiaGame extends Game {
     @Override
     public void create() {
         batch = new SpriteBatch();
-        skin = createBasicSkin(); // Generate skin programmatically
+        skin = new Skin(Gdx.files.internal("uiskin.json"));
+
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+
+        skin.add("white", new Texture(pixmap));
+        pixmap.dispose();
+
+        String fontPath = "game_font.ttf"; // Or whatever you named it
+        // SAFETY CHECK: Does the file exist?
+        if (!Gdx.files.internal(fontPath).exists()) {
+            System.err.println("CRITICAL ERROR: Could not find font file at: " + fontPath);
+            // Fallback to default blurry font so game doesn't crash
+            skin.add("default-font", new BitmapFont());
+        } else {
+            // File exists, safe to load
+            FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fontPath));
+            FreeTypeFontParameter parameter = new FreeTypeFontParameter();
+            parameter.size = 24;
+            parameter.minFilter = Texture.TextureFilter.Linear;
+            parameter.magFilter = Texture.TextureFilter.Linear;
+
+            BitmapFont customFont = generator.generateFont(parameter);
+            generator.dispose();
+
+            skin.add("default-font", customFont);
+        }
 
         // LOAD TEXTURES ONCE
         texGrass = new Texture("tile_grass.png");
