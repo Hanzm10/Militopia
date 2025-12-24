@@ -1,4 +1,4 @@
-package com.militopia;
+package com.militopia.map;
 
 import java.util.Random;
 

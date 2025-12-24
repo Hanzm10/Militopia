@@ -1,4 +1,4 @@
-package com.militopia;
+package com.militopia.screen;
 
 import com.badlogic.gdx.Screen;
 

@@ -1,4 +1,4 @@
-package com.militopia;
+package com.militopia.factories;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;

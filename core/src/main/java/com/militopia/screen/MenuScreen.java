@@ -1,5 +1,6 @@
-package com.militopia;
+package com.militopia.screen;
 
+import com.militopia.screen.LoadGameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -9,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.militopia.MilitopiaGame;
 
 public class MenuScreen implements Screen {
     final MilitopiaGame game;

@@ -1,4 +1,4 @@
-package com.militopia;
+package com.militopia.map;
 
 import com.badlogic.gdx.math.MathUtils;
 import java.util.ArrayList;

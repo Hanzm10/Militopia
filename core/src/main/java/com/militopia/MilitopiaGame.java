@@ -1,5 +1,6 @@
 package com.militopia;
 
+import com.militopia.screen.MenuScreen;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;

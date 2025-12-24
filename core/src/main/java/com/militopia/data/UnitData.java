@@ -1,4 +1,4 @@
-package com.militopia;
+package com.militopia.data;
 
 public class UnitData {
     public int x, y;

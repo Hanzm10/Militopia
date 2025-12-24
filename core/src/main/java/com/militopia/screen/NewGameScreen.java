@@ -1,5 +1,7 @@
-package com.militopia;
+package com.militopia.screen;
 
+import com.militopia.screen.MenuScreen;
+import com.militopia.screen.GameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
@@ -12,6 +14,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.militopia.data.GameState;
+import com.militopia.MilitopiaGame;
 
 public class NewGameScreen implements Screen {
 

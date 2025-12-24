@@ -1,4 +1,4 @@
-package com.militopia;
+package com.militopia.data;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
