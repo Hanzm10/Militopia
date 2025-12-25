@@ -26,39 +26,34 @@ public class SaveManager {
      * @param saveName The filename (without .json)
      * @param engine The ECS engine (to find and save units)
      */
-    public void saveGame(long seed, String p1Name, String p2Name, String saveName, PooledEngine engine) {
+    public void saveGame(GameState state, PooledEngine engine) {
 
-        // 1. Create the Data Container
-        GameState state = new GameState(seed, p1Name, p2Name, saveName);
+        // 1. You don't need to create a new GameState anymore.
+        //    Just clear the old lists inside the existing one to avoid duplicates.
+        state.units.clear();
 
-        // 2. Extract Units from the Engine
-        // We look for everything that has a GridPosition and is tagged as a UNIT
-        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TypeComponent.class).get());
+        // 2. Extract Data from Engine (Entities)
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
 
         for (Entity e : entities) {
             TypeComponent type = e.getComponent(TypeComponent.class);
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
 
             if (type.type == TypeComponent.Type.UNIT) {
-                GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
-                StatsComponent stats = e.getComponent(StatsComponent.class); // <--- GET STATS
-
-                // Pass stats.owner to the new UnitData constructor
+                StatsComponent stats = e.getComponent(StatsComponent.class);
+                // Save unit with OWNER
                 state.units.add(new UnitData(pos.x, pos.y, "RECRUIT", stats.owner));
             }
         }
 
-        // 3. Convert to JSON
+        // 3. Write to JSON File
         Json json = new Json();
-        String text = json.toJson(state);
+        String jsonText = json.toJson(state);
 
-        // 4. Write to File
-        try {
-            FileHandle file = Gdx.files.local("saves/" + saveName + ".json");
-            file.writeString(text, false);
-            System.out.println("Game saved successfully to: " + file.path());
-        } catch (Exception e) {
-            System.err.println("Failed to save game: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Use state.saveName for the filename
+        FileHandle file = Gdx.files.local("saves/" + state.saveName + ".json");
+        file.writeString(jsonText, false);
+
+        System.out.println("Game Saved: " + file.path());
     }
 }

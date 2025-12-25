@@ -1,26 +1,27 @@
 package com.militopia.screen;
 
-import com.badlogic.ashley.core.Entity;
-import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
-import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.factories.EntityFactory;
 import com.militopia.config.GameConfig;
@@ -29,8 +30,6 @@ import com.militopia.map.MapGenerator;
 import com.militopia.MilitopiaGame;
 import com.militopia.data.UnitData;
 import com.militopia.factories.UnitFactory;
-import com.militopia.components.GridPositionComponent;
-import com.militopia.components.TypeComponent;
 import com.militopia.controller.GameInputController;
 import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
@@ -42,6 +41,7 @@ public class GameScreen implements Screen {
 
     final MilitopiaGame game;
     OrthographicCamera camera;
+    FitViewport viewport;
 
     // --- 1. DATA & SYSTEMS ---
     MapGenerator.GameMap gameMap;
@@ -61,7 +61,8 @@ public class GameScreen implements Screen {
     Table summonMenu;
     BitmapFont font;
 
-    SaveManager saveManager; // <--- Add this
+    SaveManager saveManager;
+    private GameState gameState;
 
     // --- 3. STATE (Shared with Controller) ---
     // Public so InputController can update them
@@ -73,8 +74,19 @@ public class GameScreen implements Screen {
     long seed;
     String p1Name, p2Name, saveName;
 
+    // Top HUD Labels (So we can update them later)
+    private Label xpLabel;
+    private Label fundsLabel;
+    private Label turnLabel;
+
+    private Stage stage;
+
+    // Settings Overlay
+    private Table settingsOverlay;
+
     public GameScreen(final MilitopiaGame game, GameState loadedState) {
         this.game = game;
+        this.gameState = loadedState;
 
         // Unpack GameState
         this.seed = loadedState.seed;
@@ -82,72 +94,70 @@ public class GameScreen implements Screen {
         this.p2Name = loadedState.p2Name;
         this.saveName = loadedState.saveName;
 
-        // 1. Setup Camera
+        // 1. Setup Camera & Viewport
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800, 600);
+        camera.setToOrtho(false, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
         camera.zoom = 1.0f;
+        viewport = new FitViewport(GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT, camera);
 
         // 2. Setup ECS Engine & Factories
         engine = new PooledEngine();
         entityFactory = new EntityFactory(engine);
         unitFactory = new UnitFactory(engine);
+        saveManager = new SaveManager();
 
         // 3. Generate Map
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT, seed);
 
-        // Center Map on Start-up
+        // --- Center Camera Logic ---
         float midX = GameConfig.MAP_WIDTH / 2f;
         float midY = GameConfig.MAP_HEIGHT / 2f;
-
-        // 2. Convert Grid(16, 16) to Isometric Coordinates
-        // (This uses the exact same math as your Render System)
         float isoCenterX = (midX - midY) * (GameConfig.TILE_WIDTH / 2.0f);
         float isoCenterY = (midX + midY) * (GameConfig.TILE_HEIGHT / 2.0f);
-
-        // 3. Move Camera
         camera.position.set(isoCenterX, isoCenterY, 0);
         camera.update();
 
         // 4. Add Systems
-        // A. Movement Logic (Updates timers)
         engine.addSystem(new MovementSystem());
-
-        // B. Map Rendering (Priority 0 - Bottom)
         mapRenderSystem = new MapRenderSystem(game.batch, game, gameMap, p1Name, p2Name);
         engine.addSystem(mapRenderSystem);
-
-        unitRenderSystem = new UnitRenderSystem(game.batch); // Store it in the variable!
+        unitRenderSystem = new UnitRenderSystem(game.batch);
         engine.addSystem(unitRenderSystem);
 
-        // 5. Restore Units from Save File
+        // 5. Restore Units
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if (u.type.equals("RECRUIT")) {
-                    // Pass the saved owner ID (1 or 2)
                     unitFactory.createRecruit(u.x, u.y, u.owner);
                 }
             }
         }
 
-        // 6. Setup Fonts & UI
-        font = game.skin.getFont("default-font"); // Use the name you added in MilitopiaGame
-        font.getData().setScale(0.5f); // Scale down if 24px is too big for the map names
-        setupHUD(); // Creates 'hudStage' and 'summonMenu'
+        font = game.skin.getFont("default-font"); // Initialize the font!
+        font.getData().setScale(0.5f); // Keep your scaling preference
 
-        // 7. Setup Input Controller (Connects everything)
+        // 6. INITIALIZE UI VARIABLES (The Fix)
+        // We create the Stage and Menu objects NOW so we can pass them to the controller.
+        stage = new Stage(new ScreenViewport());
+        summonMenu = new Table(); // Create the table reference now!
+
+        // 7. Setup Input Controller
+        // Now it's safe to pass 'summonMenu' because we just created it above.
         inputController = new GameInputController(
                 this, camera, engine, gameMap, unitFactory, entityFactory, summonMenu
         );
 
-        // 8. Setup Input Multiplexer
-        InputMultiplexer multiplexer = new InputMultiplexer();
-        multiplexer.addProcessor(hudStage);      // UI First
-        multiplexer.addProcessor(inputController); // Logic Second
-        Gdx.input.setInputProcessor(multiplexer);
+        // 8. Setup HUD (Populate the UI)
+        // We removed the 'new Stage' and 'setInputProcessor' lines from inside setupHUD()
+        // so it purely builds the UI elements now.
+        setupHUD();
 
-        // Inside GameScreen Constructor
-        saveManager = new SaveManager();
+        // 9. Final Input Setup
+        InputMultiplexer multiplexer = new InputMultiplexer();
+        multiplexer.addProcessor(stage);           // UI Clicks First
+        multiplexer.addProcessor(inputController); // Map Clicks Second
+        Gdx.input.setInputProcessor(multiplexer);
     }
 
     // ========================================================================
@@ -186,8 +196,10 @@ public class GameScreen implements Screen {
         game.batch.end();
 
         // 6. Draw HUD (Buttons)
-        hudStage.act();
-        hudStage.draw();
+        if (stage != null) {
+            stage.act(delta);
+            stage.draw();
+        }
     }
 
     // ========================================================================
@@ -248,59 +260,225 @@ public class GameScreen implements Screen {
     }
 
     private void setupHUD() {
-        hudStage = new Stage(new ScreenViewport());
+        // ============================================
+        // 1. TOP HUD (XP, Funding, Turn)
+        // ============================================
+        Table topTable = new Table();
+        topTable.top().padTop(20);
+        topTable.setFillParent(true);
 
-        // A. Save Button
-        TextButton saveBtn = new TextButton("Save & Exit", game.skin);
-        saveBtn.addListener(new HoverListener());
-        saveBtn.setPosition(20, Gdx.graphics.getHeight() - 50);
-        saveBtn.setSize(120, 40);
-        saveBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                saveGame();
-                game.setScreen(new MenuScreen(game));
-            }
-        });
-        hudStage.addActor(saveBtn);
+        topTable.add(createStatGroup("XP", "0")).expandX();
+        topTable.add(createStatGroup("Funding", "1000")).expandX();
+        topTable.add(createStatGroup("Turn", "1")).expandX();
 
-        // B. Summon Menu
-        summonMenu = new Table();
-        summonMenu.bottom();
-        summonMenu.setFillParent(true);
+        stage.addActor(topTable);
 
-        TextButton summonBtn = new TextButton("Summon Recruit", game.skin);
-        summonBtn.addListener(new HoverListener());
-        summonBtn.addListener(new ClickListener() {
+        // ============================================
+        // 2. BOTTOM HUD (Settings, Stats, End Turn)
+        // ============================================
+        Table bottomTable = new Table();
+        bottomTable.bottom().padBottom(20);
+        bottomTable.setFillParent(true);
+
+        ImageButton settingsBtn = createCircleButton("icon_settings");
+        ImageButton statsBtn = createCircleButton("icon_stats");
+        ImageButton endTurnBtn = createCircleButton("icon_end");
+
+        bottomTable.add(createIconGroup(settingsBtn, "Settings")).expandX();
+        bottomTable.add(createIconGroup(statsBtn, "Game Stats")).expandX();
+        bottomTable.add(createIconGroup(endTurnBtn, "End Turn")).expandX();
+
+        stage.addActor(bottomTable);
+
+        // ============================================
+        // 3. SUMMON MENU (The missing part!)
+        // ============================================
+        // Note: summonMenu was initialized in the Constructor, so we just config it here.
+        summonMenu.setVisible(false); // Hidden by default
+        summonMenu.setBackground(game.skin.newDrawable("white", Color.DARK_GRAY)); // Grey background
+        summonMenu.setSize(200, 150);
+        summonMenu.setPosition(GameConfig.DRAW_WIDTH / 2f - 100, GameConfig.DRAW_HEIGHT / 2f - 75); // Center it
+
+        Label summonLabel = new Label("Summon Unit", game.skin);
+        TextButton recruitBtn = new TextButton("Recruit", game.skin);
+        TextButton cancelBtn = new TextButton("Cancel", game.skin);
+
+        // --- Recruit Logic ---
+        recruitBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 int tx = inputController.getLastClickedX();
                 int ty = inputController.getLastClickedY();
 
                 if (tx != -1 && ty != -1) {
-                    // Check the map to see WHO owns this base
-                    int owner = 1; // Default P1
+                    // Check ownership of the base to spawn the correct unit color
+                    int owner = 1;
                     if (gameMap.objects[tx][ty] == MapGenerator.ObjectType.BASE_P2) {
-                        owner = 2; // It's a P2 Base
+                        owner = 2;
                     }
 
-                    // Create the unit with the correct owner
                     unitFactory.createRecruit(tx, ty, owner);
-
                     summonMenu.setVisible(false);
                     inputController.resetLastClicked();
                 }
             }
         });
 
-        summonMenu.add(summonBtn).padBottom(20);
-        summonMenu.setVisible(false);
-        hudStage.addActor(summonMenu);
+        // --- Cancel Logic ---
+        cancelBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                summonMenu.setVisible(false);
+                inputController.resetLastClicked();
+            }
+        });
+
+        // Add hover effects
+        recruitBtn.addListener(new HoverListener());
+        cancelBtn.addListener(new HoverListener());
+
+        // Layout the menu
+        summonMenu.add(summonLabel).pad(10).row();
+        summonMenu.add(recruitBtn).fillX().pad(5).row();
+        summonMenu.add(cancelBtn).fillX().pad(5);
+
+        stage.addActor(summonMenu);
+
+        // ============================================
+        // 4. SETTINGS OVERLAY
+        // ============================================
+        createSettingsOverlay();
+
+        // ============================================
+        // 5. BOTTOM BUTTON LISTENERS
+        // ============================================
+        settingsBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                settingsOverlay.setVisible(true);
+            }
+        });
+
+        settingsBtn.addListener(new HoverListener());
+        statsBtn.addListener(new HoverListener());
+        endTurnBtn.addListener(new HoverListener());
     }
 
-    // ========================================================================
-    //                      HELPER METHODS (Called by Controller)
-    // ========================================================================
+    // --- HELPER: Create Top Stat (Label over Value) ---
+    private Table createStatGroup(String title, String placeholderValue) {
+        Table t = new Table();
+        Label titleLbl = new Label(title, game.skin, "default-font", Color.GRAY);
+        titleLbl.setFontScale(0.8f); // Smaller title
+
+        Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
+        valLbl.setFontScale(1.2f); // Bigger value
+
+        // Save references if needed (Logic for later)
+        if (title.equals("XP")) {
+            xpLabel = valLbl;
+        }
+        if (title.equals("Funding")) {
+            fundsLabel = valLbl;
+        }
+        if (title.equals("Turn")) {
+            turnLabel = valLbl;
+        }
+
+        t.add(titleLbl).row();
+        t.add(valLbl);
+        return t;
+    }
+
+    // --- HELPER: Create Circle Icon Button ---
+    private ImageButton createCircleButton(String iconName) {
+        // 1. Create a "Circle" background
+        // Since we don't have a circle texture yet, we use a standard button style
+        // Later, you can create a specific ImageButtonStyle in your skin
+        ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
+        style.up = game.skin.newDrawable("white", Color.DARK_GRAY); // Placeholder Circle
+        style.down = game.skin.newDrawable("white", Color.GRAY);
+
+        // Try to load icon, fallback to nothing if missing
+        try {
+            style.imageUp = new TextureRegionDrawable(new TextureRegion(new Texture(iconName + ".png")));
+        } catch (Exception e) {
+            // Icon missing? Just leave it blank for now
+        }
+
+        ImageButton btn = new ImageButton(style);
+
+        // Make it round-ish using simple scaling (or use a real circle PNG later)
+        btn.setSize(60, 60);
+        return btn;
+    }
+
+    // --- HELPER: Group Button + Label for Bottom HUD ---
+    private Table createIconGroup(ImageButton btn, String labelText) {
+        Table t = new Table();
+        t.add(btn).size(60, 60).row(); // Force size
+
+        Label lbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
+        lbl.setFontScale(0.7f);
+        t.add(lbl).padTop(5);
+        return t;
+    }
+
+    // --- HELPER: Create the Settings Popup ---
+    private void createSettingsOverlay() {
+        settingsOverlay = new Table();
+        settingsOverlay.setFillParent(true);
+        settingsOverlay.setVisible(false); // Hidden start
+
+        // 1. Dark Background (The "Blur" effect)
+        // We create a black pixel and make it 80% transparent
+        Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        p.setColor(0, 0, 0, 0.85f); // Dark tint
+        p.fill();
+        settingsOverlay.setBackground(new TextureRegionDrawable(new TextureRegion(new Texture(p))));
+        p.dispose();
+
+        // 2. The "Menu Box" in the center
+        Table menuBox = new Table();
+        menuBox.setBackground(game.skin.newDrawable("white", Color.DARK_GRAY)); // Grey box
+
+        Label title = new Label("PAUSED", game.skin);
+        title.setFontScale(1.5f);
+
+        TextButton saveExitBtn = new TextButton("Save & Exit", game.skin);
+        saveExitBtn.addListener(new HoverListener());
+
+        // 3. Save & Exit Logic
+        saveExitBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // A. Save the Game
+                SaveManager saveManager = new SaveManager();
+                saveManager.saveGame(gameState, engine);
+
+                // B. Go to Menu
+                game.setScreen(new com.militopia.screen.MenuScreen(game));
+            }
+        });
+
+        TextButton resumeBtn = new TextButton("Resume", game.skin);
+        resumeBtn.addListener(new HoverListener());
+        resumeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                settingsOverlay.setVisible(false); // Hide overlay
+            }
+        });
+
+        // Layout the box
+        menuBox.add(title).pad(20).row();
+        menuBox.add(saveExitBtn).size(200, 50).pad(10).row();
+        menuBox.add(resumeBtn).size(200, 50).pad(10);
+
+        settingsOverlay.add(menuBox).size(300, 250); // Add box to overlay
+
+        stage.addActor(settingsOverlay); // Add to stage LAST so it's on top
+    }
+
     public void updateSelection(int x, int y) {
         this.selectedX = x;
         this.selectedY = y;
@@ -312,17 +490,15 @@ public class GameScreen implements Screen {
         this.bounceTimer = 0;
     }
 
-    private void saveGame() {
-        // Pass the raw data to the manager
-        saveManager.saveGame(seed, p1Name, p2Name, saveName, engine);
-    }
-
     @Override
     public void resize(int width, int height) {
-        hudStage.getViewport().update(width, height, true);
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
-        camera.update();
+        // Update Viewport
+        viewport.update(width, height);
+
+        // Update UI Stage (CHANGE 'hudStage' TO 'stage')
+        if (stage != null) {
+            stage.getViewport().update(width, height, true);
+        }
     }
 
     @Override
