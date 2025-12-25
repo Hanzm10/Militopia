@@ -4,6 +4,7 @@ import com.militopia.screen.GameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -16,6 +17,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
+import com.militopia.utils.HoverListener;
 
 public class LoadGameScreen implements Screen {
 
@@ -56,6 +58,7 @@ public class LoadGameScreen implements Screen {
 
                     String buttonText = state.saveName + " (" + state.timestamp + ")";
                     TextButton btn = new TextButton(buttonText, game.skin);
+                    btn.addListener(new HoverListener());
 
                     btn.addListener(new ClickListener() {
                         @Override
@@ -77,6 +80,7 @@ public class LoadGameScreen implements Screen {
         mainTable.add(scroll).size(500, 300).row();
 
         TextButton backBtn = new TextButton("Back", game.skin);
+        backBtn.addListener(new HoverListener());
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -104,6 +108,7 @@ public class LoadGameScreen implements Screen {
 
     @Override
     public void hide() {
+        Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
     }
 
     @Override

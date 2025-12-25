@@ -9,6 +9,7 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -35,6 +36,7 @@ import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.managers.SaveManager;
+import com.militopia.utils.HoverListener;
 
 public class GameScreen implements Screen {
 
@@ -250,6 +252,7 @@ public class GameScreen implements Screen {
 
         // A. Save Button
         TextButton saveBtn = new TextButton("Save & Exit", game.skin);
+        saveBtn.addListener(new HoverListener());
         saveBtn.setPosition(20, Gdx.graphics.getHeight() - 50);
         saveBtn.setSize(120, 40);
         saveBtn.addListener(new ClickListener() {
@@ -267,6 +270,7 @@ public class GameScreen implements Screen {
         summonMenu.setFillParent(true);
 
         TextButton summonBtn = new TextButton("Summon Recruit", game.skin);
+        summonBtn.addListener(new HoverListener());
         summonBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -335,6 +339,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {
+        Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
     }
 
     @Override

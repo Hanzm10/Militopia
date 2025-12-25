@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
+import com.militopia.utils.HoverListener;
 
 public class NewGameScreen implements Screen {
 
@@ -52,7 +53,9 @@ public class NewGameScreen implements Screen {
         errorLabel = new Label("", errorStyle); // Start empty
 
         TextButton startBtn = new TextButton("Start Game", game.skin);
+        startBtn.addListener(new HoverListener());
         TextButton backBtn = new TextButton("Back", game.skin);
+        backBtn.addListener(new HoverListener());
 
         // 3. Layout
         addInputRow(table, "Map Name:", nameField);
