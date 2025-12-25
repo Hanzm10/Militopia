@@ -147,8 +147,8 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
-        camera.zoom += amountY * 0.1f;
-        camera.zoom = MathUtils.clamp(camera.zoom, 0.2f, 3.0f);
+        camera.zoom += amountY * GameConfig.ZOOM_SPEED;
+        camera.zoom = MathUtils.clamp(camera.zoom, GameConfig.ZOOM_MIN, GameConfig.ZOOM_MAX);
         return true;
     }
 

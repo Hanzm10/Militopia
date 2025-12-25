@@ -47,6 +47,7 @@ public class GameScreen implements Screen {
 
     // Systems
     MapRenderSystem mapRenderSystem;
+    UnitRenderSystem unitRenderSystem;
 
     // Factories
     EntityFactory entityFactory;
@@ -59,7 +60,6 @@ public class GameScreen implements Screen {
     BitmapFont font;
 
     SaveManager saveManager; // <--- Add this
-    
 
     // --- 3. STATE (Shared with Controller) ---
     // Public so InputController can update them
@@ -115,8 +115,8 @@ public class GameScreen implements Screen {
         mapRenderSystem = new MapRenderSystem(game.batch, game, gameMap, p1Name, p2Name);
         engine.addSystem(mapRenderSystem);
 
-        // C. Unit Rendering (Priority 1 - Top)
-        engine.addSystem(new UnitRenderSystem(game.batch));
+        unitRenderSystem = new UnitRenderSystem(game.batch); // Store it in the variable!
+        engine.addSystem(unitRenderSystem);
 
         // 5. Restore Units from Save File
         if (loadedState.units != null) {
@@ -169,8 +169,10 @@ public class GameScreen implements Screen {
 
         game.batch.begin();
 
-        // 3. Sync State to Map System (Pass dynamic variables)
+        // 3. Sync State to Map & Unit System (Pass dynamic variables)
         mapRenderSystem.updateState(selectedX, selectedY, bouncingX, bouncingY, bounceTimer);
+        
+        unitRenderSystem.updateState(selectedX, selectedY);
 
         // 4. Run ECS Engine (Draws Map -> Then Units)
         engine.update(delta);

@@ -17,8 +17,13 @@ public class GameConfig {
     
     // mouse/touch x & y adjustment Settings
     public static final float INPUT_OFFSET_Y = -12f;
-    public static final float INPUT_OFFSET_X = -8f;
+    public static final float INPUT_OFFSET_X = -12f;
     
     // Territory Settings
     public static final int BORDER_RADIUS = 2; // "2 tiles wide"
+    
+    // Camera Settings
+    public static final float ZOOM_MIN = 0.2f; // Closest (Zoomed In)
+    public static final float ZOOM_MAX = 2.0f; // Furthest (Zoomed Out)
+    public static final float ZOOM_SPEED = 0.1f; // How fast scrolling zooms
 }

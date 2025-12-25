@@ -47,68 +47,74 @@ public class MapRenderSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
+        // Calculate Global Offsets once per frame
         float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
         float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
 
-        // --- PASS 1: TERRAIN & SELECTION ---
+        // --- PASS 1: TERRAIN (Batch is ALREADY open from GameScreen) ---
         for (int x = gameMap.width - 1; x >= 0; x--) {
             for (int y = gameMap.height - 1; y >= 0; y--) {
-                float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
-                float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
-
-                float animY = 0;
-                if (x == bouncingX && y == bouncingY) {
-                    float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
-                    animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
-                }
-
-                // 1. Determine Terrain Texture 't'
-                Texture t = null;
-                switch (gameMap.terrain[x][y]) {
-                    case GRASS:
-                        t = game.texGrass;
-                        break;
-                    case WATER:
-                        t = game.texWater;
-                        break;
-                    case DEEP_WATER:
-                        t = game.texDeepWater;
-                        break;
-                    case SAND:
-                        t = game.texSand;
-                        break;
-                    case FOREST:
-                        t = game.texForest;
-                        break;
-                }
-
-                // 2. Draw Terrain
-                if (t != null) {
-                    batch.draw(t, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-                }
-
-                // 3. Draw Selection Highlight (MOVED HERE)
-                // Since we still have 't', we can re-draw it with the blend effect
-                if (x == selectedX && y == selectedY) {
-                    Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
-                    batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-                    batch.setColor(0.4f, 0.4f, 0.4f, 1f);
-
-                    if (t != null) {
-                        batch.draw(t, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-                    }
-
-                    batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
-                    batch.setColor(Color.WHITE);
-                }
+                drawTerrainTile(x, y, xOffset, yOffset);
             }
         }
 
-        // --- PASS 2: BORDERS (ShapeRenderer) ---
+        // --- PASS 2: BORDERS (Switch to ShapeRenderer) ---
         batch.end();
+        renderBordersPass();
+        batch.begin();
 
+        // --- PASS 3: OBJECTS (Switch back to Batch) ---
+        for (int x = gameMap.width - 1; x >= 0; x--) {
+            for (int y = gameMap.height - 1; y >= 0; y--) {
+                drawObjectTile(x, y, xOffset, yOffset);
+            }
+        }
+    }
+
+    // ========================================================================
+    //                          HELPER METHODS
+    // ========================================================================
+    private void drawTerrainTile(int x, int y, float xOffset, float yOffset) {
+        float[] coords = getIsoCoords(x, y);
+        float isoX = coords[0];
+        float isoY = coords[1];
+        float animY = coords[2];
+
+        // 1. Get Texture
+        Texture t = null;
+        switch (gameMap.terrain[x][y]) {
+            case GRASS:
+                t = game.texGrass;
+                break;
+            case WATER:
+                t = game.texWater;
+                break;
+            case DEEP_WATER:
+                t = game.texDeepWater;
+                break;
+            case SAND:
+                t = game.texSand;
+                break;
+            case FOREST:
+                t = game.texForest;
+                break;
+        }
+
+        // 2. Draw Base Terrain
+        if (t != null) {
+            batch.draw(t, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        }
+
+        // 3. Draw Floor Highlight (If selected)
+        if (x == selectedX && y == selectedY && t != null) {
+            drawHighlight(t, isoX - xOffset, isoY - yOffset + animY);
+        }
+    }
+
+    private void renderBordersPass() {
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         Gdx.gl.glBlendFunc(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -126,54 +132,76 @@ public class MapRenderSystem extends EntitySystem {
             }
         }
         shapeRenderer.end();
+    }
 
-        batch.begin();
+    private void drawObjectTile(int x, int y, float xOffset, float yOffset) {
+        float[] coords = getIsoCoords(x, y);
+        float isoX = coords[0];
+        float isoY = coords[1];
+        float animY = coords[2];
 
-        // --- PASS 3: OBJECTS ONLY ---
-        for (int x = gameMap.width - 1; x >= 0; x--) {
-            for (int y = gameMap.height - 1; y >= 0; y--) {
-                float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
-                float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
+        // 1. Get Object Texture
+        Texture o = null;
+        switch (gameMap.objects[x][y]) {
+            case BASE_P1:
+                o = game.texBaseP1;
+                break;
+            case BASE_P2:
+                o = game.texBaseP2;
+                break;
+            case BASE_NEUTRAL:
+                o = game.texBaseNeutral;
+                break;
+            case TREE:
+                o = game.texTree;
+                break;
+            case RUINS:
+                o = game.texRuins;
+                break;
+            case OIL:
+                o = game.texOil;
+                break;
+            case CACTUS:
+                o = game.texCactus;
+                break;
+        }
 
-                float animY = 0;
-                if (x == bouncingX && y == bouncingY) {
-                    float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
-                    animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
-                }
+        if (o != null) {
+            float objOffsetX = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+            float surfaceLift = 15f;
+            float drawX = isoX - objOffsetX;
+            float drawY = isoY - yOffset + surfaceLift + animY;
 
-                // Draw Objects (Bases, Trees, etc.)
-                Texture o = null;
-                switch (gameMap.objects[x][y]) {
-                    case BASE_P1:
-                        o = game.texBaseP1;
-                        break;
-                    case BASE_P2:
-                        o = game.texBaseP2;
-                        break;
-                    case BASE_NEUTRAL:
-                        o = game.texBaseNeutral;
-                        break;
-                    case TREE:
-                        o = game.texTree;
-                        break;
-                    case RUINS:
-                        o = game.texRuins;
-                        break;
-                    case OIL:
-                        o = game.texOil;
-                        break;
-                    case CACTUS:
-                        o = game.texCactus;
-                        break;
-                }
+            // 2. Draw Object
+            batch.draw(o, drawX, drawY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
 
-                if (o != null) {
-                    float objOffsetX = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
-                    float surfaceLift = 15f;
-                    batch.draw(o, isoX - objOffsetX, isoY - yOffset + surfaceLift + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-                }
+            // 3. Draw Object Highlight (If selected) - NEW!
+            if (x == selectedX && y == selectedY) {
+                drawHighlight(o, drawX, drawY);
             }
         }
+    }
+
+    // --- SHARED UTILITIES ---
+    private float[] getIsoCoords(int x, int y) {
+        float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
+        float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
+        float animY = 0;
+
+        if (x == bouncingX && y == bouncingY) {
+            float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
+            animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
+        }
+        return new float[]{isoX, isoY, animY};
+    }
+
+    private void drawHighlight(Texture t, float x, float y) {
+        Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
+        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
+        batch.setColor(0.4f, 0.4f, 0.4f, 1f); // Glow Intensity
+        batch.draw(t, x, y, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+        batch.setColor(Color.WHITE);
     }
 
     private void drawSmartBorders(int x, int y, int currentOwner) {
