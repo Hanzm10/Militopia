@@ -56,6 +56,7 @@ public class UnitRenderSystem extends EntitySystem {
             TextureComponent tex = e.getComponent(TextureComponent.class);
             MovementComponent move = e.getComponent(MovementComponent.class);
             TypeComponent typeC = e.getComponent(TypeComponent.class);
+            StatsComponent stats = e.getComponent(StatsComponent.class);
 
             float isoX, isoY;
 
@@ -81,11 +82,30 @@ public class UnitRenderSystem extends EntitySystem {
             boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
             float verticalOffset = isMarker ? 7.5f : 15f;
 
+            // --- COLOR TINTING LOGIC ---            
+            if (typeC.type == TypeComponent.Type.MARKER) {
+                // FORCE MARKERS TO ALWAYS BE WHITE
+                batch.setColor(Color.WHITE);
+            } 
+            else if (stats != null && stats.owner == 2) {
+                // Tint Red ONLY if it is a Player 2 Unit
+                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); 
+            } else if (stats != null && stats.owner == 1) {
+                // Tint Blue for Player 1
+                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
+            }
+            else {
+                // Default White for Player 1 Units
+                batch.setColor(Color.WHITE);
+            }
+
             // Draw Normal Unit
             batch.draw(tex.region,
                     isoX - xOffset,
                     isoY - yOffset + verticalOffset,
                     GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+            
+            batch.setColor(Color.WHITE);
 
             // --- HIGHLIGHT LOGIC (NEW) ---
             // We only highlight UNITs (not markers) and only if mouse is over them

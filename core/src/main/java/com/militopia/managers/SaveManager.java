@@ -12,20 +12,22 @@ import com.militopia.data.GameState;
 import com.militopia.data.UnitData;
 import com.militopia.data.UnitData;
 import com.militopia.components.GridPositionComponent;
+import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 
 public class SaveManager {
 
     /**
      * Saves the current game state to a JSON file.
-     * * @param seed      The map seed
-     * @param p1Name    Player 1 Name
-     * @param p2Name    Player 2 Name
-     * @param saveName  The filename (without .json)
-     * @param engine    The ECS engine (to find and save units)
+     *
+     * * @param seed The map seed
+     * @param p1Name Player 1 Name
+     * @param p2Name Player 2 Name
+     * @param saveName The filename (without .json)
+     * @param engine The ECS engine (to find and save units)
      */
     public void saveGame(long seed, String p1Name, String p2Name, String saveName, PooledEngine engine) {
-        
+
         // 1. Create the Data Container
         GameState state = new GameState(seed, p1Name, p2Name, saveName);
 
@@ -35,14 +37,13 @@ public class SaveManager {
 
         for (Entity e : entities) {
             TypeComponent type = e.getComponent(TypeComponent.class);
-            
-            // Only save actual UNITs (Ignore markers, effects, etc.)
+
             if (type.type == TypeComponent.Type.UNIT) {
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
-                
-                // Currently hardcoded to "RECRUIT". 
-                // Later, you can check StatsComponent to save "TANK", "ARCHER", etc.
-                state.units.add(new UnitData(pos.x, pos.y, "RECRUIT"));
+                StatsComponent stats = e.getComponent(StatsComponent.class); // <--- GET STATS
+
+                // Pass stats.owner to the new UnitData constructor
+                state.units.add(new UnitData(pos.x, pos.y, "RECRUIT", stats.owner));
             }
         }
 

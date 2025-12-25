@@ -17,7 +17,7 @@ public class UnitFactory {
         texRecruit = new Texture("unit_recruit.png"); 
     }
 
-    public void createRecruit(int x, int y) {
+    public void createRecruit(int x, int y, int owner) {
         Entity entity = engine.createEntity();
 
         // 1. Position & Visuals
@@ -27,7 +27,7 @@ public class UnitFactory {
 
         // 2. Stats & Constraints (The new part)
         // Name: Recruit, Range: 3, HP: 10, Atk: 5, Type: LAND
-        entity.add(new StatsComponent("Recruit", 1, 10, 5, StatsComponent.MoveType.LAND));
+        entity.add(new StatsComponent("Recruit", 1, 10, 5, StatsComponent.MoveType.LAND, owner));
 
         engine.addEntity(entity);
     }

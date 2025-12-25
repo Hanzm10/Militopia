@@ -86,7 +86,7 @@ public class NewGameScreen implements Screen {
                         seed = seedField.getText().hashCode();
                     }
 
-                    GameState newState = new GameState(seed, p1Field.getText(), p2Field.getText(), "Save_" + seed);
+                    GameState newState = new GameState(seed, p1Field.getText(), p2Field.getText(), nameField.getText() + '_' + seed);
                     game.setScreen(new GameScreen(game, newState));
                 }
             }

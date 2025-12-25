@@ -94,10 +94,12 @@ public class GameInputController extends InputAdapter {
 
             // --- PRIORITY 3: CLICKED BASE? (Summon Menu) ---
             MapGenerator.ObjectType obj = gameMap.objects[gridX][gridY];
-            if (obj == MapGenerator.ObjectType.BASE_P1) {
+
+            // Allow clicking BOTH P1 and P2 bases
+            if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
                 lastClickedX = gridX;
                 lastClickedY = gridY;
-                summonMenu.setVisible(true);
+                summonMenu.setVisible(true); // Open the menu
                 return true;
             }
 

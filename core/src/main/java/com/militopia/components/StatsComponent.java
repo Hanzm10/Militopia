@@ -13,14 +13,16 @@ public class StatsComponent implements Component {
     public int currentHealth;
     public int attackDamage;
     public String name;
-    public MoveType moveType; // <-- NEW: Determines where it can walk
+    public MoveType moveType;
+    public int owner;
 
-    public StatsComponent(String name, int range, int hp, int atk, MoveType type) {
+    public StatsComponent(String name, int range, int hp, int atk, MoveType type, int owner) {
         this.name = name;
         this.moveRange = range;
         this.maxHealth = hp;
         this.currentHealth = hp;
         this.attackDamage = atk;
         this.moveType = type;
+        this.owner = owner;
     }
 }

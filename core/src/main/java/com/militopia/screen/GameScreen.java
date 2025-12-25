@@ -122,7 +122,8 @@ public class GameScreen implements Screen {
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if (u.type.equals("RECRUIT")) {
-                    unitFactory.createRecruit(u.x, u.y);
+                    // Pass the saved owner ID (1 or 2)
+                    unitFactory.createRecruit(u.x, u.y, u.owner);
                 }
             }
         }
@@ -171,7 +172,7 @@ public class GameScreen implements Screen {
 
         // 3. Sync State to Map & Unit System (Pass dynamic variables)
         mapRenderSystem.updateState(selectedX, selectedY, bouncingX, bouncingY, bounceTimer);
-        
+
         unitRenderSystem.updateState(selectedX, selectedY);
 
         // 4. Run ECS Engine (Draws Map -> Then Units)
@@ -269,12 +270,19 @@ public class GameScreen implements Screen {
         summonBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // Ask controller where the last base click was
                 int tx = inputController.getLastClickedX();
                 int ty = inputController.getLastClickedY();
 
                 if (tx != -1 && ty != -1) {
-                    unitFactory.createRecruit(tx, ty);
+                    // Check the map to see WHO owns this base
+                    int owner = 1; // Default P1
+                    if (gameMap.objects[tx][ty] == MapGenerator.ObjectType.BASE_P2) {
+                        owner = 2; // It's a P2 Base
+                    }
+
+                    // Create the unit with the correct owner
+                    unitFactory.createRecruit(tx, ty, owner);
+
                     summonMenu.setVisible(false);
                     inputController.resetLastClicked();
                 }
