@@ -23,6 +23,8 @@ public class UnitRenderSystem extends EntitySystem {
 
     // State for Highlighting
     private int selectedX = -1, selectedY = -1;
+    private int bouncingX = -1, bouncingY = -1;
+    private float bounceTimer = 0;
 
     public UnitRenderSystem(SpriteBatch batch) {
         this.batch = batch;
@@ -31,9 +33,12 @@ public class UnitRenderSystem extends EntitySystem {
     }
 
     // Call this from GameScreen to sync mouse position
-    public void updateState(int x, int y) {
-        this.selectedX = x;
-        this.selectedY = y;
+    public void updateState(int selX, int selY, int bX, int bY, float bTimer) {
+        this.selectedX = selX;
+        this.selectedY = selY;
+        this.bouncingX = bX;
+        this.bouncingY = bY;
+        this.bounceTimer = bTimer;
     }
 
     @Override
@@ -75,26 +80,31 @@ public class UnitRenderSystem extends EntitySystem {
                 isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
             }
 
+            float animY = 0;
+
+            if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
+                float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
+                animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
+            }
+
             // --- DRAWING ---
             float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
             float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
 
             boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
-            float verticalOffset = isMarker ? 7.5f : 15f;
+            float verticalOffset = isMarker ? 5f : 10f;
 
             // --- COLOR TINTING LOGIC ---            
             if (typeC.type == TypeComponent.Type.MARKER) {
                 // FORCE MARKERS TO ALWAYS BE WHITE
                 batch.setColor(Color.WHITE);
-            } 
-            else if (stats != null && stats.owner == 2) {
+            } else if (stats != null && stats.owner == 2) {
                 // Tint Red ONLY if it is a Player 2 Unit
-                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); 
+                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
             } else if (stats != null && stats.owner == 1) {
                 // Tint Blue for Player 1
                 batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
-            }
-            else {
+            } else {
                 // Default White for Player 1 Units
                 batch.setColor(Color.WHITE);
             }
@@ -102,9 +112,9 @@ public class UnitRenderSystem extends EntitySystem {
             // Draw Normal Unit
             batch.draw(tex.region,
                     isoX - xOffset,
-                    isoY - yOffset + verticalOffset,
+                    isoY - yOffset + verticalOffset + animY,
                     GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-            
+
             batch.setColor(Color.WHITE);
 
             // --- HIGHLIGHT LOGIC (NEW) ---
@@ -116,7 +126,7 @@ public class UnitRenderSystem extends EntitySystem {
 
                 batch.draw(tex.region,
                         isoX - xOffset,
-                        isoY - yOffset + verticalOffset,
+                        isoY - yOffset + verticalOffset + animY,
                         GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
 
                 batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);

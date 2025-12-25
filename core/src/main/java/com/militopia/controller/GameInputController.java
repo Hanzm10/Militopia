@@ -4,6 +4,8 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.MathUtils;
@@ -70,7 +72,6 @@ public class GameInputController extends InputAdapter {
         // 2. Update GameScreen Selection State (For rendering)
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
             screen.updateSelection(gridX, gridY); // Helper we will make in GameScreen
-            screen.triggerBounce(gridX, gridY);   // Helper we will make in GameScreen
 
             // --- PRIORITY 1: CLICKED MARKER? (Move Unit) ---
             Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
@@ -78,6 +79,8 @@ public class GameInputController extends InputAdapter {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
             }
+
+            screen.triggerBounce(gridX, gridY);
 
             // --- RESET STATE ---
             clearMarkers();
@@ -139,12 +142,20 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        float deltaX = lastTouchX - screenX;
-        float deltaY = screenY - lastTouchY;
-        camera.translate(deltaX * camera.zoom, deltaY * camera.zoom);
-        lastTouchX = screenX;
-        lastTouchY = screenY;
-        return true;
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+            float x = Gdx.input.getDeltaX();
+            float y = Gdx.input.getDeltaY();
+
+            // Multiply by DRAG_SPEED to slow it down
+            camera.translate(
+                    -x * camera.zoom * GameConfig.DRAG_SPEED,
+                    y * camera.zoom * GameConfig.DRAG_SPEED
+            );
+
+            camera.update();
+            return true;
+        }
+        return false;
     }
 
     @Override

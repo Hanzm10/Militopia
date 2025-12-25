@@ -168,7 +168,7 @@ public class MapRenderSystem extends EntitySystem {
 
         if (o != null) {
             float objOffsetX = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
-            float surfaceLift = 15f;
+            float surfaceLift = 10f;
             float drawX = isoX - objOffsetX;
             float drawY = isoY - yOffset + surfaceLift + animY;
 
@@ -212,7 +212,7 @@ public class MapRenderSystem extends EntitySystem {
 
         float drawX = isoX - xOffset;
         float centerX = drawX + (GameConfig.DRAW_WIDTH / 2f);
-        float surfaceLift = 15f;
+        float surfaceLift = 10f;
         float centerY = isoY + surfaceLift;
 
         // 2. DIMENSIONS
@@ -230,7 +230,7 @@ public class MapRenderSystem extends EntitySystem {
         float leftY = centerY;
 
         // 4. SETTINGS
-        float thick = 3.0f;
+        float thick = 2.0f;
         float jointSize = thick / 2f; // Radius of the corner cap
 
         // 5. CHECK NEIGHBORS & DRAW LINES + JOINTS

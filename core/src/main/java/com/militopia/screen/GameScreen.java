@@ -96,9 +96,10 @@ public class GameScreen implements Screen {
 
         // 1. Setup Camera & Viewport
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-        camera.zoom = 1.0f;
-        viewport = new FitViewport(GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT, camera);
+        camera.setToOrtho(false, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
+        camera.zoom = GameConfig.STARTUP_ZOOM;
+        // Use WORLD dimensions for the Viewport
+        viewport = new FitViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
 
         // 2. Setup ECS Engine & Factories
         engine = new PooledEngine();
@@ -184,8 +185,7 @@ public class GameScreen implements Screen {
 
         // 3. Sync State to Map & Unit System (Pass dynamic variables)
         mapRenderSystem.updateState(selectedX, selectedY, bouncingX, bouncingY, bounceTimer);
-
-        unitRenderSystem.updateState(selectedX, selectedY);
+        unitRenderSystem.updateState(selectedX, selectedY, bouncingX, bouncingY, bounceTimer);
 
         // 4. Run ECS Engine (Draws Map -> Then Units)
         engine.update(delta);
@@ -238,7 +238,7 @@ public class GameScreen implements Screen {
         float barWidth = 40f;
         float barHeight = 6f;
         float xOffset = (GameConfig.DRAW_WIDTH - barWidth) / 2f;
-        float yOffset = 15f; // Lift above dirt
+        float yOffset = 8f; // Lift above dirt
 
         // Draw Bar Background
         game.batch.setColor(Color.BLACK);
@@ -297,8 +297,10 @@ public class GameScreen implements Screen {
         summonMenu.setVisible(false); // Hidden by default
         summonMenu.setBackground(game.skin.newDrawable("white", Color.DARK_GRAY)); // Grey background
         summonMenu.setSize(200, 150);
-        summonMenu.setPosition(GameConfig.DRAW_WIDTH / 2f - 100, GameConfig.DRAW_HEIGHT / 2f - 75); // Center it
-
+        summonMenu.setPosition(
+                (GameConfig.WORLD_WIDTH - 200) / 2f,
+                100
+        );
         Label summonLabel = new Label("Summon Unit", game.skin);
         TextButton recruitBtn = new TextButton("Recruit", game.skin);
         TextButton cancelBtn = new TextButton("Cancel", game.skin);
@@ -492,12 +494,21 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        // Update Viewport
-        viewport.update(width, height);
+        // 1. Update World Viewport (Keep 'false' to avoid resetting camera pos)
+        viewport.update(width, height, false);
 
-        // Update UI Stage (CHANGE 'hudStage' TO 'stage')
+        // 2. Update UI Stage (This resizes the stage to match the new window)
         if (stage != null) {
             stage.getViewport().update(width, height, true);
+        }
+
+        // 3. RE-CENTER THE SUMMON MENU
+        // Now that stage.getWidth() returns the NEW screen width, we recalculate.
+        if (summonMenu != null) {
+            summonMenu.setPosition(
+                    (stage.getWidth() - summonMenu.getWidth()) / 2f,
+                    100 // Keep the Y height fixed at 100
+            );
         }
     }
 
