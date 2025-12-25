@@ -59,6 +59,7 @@ public class GameScreen implements Screen {
     BitmapFont font;
 
     SaveManager saveManager; // <--- Add this
+    
 
     // --- 3. STATE (Shared with Controller) ---
     // Public so InputController can update them

@@ -19,4 +19,6 @@ public class GameConfig {
     public static final float INPUT_OFFSET_Y = -12f;
     public static final float INPUT_OFFSET_X = -8f;
     
+    // Territory Settings
+    public static final int BORDER_RADIUS = 2; // "2 tiles wide"
 }
