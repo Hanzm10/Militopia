@@ -55,6 +55,8 @@ public class UnitRenderSystem extends EntitySystem {
         }
         Collections.sort(sortedEntities, comparator);
 
+        batch.begin(); // <--- Start
+        
         // 2. Draw Loop
         for (Entity e : sortedEntities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
@@ -133,5 +135,7 @@ public class UnitRenderSystem extends EntitySystem {
                 batch.setColor(Color.WHITE);
             }
         }
+        
+        batch.end(); // <--- End
     }
 }

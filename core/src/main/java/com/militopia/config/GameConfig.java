@@ -6,11 +6,11 @@ public class GameConfig {
     public static final int MAP_WIDTH = 32;  
     public static final int MAP_HEIGHT = 32; 
     //size of tiles
-    public static final int TILE_WIDTH = 18;
+    public static final int TILE_WIDTH = 16;
     public static final int TILE_HEIGHT = 10;
 
     // Drawing Settings
-    public static final float DRAW_WIDTH = 20f;
+    public static final float DRAW_WIDTH = 18f;
     public static final float DRAW_HEIGHT = 20f;
 
     public static final float WORLD_WIDTH = 640f;
@@ -35,4 +35,7 @@ public class GameConfig {
     
     // Drag Sensitivity (Lower = Slower/Smoother)
     public static final float DRAG_SPEED = 0.35f;
+    
+    //UI LAYOUT SETTINGS
+    public static final float UI_WIDTH = 300f;
 }

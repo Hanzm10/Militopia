@@ -50,7 +50,7 @@ public class MapRenderSystem extends EntitySystem {
         // Calculate Global Offsets once per frame
         float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
         float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
-
+        batch.begin(); // <--- ADD THIS LINE
         // --- PASS 1: TERRAIN (Batch is ALREADY open from GameScreen) ---
         for (int x = gameMap.width - 1; x >= 0; x--) {
             for (int y = gameMap.height - 1; y >= 0; y--) {
@@ -69,6 +69,7 @@ public class MapRenderSystem extends EntitySystem {
                 drawObjectTile(x, y, xOffset, yOffset);
             }
         }
+        batch.end(); // <--- ADD THIS LINE
     }
 
     // ========================================================================
