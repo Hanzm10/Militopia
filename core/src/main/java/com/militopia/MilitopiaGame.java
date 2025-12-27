@@ -23,9 +23,9 @@ public class MilitopiaGame extends Game {
     public SpriteBatch batch;
     public Skin skin;
 
-    public Texture texGrass, texWater, texDeepWater, texSand, texForest;
-    public Texture texBaseP1, texBaseP2, texBaseNeutral;
-    public Texture texTree, texRuins, texOil, texCactus;
+    public Texture texGrass, texWater, texDeepWater, texSand, texMountain;
+    public Texture texBaseP1, texBaseP2, texTown;
+    public Texture texTree, texRuins, texOil, texCactus, texMountainObj;
 
     @Override
     public void create() {
@@ -64,16 +64,17 @@ public class MilitopiaGame extends Game {
         texWater = new Texture("tile_water.png");
         texDeepWater = new Texture("tile_deepwater.png");
         texSand = new Texture("tile_sand.png");
-        texForest = new Texture("tile_forest.png"); // Darker grass usually
+        texMountain = new Texture("tile_mountain.png"); 
 
         // Load Objects (You can find specific sprites for these later)
         texBaseP1 = new Texture("struct_base_blue.png");
         texBaseP2 = new Texture("struct_base_red.png");
-        texBaseNeutral = new Texture("struct_base_neutral.png");
+        texTown = new Texture("struct_town.png");
         texTree = new Texture("obj_tree.png");
         texRuins = new Texture("obj_ruins.png");
         texOil = new Texture("obj_oil.png");
         texCactus = new Texture("obj_cactus.png");
+        texMountainObj = new Texture("obj_mountain.png");
 
         this.setScreen(new MenuScreen(this));
     }
@@ -134,15 +135,16 @@ public class MilitopiaGame extends Game {
         texWater.dispose();
         texDeepWater.dispose();
         texSand.dispose();
-        texForest.dispose(); // Darker grass usually
+        texMountain.dispose(); // Darker grass usually
 
         // Load Objects (You can find specific sprites for these later)
         texBaseP1.dispose();
         texBaseP2.dispose();
-        texBaseNeutral.dispose();
+        texTown.dispose();
         texTree.dispose();
         texRuins.dispose();
         texOil.dispose();
         texCactus.dispose();
+        texMountainObj.dispose();
     }
 }

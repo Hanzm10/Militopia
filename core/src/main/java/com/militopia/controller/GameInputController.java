@@ -46,6 +46,9 @@ public class GameInputController extends InputAdapter {
     //Track Hover Position
     private int hoveredX = -1, hoveredY = -1;
 
+    // Selection Cycling State
+    private int selectionIndex = 0;
+
     // Add getters for the renderer to use
     public int getHoveredX() {
         return hoveredX;
@@ -124,94 +127,74 @@ public class GameInputController extends InputAdapter {
         float halfW = GameConfig.TILE_WIDTH / 2.0f;
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
 
-        // Calculate Grid Coords
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
-
-        // Update global last clicked immediately for renderers
-        lastClickedX = gridX;
-        lastClickedY = gridY;
 
         System.out.println("Clicked Grid: " + gridX + ", " + gridY);
 
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
 
-            // 1. CLICKED MARKER? (Move Unit)
+            // --- PRIORITY 0: MOVEMENT (Always Check First) ---
+            // If we have a unit selected and we click a valid Move Marker, 
+            // we MOVE. We do NOT cycle selection here.
             Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
             if (clickedMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
             }
 
-            String infoName = "Unknown";
-            TextureRegion infoRegion = null;
-
-            // Check 1: Is there a Unit?
-            Entity unit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
-            if (unit != null) {
-                infoName = "Unit"; // Or get specific name from stats
-                TextureComponent tex = unit.getComponent(TextureComponent.class);
-                if (tex != null) {
-                    infoRegion = tex.region;
-                }
-
-                // Keep selection logic
-                selectedUnitEntity = unit;
-                showMovementMarkers(gridX, gridY);
-            } else if (gameMap.objects[gridX][gridY] != MapGenerator.ObjectType.NONE) {
-                MapGenerator.ObjectType obj = gameMap.objects[gridX][gridY];
-                infoName = obj.toString(); // e.g. "BASE_P1"
-
-                // To get the texture, we might need a lookup or grab from assets.
-                // For now, let's just grab the terrain texture as a fallback placeholder
-                // or you need to pass your AssetManager/Atlas to the controller.
-                // Simplified: Just use the terrain underneath for now:
-                infoRegion = unitFactory.getTextureForTerrain(gameMap.terrain[gridX][gridY].ordinal());
+            // --- SELECTION CYCLING LOGIC ---
+            // 1. Check if we clicked the SAME tile as before
+            if (gridX == lastClickedX && gridY == lastClickedY) {
+                selectionIndex++; // Go to next item
             } else {
-                MapGenerator.TerrainType type = gameMap.terrain[gridX][gridY];
-
-                // Compare Enum directly for the Name
-                // (Modify these Enums to match exactly what is in your MapGenerator)
-                if (type == MapGenerator.TerrainType.WATER || type == MapGenerator.TerrainType.DEEP_WATER) {
-                    infoName = "Water";
-                } else {
-                    infoName = "Ground";
-                }
-
-                // 3. FIX: Pass the .ordinal() (ID number) to the factory
-                // Since UnitFactory expects an 'int', we convert the Enum to its number here.
-                infoRegion = unitFactory.getTextureForTerrain(type.ordinal());
+                selectionIndex = 0; // New tile, start at top
             }
 
-            if (infoRegion != null) {
-                gameHUD.showTileInfo(infoName, infoRegion);
+            // Update Global Last Clicked
+            lastClickedX = gridX;
+            lastClickedY = gridY;
+
+            // 2. Build the Stack of Selectable Things (Top to Bottom)
+            // Use a simple List or ArrayList to hold the "types" of things found
+            java.util.List<String> selectionStack = new java.util.ArrayList<>();
+
+            Entity foundUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+            MapGenerator.ObjectType foundObject = gameMap.objects[gridX][gridY];
+            boolean hasObject = (foundObject != MapGenerator.ObjectType.NONE);
+
+            // LAYER 1: UNIT (Z-Index High)
+            if (foundUnit != null) {
+                selectionStack.add("UNIT");
             }
 
-            // 2. TRIGGER ANIMATION
-            triggerBounce(gridX, gridY);
+            // LAYER 2: OBJECT/BASE (Z-Index Medium)
+            if (hasObject) {
+                selectionStack.add("OBJECT");
+            }
 
-            // 3. RESET SELECTION
+            // LAYER 3: TERRAIN (Z-Index Low - Always there)
+            selectionStack.add("TERRAIN");
+
+            // 3. Pick the Target based on Index
+            // The modulo (%) operator makes it loop safely (0, 1, 2, 0, 1...)
+            String targetType = selectionStack.get(selectionIndex % selectionStack.size());
+
+            // 4. RESET UI STATE (Before selecting new thing)
             clearMarkers();
-            // Don't nullify selectedUnitEntity yet, check if we clicked a NEW unit below
-            Entity oldSelection = selectedUnitEntity;
+            // Don't nullify selectedUnitEntity if we are just clicking the same unit again,
+            // but for safety, let's re-select it explicitly below.
             selectedUnitEntity = null;
             gameHUD.summonMenu.setVisible(false);
+            triggerBounce(gridX, gridY);
 
-            // 4. CLICKED UNIT? (Select Unit)
-            Entity clickedUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
-            if (clickedUnit != null) {
-                selectedUnitEntity = clickedUnit;
-                // Show range based on unit stats
-                showMovementMarkers(gridX, gridY);
-                return true;
-            }
-
-            // 5. CLICKED BASE? (Open Menu)
-            MapGenerator.ObjectType obj = gameMap.objects[gridX][gridY];
-            if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
-                int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
-                gameHUD.openSummonMenu(owner);
-                return true;
+            // 5. EXECUTE SELECTION
+            if (targetType.equals("UNIT")) {
+                handleUnitSelection(foundUnit, gridX, gridY);
+            } else if (targetType.equals("OBJECT")) {
+                handleObjectSelection(foundObject, gridX, gridY);
+            } else if (targetType.equals("TERRAIN")) {
+                handleTerrainSelection(gridX, gridY);
             }
 
         } else {
@@ -222,8 +205,49 @@ public class GameInputController extends InputAdapter {
             gameHUD.hideTileInfo();
             lastClickedX = -1;
             lastClickedY = -1;
+            selectionIndex = 0; // Reset
         }
         return true;
+    }
+
+    // 1. HANDLE UNIT SELECTION
+    private void handleUnitSelection(Entity unit, int x, int y) {
+        selectedUnitEntity = unit;
+        showMovementMarkers(x, y);
+
+        // Use Factory to get consistent Name and Icon
+        // (Later you can get specific type from StatsComponent)
+        UnitFactory.UiInfo info = unitFactory.getUnitUi("RECRUIT");
+
+        gameHUD.showTileInfo(info.name, info.region);
+        System.out.println("Selected: " + info.name);
+    }
+
+    // 2. HANDLE OBJECT SELECTION
+    private void handleObjectSelection(MapGenerator.ObjectType obj, int x, int y) {
+        // Use Factory lookup
+        UnitFactory.UiInfo info = unitFactory.getObjectUi(obj);
+
+        gameHUD.showTileInfo(info.name, info.region);
+
+        // Logic for opening menu remains the same
+        if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
+            int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
+            gameHUD.openSummonMenu(owner);
+        }
+
+        System.out.println("Selected: " + info.name);
+    }
+
+    // 3. HANDLE TERRAIN SELECTION
+    private void handleTerrainSelection(int x, int y) {
+        MapGenerator.TerrainType type = gameMap.terrain[x][y];
+
+        // Use Factory lookup
+        UnitFactory.UiInfo info = unitFactory.getTerrainUi(type);
+
+        gameHUD.showTileInfo(info.name, info.region);
+        System.out.println("Selected: " + info.name);
     }
 
     @Override

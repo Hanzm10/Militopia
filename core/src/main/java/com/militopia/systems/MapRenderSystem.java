@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.militopia.config.GameConfig;
 import com.militopia.map.MapGenerator;
 import com.militopia.MilitopiaGame;
+import static com.militopia.map.MapGenerator.ObjectType.CACTUS;
 
 public class MapRenderSystem extends EntitySystem {
 
@@ -96,8 +97,8 @@ public class MapRenderSystem extends EntitySystem {
             case SAND:
                 t = game.texSand;
                 break;
-            case FOREST:
-                t = game.texForest;
+            case MOUNTAIN:
+                t = game.texMountain;
                 break;
         }
 
@@ -150,8 +151,8 @@ public class MapRenderSystem extends EntitySystem {
             case BASE_P2:
                 o = game.texBaseP2;
                 break;
-            case BASE_NEUTRAL:
-                o = game.texBaseNeutral;
+            case TOWN:
+                o = game.texTown;
                 break;
             case TREE:
                 o = game.texTree;
@@ -164,6 +165,9 @@ public class MapRenderSystem extends EntitySystem {
                 break;
             case CACTUS:
                 o = game.texCactus;
+                break;
+            case MOUNTAIN_OBJ:
+                o = game.texMountainObj;
                 break;
         }
 

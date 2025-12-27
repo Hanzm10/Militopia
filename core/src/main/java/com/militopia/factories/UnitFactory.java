@@ -11,30 +11,98 @@ public class UnitFactory {
 
     private final PooledEngine engine;
 
-    // --- 1. STORE TEXTURE REGIONS ---
-    private final TextureRegion recruitLeftRegion;
+    // --- TEXTURE REGIONS ---
     private final TextureRegion recruitRightRegion;
+    private final TextureRegion recruitLeftRegion;
 
-    // Terrain Textures
+    // Terrain
     private final TextureRegion grassRegion;
     private final TextureRegion waterRegion;
     private final TextureRegion deepWaterRegion;
+    private final TextureRegion sandRegion;
+    private final TextureRegion mountainRegion;
+
+    // Objects (NEW!)
+    private final TextureRegion treeRegion;
+    private final TextureRegion ruinsRegion;
+    private final TextureRegion baseP1Region;
+    private final TextureRegion baseP2Region;
+    private final TextureRegion townRegion;
+    private final TextureRegion oilRegion;
+    private final TextureRegion cactusRegion;
+    private final TextureRegion mountainObjRegion;
 
     public UnitFactory(PooledEngine engine) {
         this.engine = engine;
 
-        // --- 2. LOAD TEXTURES ---
-        // Unit Assets
-        Texture texRight = new Texture("recruit_right.png");
-        Texture texLeft = new Texture("recruit_left.png");
-        this.recruitRightRegion = new TextureRegion(texRight);
-        this.recruitLeftRegion = new TextureRegion(texLeft);
+        // 1. Load Unit
+        this.recruitRightRegion = new TextureRegion(new Texture("recruit_right.png"));
+        this.recruitLeftRegion = new TextureRegion(new Texture("recruit_left.png"));
 
-        // Terrain Assets (Assuming these file names exist in your assets folder!)
-        // Make sure you actually have these .png files
+        // 2. Load Terrain (Ensure these files exist!)
         this.grassRegion = new TextureRegion(new Texture("tile_grass.png"));
         this.waterRegion = new TextureRegion(new Texture("tile_water.png"));
         this.deepWaterRegion = new TextureRegion(new Texture("tile_deepwater.png"));
+        this.sandRegion = new TextureRegion(new Texture("tile_sand.png"));
+        this.mountainRegion = new TextureRegion(new Texture("tile_mountain.png"));
+
+        // 3. Load Objects (Ensure these files exist!)
+        // Use your actual file names here. If you don't have one, reuse a placeholder.
+        this.treeRegion = new TextureRegion(new Texture("obj_tree.png"));
+        this.ruinsRegion = new TextureRegion(new Texture("obj_ruins.png"));
+        this.baseP1Region = new TextureRegion(new Texture("struct_base_blue.png"));
+        this.baseP2Region = new TextureRegion(new Texture("struct_base_red.png"));
+        this.townRegion = new TextureRegion(new Texture("struct_town.png"));
+        this.oilRegion = new TextureRegion(new Texture("obj_oil.png"));
+        this.cactusRegion = new TextureRegion(new Texture("obj_cactus.png"));
+        this.mountainObjRegion = new TextureRegion(new Texture("obj_mountain.png"));
+
+    }
+
+    public UiInfo getTerrainUi(MapGenerator.TerrainType type) {
+        switch (type) {
+            case WATER:
+                return new UiInfo("Shallow Water", waterRegion);
+            case DEEP_WATER:
+                return new UiInfo("Deep Ocean", deepWaterRegion);
+            case SAND:
+                return new UiInfo("Desert", sandRegion);
+            case MOUNTAIN:
+                return new UiInfo("Mountain Range", mountainRegion);
+            default:
+                return new UiInfo("Grassland", grassRegion);
+        }
+    }
+
+    public UiInfo getObjectUi(MapGenerator.ObjectType type) {
+        switch (type) {
+            case BASE_P1:
+                return new UiInfo("Blue Base", baseP1Region);
+            case BASE_P2:
+                return new UiInfo("Red Base", baseP2Region);
+            case TOWN:
+                return new UiInfo("Town", townRegion);
+            case TREE:
+                return new UiInfo("Oak Tree", treeRegion);
+            case RUINS:
+                return new UiInfo("Ancient Ruins", ruinsRegion);
+            case OIL:
+                return new UiInfo("Oil Reservoir", oilRegion);
+            case CACTUS:
+                return new UiInfo("Cactus", cactusRegion);
+            case MOUNTAIN_OBJ:
+                return new UiInfo("Mountain", mountainObjRegion); // New Case
+            default:
+                return new UiInfo("Unknown Object", grassRegion);
+        }
+    }
+
+    public UiInfo getUnitUi(String unitType) {
+        // You can expand this switch when you add Tanks/Planes
+        if ("RECRUIT".equals(unitType)) {
+            return new UiInfo("Infantry Recruit", recruitRightRegion);
+        }
+        return new UiInfo("Unknown Unit", recruitRightRegion);
     }
 
     public void createRecruit(int x, int y, int owner) {
@@ -78,6 +146,19 @@ public class UnitFactory {
             return deepWaterRegion;
         } else {
             return grassRegion;
+        }
+
+    }
+
+    // Simple container for HUD data
+    public static class UiInfo {
+
+        public String name;
+        public TextureRegion region;
+
+        public UiInfo(String name, TextureRegion region) {
+            this.name = name;
+            this.region = region;
         }
     }
 }
