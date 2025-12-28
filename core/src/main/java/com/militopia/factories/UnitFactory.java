@@ -161,4 +161,32 @@ public class UnitFactory {
             this.region = region;
         }
     }
+
+    public void createObjectEntity(int x, int y, MapGenerator.ObjectType type) {
+        UiInfo info = getObjectUi(type);
+        if (info.region == null) {
+            return;
+        }
+
+        Entity entity = engine.createEntity();
+
+        // 1. Position (Z-Index 1: Between floor and units)
+        // Note: The ZComparator will prioritize Y-sorting, so zIndex is just a tie-breaker.
+        entity.add(new GridPositionComponent(x, y, 1));
+
+        // 2. Texture
+        entity.add(new TextureComponent(info.region));
+
+        // 3. Type (Important for the RenderSystem to not crash)
+        // We reuse 'MARKER' or 'UNIT' for now if you don't have an 'OBJECT' enum in TypeComponent.
+        // It's safer to add a dummy type so the renderer knows it's not a Unit (no HP bar, etc).
+        // Assuming you have Type.MARKER, we use that to treat it as a "prop".
+        entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
+
+        // 4. Stats (Optional) - Add this if you want to click it and see a name!
+        // We use owner=0 (Neutral)
+        entity.add(new StatsComponent(info.name, 0, 0, 0, StatsComponent.MoveType.LAND, 0));
+
+        engine.addEntity(entity);
+    }
 }

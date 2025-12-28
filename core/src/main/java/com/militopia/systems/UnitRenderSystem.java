@@ -55,19 +55,20 @@ public class UnitRenderSystem extends EntitySystem {
         }
         Collections.sort(sortedEntities, comparator);
 
-        batch.begin(); // <--- Start
-        
-        // 2. Draw Loop
+        batch.begin();
+
         for (Entity e : sortedEntities) {
+            // Get Components (Use Safe Checks!)
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TextureComponent tex = e.getComponent(TextureComponent.class);
-            MovementComponent move = e.getComponent(MovementComponent.class);
-            TypeComponent typeC = e.getComponent(TypeComponent.class);
-            StatsComponent stats = e.getComponent(StatsComponent.class);
+            MovementComponent move = e.getComponent(MovementComponent.class); // Can be null!
+            TypeComponent typeC = e.getComponent(TypeComponent.class);       // Can be null!
+            StatsComponent stats = e.getComponent(StatsComponent.class);     // Can be null!
 
             float isoX, isoY;
 
             // --- ANIMATION CALCULATION ---
+            // Check if 'move' exists before using it
             if (move != null) {
                 float alpha = Math.min(move.time / move.duration, 1.0f);
                 float startIsoX = (move.startX - move.startY) * (GameConfig.TILE_WIDTH / 2.0f);
@@ -83,7 +84,7 @@ public class UnitRenderSystem extends EntitySystem {
             }
 
             float animY = 0;
-
+            // Only bounce if it's the specific bouncing tile
             if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
                 float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
                 animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
@@ -93,25 +94,24 @@ public class UnitRenderSystem extends EntitySystem {
             float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
             float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
 
+            // Safe check for Marker Type
             boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
+            // Adjust vertical offset: Markers float higher, Objects sit on ground
             float verticalOffset = isMarker ? 5f : 10f;
 
             // --- COLOR TINTING LOGIC ---            
-            if (typeC.type == TypeComponent.Type.MARKER) {
-                // FORCE MARKERS TO ALWAYS BE WHITE
+            if (isMarker) {
                 batch.setColor(Color.WHITE);
             } else if (stats != null && stats.owner == 2) {
-                // Tint Red ONLY if it is a Player 2 Unit
                 batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
             } else if (stats != null && stats.owner == 1) {
-                // Tint Blue for Player 1
                 batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
             } else {
-                // Default White for Player 1 Units
+                // This covers Type.OBJECT (Neutral)
                 batch.setColor(Color.WHITE);
             }
 
-            // Draw Normal Unit
+            // Draw
             batch.draw(tex.region,
                     isoX - xOffset,
                     isoY - yOffset + verticalOffset + animY,
@@ -119,12 +119,11 @@ public class UnitRenderSystem extends EntitySystem {
 
             batch.setColor(Color.WHITE);
 
-            // --- HIGHLIGHT LOGIC (NEW) ---
-            // We only highlight UNITs (not markers) and only if mouse is over them
+            // --- HIGHLIGHT LOGIC ---
             if (!isMarker && pos.x == selectedX && pos.y == selectedY) {
                 Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
                 batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-                batch.setColor(0.4f, 0.4f, 0.4f, 1f); // Grey Glow
+                batch.setColor(0.4f, 0.4f, 0.4f, 1f);
 
                 batch.draw(tex.region,
                         isoX - xOffset,
@@ -135,7 +134,6 @@ public class UnitRenderSystem extends EntitySystem {
                 batch.setColor(Color.WHITE);
             }
         }
-        
-        batch.end(); // <--- End
+        batch.end();
     }
 }

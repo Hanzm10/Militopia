@@ -78,8 +78,17 @@ public class GameScreen implements Screen {
 
         // 3. GENERATE MAP
         MapGenerator generator = new MapGenerator();
-        // The generator returns MapGenerator.GameMap, so this matches our variable now
         gameMap = generator.generateMap(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT, loadedState.seed);
+
+        // This loop turns every Tree and Mountain into a sorted Entity
+        for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
+            for (int y = 0; y < GameConfig.MAP_HEIGHT; y++) {
+                MapGenerator.ObjectType type = gameMap.objects[x][y];
+                if (type != MapGenerator.ObjectType.NONE) {
+                    unitFactory.createObjectEntity(x, y, type);
+                }
+            }
+        }
 
         // 4. ADD SYSTEMS
         engine.addSystem(new MovementSystem());

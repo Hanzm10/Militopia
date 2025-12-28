@@ -65,11 +65,11 @@ public class MapRenderSystem extends EntitySystem {
         batch.begin();
 
         // --- PASS 3: OBJECTS (Switch back to Batch) ---
-        for (int x = gameMap.width - 1; x >= 0; x--) {
-            for (int y = gameMap.height - 1; y >= 0; y--) {
-                drawObjectTile(x, y, xOffset, yOffset);
-            }
-        }
+//        for (int x = gameMap.width - 1; x >= 0; x--) {
+//            for (int y = gameMap.height - 1; y >= 0; y--) {
+//                drawObjectTile(x, y, xOffset, yOffset);
+//            }
+//        }
         batch.end(); // <--- ADD THIS LINE
     }
 
