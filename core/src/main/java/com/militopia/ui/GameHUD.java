@@ -68,29 +68,29 @@ public class GameHUD {
         summonMenu.setVisible(true);
     }
 
-public void resize(int width, int height) {
+    public void resize(int width, int height) {
         // Update Stage Viewport
         stage.getViewport().update(width, height, true);
-        
+
         // --- FIX TILE INFO RESIZING ---
         if (tileInfoTable != null) {
             // 1. Force Width to match new screen width
-            tileInfoTable.setWidth(width); 
-            
+            tileInfoTable.setWidth(width);
+
             // 2. Force X to 0 (Left edge)
             tileInfoTable.setX(0);
         }
-        
+
         // --- FIX BOTTOM CONTAINER RESIZING ---
         // Since bottomContainer is inside rootTable (which uses .growX()), 
         // it SHOULD resize automatically, but we ensure layout is refreshed.
-        rootTable.invalidateHierarchy(); 
+        rootTable.invalidateHierarchy();
 
         // Re-center summon menu
         if (summonMenu != null) {
             summonMenu.setPosition(
-                (stage.getWidth() - summonMenu.getWidth()) / 2f, 
-                100 
+                    (stage.getWidth() - summonMenu.getWidth()) / 2f,
+                    100
             );
         }
     }
@@ -168,30 +168,36 @@ public void resize(int width, int height) {
         endTurnBtn.addListener(new HoverListener());
     }
 
-private void createTileInfoPanel() {
+    private void createTileInfoPanel() {
         tileInfoTable = new Table();
         // Background: Dark Gray with transparency
         tileInfoTable.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.9f)));
+
+        //font crisptness
+        Label.LabelStyle style = new Label.LabelStyle(
+                game.skin.getFont("default-font"),
+                Color.WHITE
+        );
 
         // 1. LEFT: The Icon
         tileInfoImage = new com.badlogic.gdx.scenes.scene2d.ui.Image();
         tileInfoTable.add(tileInfoImage).size(50, 50).padLeft(20);
 
         // 2. CENTER: The Name
-        tileInfoLabel = new Label("Terrain Name", game.skin);
-        tileInfoLabel.setFontScale(1.2f);
+        tileInfoLabel = new Label("Terrain Name", style);
+        tileInfoLabel.setFontScale(0.8f);
         tileInfoTable.add(tileInfoLabel).expandX().left().padLeft(20);
 
         // 3. RIGHT: Close Button (CHANGED TO IMAGE BUTTON)
         ImageButton.ImageButtonStyle closeStyle = new ImageButton.ImageButtonStyle();
-        
+
         try {
             Texture closeTex = new Texture("slidedown_btn.png");
             closeTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            
+
             // Create the specific drawable type so .tint() works
             TextureRegionDrawable myDrawable = new TextureRegionDrawable(new TextureRegion(closeTex));
-            
+
             closeStyle.imageUp = myDrawable;
             closeStyle.imageDown = myDrawable.tint(Color.LIGHT_GRAY); // Darken when pressed
 
@@ -201,7 +207,7 @@ private void createTileInfoPanel() {
         }
 
         ImageButton closeBtn = new ImageButton(closeStyle);
-        
+
         // Optional: Add hover animation if you want it to pop
         closeBtn.setTransform(true);
         closeBtn.setOrigin(20, 20); // Center of 40x40
@@ -213,14 +219,14 @@ private void createTileInfoPanel() {
                 hideTileInfo();
             }
         });
-        
+
         // Keep your original padding logic
         tileInfoTable.add(closeBtn).size(40, 40).padRight(20);
 
         // 4. POSITIONING
         float panelHeight = 80f;
         // Ensure X starts at 0 so it doesn't slide diagonally
-        tileInfoTable.setPosition(0, -panelHeight); 
+        tileInfoTable.setPosition(0, -panelHeight);
         tileInfoTable.setSize(stage.getWidth(), panelHeight);
 
         stage.addActor(tileInfoTable);

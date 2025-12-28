@@ -14,6 +14,8 @@ public class UnitFactory {
     // --- TEXTURE REGIONS ---
     private final TextureRegion recruitRightRegion;
     private final TextureRegion recruitLeftRegion;
+    
+    private final TextureRegion recruitDisplayRegion;
 
     // Terrain
     private final TextureRegion grassRegion;
@@ -38,6 +40,9 @@ public class UnitFactory {
         // 1. Load Unit
         this.recruitRightRegion = new TextureRegion(new Texture("recruit_right.png"));
         this.recruitLeftRegion = new TextureRegion(new Texture("recruit_left.png"));
+        
+        // Display Unit
+        this.recruitDisplayRegion = new TextureRegion(new Texture("display_recruit.png"));
 
         // 2. Load Terrain (Ensure these files exist!)
         this.grassRegion = new TextureRegion(new Texture("tile_grass.png"));
@@ -100,9 +105,9 @@ public class UnitFactory {
     public UiInfo getUnitUi(String unitType) {
         // You can expand this switch when you add Tanks/Planes
         if ("RECRUIT".equals(unitType)) {
-            return new UiInfo("Infantry Recruit", recruitRightRegion);
+            return new UiInfo("Infantry Recruit", recruitDisplayRegion);
         }
-        return new UiInfo("Unknown Unit", recruitRightRegion);
+        return new UiInfo("Unknown Unit", recruitDisplayRegion);
     }
 
     public void createRecruit(int x, int y, int owner) {
