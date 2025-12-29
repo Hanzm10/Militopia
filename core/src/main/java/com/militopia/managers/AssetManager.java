@@ -13,13 +13,13 @@ public class AssetManager {
 
     public final com.badlogic.gdx.assets.AssetManager manager;
 
-    // --- ASSET PATHS (Constants to avoid typos) ---
     // Terrain
     public static final String TILE_GRASS = "tile_grass.png";
     public static final String TILE_WATER = "tile_water.png";
     public static final String TILE_DEEPWATER = "tile_deepwater.png";
     public static final String TILE_SAND = "tile_sand.png";
     public static final String TILE_MOUNTAIN = "tile_mountain.png";
+    public static final String FOG_OF_WAR = "fog_of_war.png"; // <--- NEW
 
     // Objects
     public static final String OBJ_TREE = "obj_tree.png";
@@ -36,7 +36,7 @@ public class AssetManager {
     public static final String RECRUIT_LEFT = "recruit_left.png";
     public static final String RECRUIT_DISPLAY = "display_recruit.png";
 
-    // UI & Misc
+    // UI
     public static final String MARKER_DOT = "marker_dot.png";
     public static final String ICON_SETTINGS = "icon_settings.png";
     public static final String ICON_STATS = "icon_stats.png";
@@ -46,7 +46,6 @@ public class AssetManager {
     
     // Fonts
     public static final String GAME_FONT = "game_font.ttf";
-    public static final String FONT_SMALL = "font_small.ttf"; // Alias for use
 
     public AssetManager() {
         manager = new com.badlogic.gdx.assets.AssetManager();
@@ -54,12 +53,12 @@ public class AssetManager {
     }
 
     private void loadAssets() {
-        // 1. Load Textures
         manager.load(TILE_GRASS, Texture.class);
         manager.load(TILE_WATER, Texture.class);
         manager.load(TILE_DEEPWATER, Texture.class);
         manager.load(TILE_SAND, Texture.class);
         manager.load(TILE_MOUNTAIN, Texture.class);
+        manager.load(FOG_OF_WAR, Texture.class); // <--- LOAD
 
         manager.load(OBJ_TREE, Texture.class);
         manager.load(OBJ_RUINS, Texture.class);
@@ -80,22 +79,18 @@ public class AssetManager {
         manager.load(ICON_END, Texture.class);
         manager.load(BTN_SLIDEDOWN, Texture.class);
 
-        // 2. Load Skin
         manager.load(UISKIN, Skin.class);
 
-        // 3. Load Fonts (Special Setup for FreeType)
         FileHandleResolver resolver = new InternalFileHandleResolver();
         manager.setLoader(FreeTypeFontGenerator.class, new FreeTypeFontGeneratorLoader(resolver));
         manager.setLoader(BitmapFont.class, ".ttf", new FreetypeFontLoader(resolver));
 
-        // Define Font Parameter (Size 24)
         FreetypeFontLoader.FreeTypeFontLoaderParameter fontParam = new FreetypeFontLoader.FreeTypeFontLoaderParameter();
         fontParam.fontFileName = GAME_FONT;
         fontParam.fontParameters.size = 24;
         fontParam.fontParameters.minFilter = Texture.TextureFilter.Linear;
         fontParam.fontParameters.magFilter = Texture.TextureFilter.Linear;
         
-        // We load the TTF but map it to a logical name if we want, or just use the filename
         manager.load(GAME_FONT, BitmapFont.class, fontParam);
     }
 
@@ -103,7 +98,6 @@ public class AssetManager {
         manager.finishLoading();
     }
 
-    // Helper to get Texture easily
     public Texture get(String fileName) {
         if (!manager.isLoaded(fileName)) return null;
         Texture t = manager.get(fileName, Texture.class);

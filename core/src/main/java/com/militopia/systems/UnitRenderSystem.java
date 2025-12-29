@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.militopia.components.*;
 import com.militopia.config.GameConfig;
+import com.militopia.map.MapGenerator;
 import com.militopia.utils.ZComparator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,19 +21,25 @@ public class UnitRenderSystem extends EntitySystem {
     private SpriteBatch batch;
     private ImmutableArray<Entity> entities;
     private ZComparator comparator;
+    
+    private final MapGenerator.GameMap gameMap; 
+    private boolean fogEnabled = true;
 
-    // State for Highlighting
     private int selectedX = -1, selectedY = -1;
     private int bouncingX = -1, bouncingY = -1;
     private float bounceTimer = 0;
 
-    public UnitRenderSystem(SpriteBatch batch) {
+    public UnitRenderSystem(SpriteBatch batch, MapGenerator.GameMap map) {
         this.batch = batch;
+        this.gameMap = map;
         this.comparator = new ZComparator();
-        this.priority = 1; // Runs after MapRenderSystem
+        this.priority = 1; 
+    }
+    
+    public void setFogEnabled(boolean enabled) {
+        this.fogEnabled = enabled;
     }
 
-    // Call this from GameScreen to sync mouse position
     public void updateState(int selX, int selY, int bX, int bY, float bTimer) {
         this.selectedX = selX;
         this.selectedY = selY;
@@ -48,27 +55,39 @@ public class UnitRenderSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
-        // 1. Sort Entities (Back to Front)
         List<Entity> sortedEntities = new ArrayList<>();
         for (Entity e : entities) {
             sortedEntities.add(e);
         }
         Collections.sort(sortedEntities, comparator);
 
-        batch.begin();
-
+        batch.begin(); 
+        
         for (Entity e : sortedEntities) {
-            // Get Components (Use Safe Checks!)
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TextureComponent tex = e.getComponent(TextureComponent.class);
-            MovementComponent move = e.getComponent(MovementComponent.class); // Can be null!
-            TypeComponent typeC = e.getComponent(TypeComponent.class);       // Can be null!
-            StatsComponent stats = e.getComponent(StatsComponent.class);     // Can be null!
+            MovementComponent move = e.getComponent(MovementComponent.class);
+            TypeComponent typeC = e.getComponent(TypeComponent.class);
+            StatsComponent stats = e.getComponent(StatsComponent.class);
+
+            // --- UPDATED VISIBILITY CHECK ---
+            if (fogEnabled) {
+                // If the tile is covered in fog...
+                if (!gameMap.visibleTiles[pos.x][pos.y]) {
+                    
+                    // FIX: Allow drawing units if they belong to Player 1 OR Player 2
+                    // This lets you see the enemy units sitting in the dark (for now).
+                    boolean isVisibleUnit = (stats != null && (stats.owner == 1 || stats.owner == 2));
+                    
+                    if (!isVisibleUnit) {
+                        continue; // Skip neutral objects/trees in the fog
+                    }
+                }
+            }
+            // --------------------------------
 
             float isoX, isoY;
 
-            // --- ANIMATION CALCULATION ---
-            // Check if 'move' exists before using it
             if (move != null) {
                 float alpha = Math.min(move.time / move.duration, 1.0f);
                 float startIsoX = (move.startX - move.startY) * (GameConfig.TILE_WIDTH / 2.0f);
@@ -84,34 +103,27 @@ public class UnitRenderSystem extends EntitySystem {
             }
 
             float animY = 0;
-            // Only bounce if it's the specific bouncing tile
             if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
                 float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
                 animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
             }
 
-            // --- DRAWING ---
             float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
             float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
 
-            // Safe check for Marker Type
             boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
-            // Adjust vertical offset: Markers float higher, Objects sit on ground
             float verticalOffset = isMarker ? 5f : 10f;
 
-            // --- COLOR TINTING LOGIC ---            
-            if (isMarker) {
+            if (typeC.type == TypeComponent.Type.MARKER) {
                 batch.setColor(Color.WHITE);
             } else if (stats != null && stats.owner == 2) {
                 batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
             } else if (stats != null && stats.owner == 1) {
                 batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
             } else {
-                // This covers Type.OBJECT (Neutral)
                 batch.setColor(Color.WHITE);
             }
 
-            // Draw
             batch.draw(tex.region,
                     isoX - xOffset,
                     isoY - yOffset + verticalOffset + animY,
@@ -119,11 +131,10 @@ public class UnitRenderSystem extends EntitySystem {
 
             batch.setColor(Color.WHITE);
 
-            // --- HIGHLIGHT LOGIC ---
             if (!isMarker && pos.x == selectedX && pos.y == selectedY) {
                 Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
                 batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-                batch.setColor(0.4f, 0.4f, 0.4f, 1f);
+                batch.setColor(0.4f, 0.4f, 0.4f, 1f); 
 
                 batch.draw(tex.region,
                         isoX - xOffset,

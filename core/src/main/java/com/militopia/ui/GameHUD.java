@@ -329,12 +329,22 @@ public class GameHUD {
         Label title = new Label("PAUSED", game.skin);
         title.setFontScale(1.5f);
 
+        // --- NEW: FOG TOGGLE ---
+        final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin);
+        fogBtn.addListener(new HoverListener());
+        fogBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                boolean newState = screen.toggleFog(); // Call toggle method
+                fogBtn.setText("Toggle Fog: " + (newState ? "ON" : "OFF"));
+            }
+        });
+
         TextButton saveExitBtn = new TextButton("Save & Exit", game.skin);
         saveExitBtn.addListener(new HoverListener());
         saveExitBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // Call back to GameScreen to handle the actual saving logic
                 screen.saveAndExit();
             }
         });
@@ -349,9 +359,10 @@ public class GameHUD {
         });
 
         menuBox.add(title).pad(20).row();
+        menuBox.add(fogBtn).size(200, 50).pad(10).row(); // Add fog button
         menuBox.add(saveExitBtn).size(200, 50).pad(10).row();
         menuBox.add(resumeBtn).size(200, 50).pad(10);
-        settingsOverlay.add(menuBox).size(300, 250);
+        settingsOverlay.add(menuBox).size(300, 300); // Increased height
 
         stage.addActor(settingsOverlay);
     }

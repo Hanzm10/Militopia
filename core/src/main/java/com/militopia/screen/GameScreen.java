@@ -21,6 +21,7 @@ import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.ui.GameHUD;
+import com.militopia.systems.FogSystem; // Import
 
 public class GameScreen implements Screen {
 
@@ -47,6 +48,10 @@ public class GameScreen implements Screen {
 
     // --- UI MANAGER ---
     public GameHUD gameHUD;
+
+    // FOG System
+    private FogSystem fogSystem;
+    private boolean isFogEnabled = true; // State
 
     private BitmapFont font;
 
@@ -92,11 +97,15 @@ public class GameScreen implements Screen {
         // 4. ADD SYSTEMS
         engine.addSystem(new MovementSystem());
 
+        // Assume Player 1 is the human player
+        fogSystem = new FogSystem(gameMap, 1);
+        engine.addSystem(fogSystem);
+
         // FIX: Pass UnitFactory (not Game)
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
         engine.addSystem(mapRenderSystem);
 
-        unitRenderSystem = new UnitRenderSystem(game.batch);
+        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap);
         engine.addSystem(unitRenderSystem);
 
         // ... (Rest of code remains the same) ...
@@ -131,6 +140,18 @@ public class GameScreen implements Screen {
     public void saveAndExit() {
         saveManager.saveGame(gameState, engine);
         game.setScreen(new com.militopia.screen.MenuScreen(game));
+    }
+    
+    public boolean toggleFog() {
+        isFogEnabled = !isFogEnabled;
+        
+        // Notify Renderers
+        mapRenderSystem.setFogEnabled(isFogEnabled);
+        unitRenderSystem.setFogEnabled(isFogEnabled);
+        
+        // Note: FogSystem keeps running to calculate visible tiles, 
+        // renderers just choose whether to respect it or not.
+        return isFogEnabled;
     }
 
     @Override

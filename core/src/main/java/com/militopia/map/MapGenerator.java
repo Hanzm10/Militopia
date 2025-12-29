@@ -21,6 +21,7 @@ public class MapGenerator {
 
         public TerrainType[][] terrain;
         public ObjectType[][] objects;
+        public boolean[][] visibleTiles; // <--- NEW: Fog Map
         public int width, height;
 
         public GameMap(int w, int h) {
@@ -28,6 +29,7 @@ public class MapGenerator {
             this.height = h;
             terrain = new TerrainType[w][h];
             objects = new ObjectType[w][h];
+            visibleTiles = new boolean[w][h]; // Defaults to false (Fogged)
         }
     }
 
