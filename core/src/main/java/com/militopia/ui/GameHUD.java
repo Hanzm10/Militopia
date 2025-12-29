@@ -1,4 +1,4 @@
-package com.militopia.ui; // or com.militopia.screen if you prefer
+package com.militopia.ui;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -9,89 +9,60 @@ import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.factories.UnitFactory;
-import com.militopia.map.MapGenerator;
+import com.militopia.managers.AssetManager;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.HoverListener;
 
 public class GameHUD {
 
     private MilitopiaGame game;
-    public Stage stage; // Public so GameScreen can access input/viewport
-
-    // UI Components
+    public Stage stage;
     private Table rootTable;
-    public Table summonMenu; // Public so InputController can toggle it
+    public Table summonMenu;
     private Table settingsOverlay;
-
+    private AssetManager assets;
     private Table tileInfoTable;
     private Table bottomContainer;
-    private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage; // To update the icon
-    private Label tileInfoLabel; // To update the text
-
-    // Labels (So we can update them)
-    private Label xpLabel, fundsLabel, turnLabel;
+    private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
+    private Label tileInfoLabel;
+    private int currentBaseOwner = 1;
 
     public GameHUD(MilitopiaGame game) {
         this.game = game;
-        // 1. Create Stage
+        this.assets = game.assets;
         stage = new Stage(new ScreenViewport());
-
-        // 2. Initialize Tables early (prevents NullPointer if accessed before build)
         summonMenu = new Table();
         rootTable = new Table();
     }
-    private int currentBaseOwner = 1;
 
-    /**
-     * Builds the UI. We pass dependencies here because they might not exist
-     * when GameHUD is first created.
-     */
-    public void build(final GameScreen screen, final GameInputController inputController,
-            final UnitFactory unitFactory) {
-
+    public void build(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory) {
         setupHUD(screen, inputController, unitFactory);
     }
 
-    public void openSummonMenu(int owner) {
-        this.currentBaseOwner = owner; // Save who owns the base we just clicked
-        summonMenu.setVisible(true);
-    }
-
     public void resize(int width, int height) {
-        // Update Stage Viewport
         stage.getViewport().update(width, height, true);
-
-        // --- FIX TILE INFO RESIZING ---
         if (tileInfoTable != null) {
-            // 1. Force Width to match new screen width
             tileInfoTable.setWidth(width);
-
-            // 2. Force X to 0 (Left edge)
             tileInfoTable.setX(0);
         }
-
-        // --- FIX BOTTOM CONTAINER RESIZING ---
-        // Since bottomContainer is inside rootTable (which uses .growX()), 
-        // it SHOULD resize automatically, but we ensure layout is refreshed.
         rootTable.invalidateHierarchy();
-
-        // Re-center summon menu
         if (summonMenu != null) {
-            summonMenu.setPosition(
-                    (stage.getWidth() - summonMenu.getWidth()) / 2f,
-                    100
-            );
+            summonMenu.setSize(width, 140);
+            summonMenu.setX(0);
         }
     }
 
@@ -104,39 +75,31 @@ public class GameHUD {
         stage.dispose();
     }
 
-    // ============================================
-    //  MAIN SETUP LOGIC (Moved from GameScreen)
-    // ============================================
-    private void setupHUD(final GameScreen screen, final GameInputController inputController,
-            final UnitFactory unitFactory) {
-
-        rootTable.clear(); // Clear in case of rebuild
+    private void setupHUD(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory) {
+        rootTable.clear();
         rootTable.setFillParent(true);
-
-        // Generate Gradients
         TextureRegionDrawable topBg = createGradientDrawable(80, true);
         TextureRegionDrawable bottomBg = createGradientDrawable(80, false);
 
-        // --- TOP HUD ---
         Table topContent = new Table();
         topContent.add(createStatGroup("XP", "0")).expandX();
         topContent.add(createStatGroup("Funding", "1000")).expandX();
         topContent.add(createStatGroup("Turn", "1")).expandX();
-
         Table topContainer = new Table();
         topContainer.setBackground(topBg);
         topContainer.add(topContent).width(GameConfig.UI_WIDTH).padTop(10).padBottom(20);
         rootTable.add(topContainer).growX().top().row();
 
-        // --- SPACER ---
         rootTable.add().expandY().row();
 
-        // --- BOTTOM HUD ---
         Table bottomContent = new Table();
         ImageButton settingsBtn = createCircleButton("icon_settings");
         ImageButton statsBtn = createCircleButton("icon_stats");
         ImageButton endTurnBtn = createCircleButton("icon_end");
 
+        // Add Listeners to Bottom Buttons (They need color setting too for the whiten effect to work)
+        // Note: We removed the setColor(LIGHT_GRAY) logic previously to keep them white.
+        
         bottomContent.add(createIconGroup(settingsBtn, "Settings")).expandX();
         bottomContent.add(createIconGroup(statsBtn, "Game Stats")).expandX();
         bottomContent.add(createIconGroup(endTurnBtn, "End Turn")).expandX();
@@ -148,15 +111,10 @@ public class GameHUD {
 
         stage.addActor(rootTable);
 
-        createTileInfoPanel(); // Helper method defined below
-
-        // --- SUMMON MENU ---
+        createTileInfoPanel();
         configureSummonMenu(inputController, unitFactory);
+        createSettingsOverlay(screen);
 
-        // --- SETTINGS OVERLAY ---
-        createSettingsOverlay(screen); // Pass screen for Save Logic
-
-        // --- LISTENERS ---
         settingsBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -168,178 +126,182 @@ public class GameHUD {
         endTurnBtn.addListener(new HoverListener());
     }
 
-    private void createTileInfoPanel() {
-        tileInfoTable = new Table();
-        // Background: Dark Gray with transparency
-        tileInfoTable.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.9f)));
+    private void configureSummonMenu(final GameInputController inputController, final UnitFactory unitFactory) {
+        summonMenu.clear();
+        summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
 
-        //font crisptness
-        Label.LabelStyle style = new Label.LabelStyle(
-                game.skin.getFont("default-font"),
-                Color.WHITE
-        );
+        Table contentTable = new Table();
 
-        // 1. LEFT: The Icon
-        tileInfoImage = new com.badlogic.gdx.scenes.scene2d.ui.Image();
-        tileInfoTable.add(tileInfoImage).size(50, 50).padLeft(20);
+        // 1. ADD UNITS
+        addSummonButton(contentTable, "RECRUIT", inputController, unitFactory);
 
-        // 2. CENTER: The Name
-        tileInfoLabel = new Label("Terrain Name", style);
-        tileInfoLabel.setFontScale(0.8f);
-        tileInfoTable.add(tileInfoLabel).expandX().left().padLeft(20);
+        // --- CANCEL BUTTON REMOVED ---
 
-        // 3. RIGHT: Close Button (CHANGED TO IMAGE BUTTON)
-        ImageButton.ImageButtonStyle closeStyle = new ImageButton.ImageButtonStyle();
+        // Add content centered
+        summonMenu.add(contentTable).expandX().center();
 
+        float panelHeight = 140f;
+        summonMenu.setSize(stage.getWidth(), panelHeight);
+        summonMenu.setPosition(0, -panelHeight);
+        stage.addActor(summonMenu);
+    }
+
+    private void addSummonButton(Table container, final String unitType,
+            final GameInputController controller, final UnitFactory factory) {
+
+        UnitFactory.UiInfo info = factory.getUnitUi(unitType);
+
+        // ... (Asset loading stays the same) ...
+        TextureRegionDrawable circleDrawable;
         try {
-            Texture closeTex = new Texture("slidedown_btn.png");
-            closeTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-
-            // Create the specific drawable type so .tint() works
-            TextureRegionDrawable myDrawable = new TextureRegionDrawable(new TextureRegion(closeTex));
-
-            closeStyle.imageUp = myDrawable;
-            closeStyle.imageDown = myDrawable.tint(Color.LIGHT_GRAY); // Darken when pressed
-
+            Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
+            circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            circleDrawable = new TextureRegionDrawable(new TextureRegion(circleTex));
         } catch (Exception e) {
-            Gdx.app.error("HUD", "close_btn.png not found.");
-            closeStyle.imageUp = game.skin.newDrawable("white", Color.RED); // Fallback
+            circleDrawable = (TextureRegionDrawable) game.skin.newDrawable("white", Color.DARK_GRAY);
         }
 
+        Stack buttonStack = new Stack();
+
+        // --- FIX 1: ENABLE TRANSFORM ---
+        // This allows the Group (Stack) to Scale and Rotate!
+        buttonStack.setTransform(true);
+
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        circleBg.setScaling(Scaling.fit);
+        buttonStack.add(circleBg);
+
+        com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(info.region);
+        unitIcon.setScaling(Scaling.fit);
+
+        Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
+        iconContainer.size(50, 50).center();
+        buttonStack.add(iconContainer);
+
+        // --- FIX 2: SET INITIAL ORIGIN ---
+        buttonStack.setOrigin(40, 40); // Center of 80x80
+        
+        buttonStack.addListener(new HoverListener());
+
+        buttonStack.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                int tx = controller.getLastClickedX();
+                int ty = controller.getLastClickedY();
+                if (tx != -1 && ty != -1) {
+                    factory.createUnit(unitType, tx, ty, currentBaseOwner);
+                    hideSummonMenu();
+                    controller.resetLastClicked();
+                }
+            }
+        });
+
+        Table group = new Table();
+        group.add(buttonStack).size(80, 80).row();
+
+        Label nameLbl = new Label(info.name, game.skin, "default-font", Color.WHITE);
+        nameLbl.setFontScale(0.7f);
+        group.add(nameLbl).padTop(5);
+
+        container.add(group).pad(10);
+    }
+
+    public void openSummonMenu(int owner) {
+        this.currentBaseOwner = owner;
+        tileInfoTable.clearActions();
+        tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
+
+        summonMenu.clearActions();
+        summonMenu.setWidth(stage.getWidth());
+        summonMenu.setX(0);
+        summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
+
+        bottomContainer.clearActions();
+        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+    }
+
+    public void hideSummonMenu() {
+        summonMenu.clearActions();
+        summonMenu.addAction(Actions.moveTo(0, -summonMenu.getHeight(), 0.3f, Interpolation.pow2In));
+        bottomContainer.clearActions();
+        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
+    }
+
+    private void createTileInfoPanel() {
+        tileInfoTable = new Table();
+        tileInfoTable.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.9f)));
+        tileInfoImage = new com.badlogic.gdx.scenes.scene2d.ui.Image();
+        tileInfoImage.setScaling(Scaling.fit);
+        tileInfoTable.add(tileInfoImage).size(70, 70).padLeft(20);
+        tileInfoLabel = new Label("Terrain Name", game.skin, "default-font", Color.WHITE);
+        tileInfoLabel.setFontScale(0.8f);
+        tileInfoTable.add(tileInfoLabel).expandX().left().padLeft(20);
+        ImageButton.ImageButtonStyle closeStyle = new ImageButton.ImageButtonStyle();
+        try {
+            Texture closeTex = assets.get(AssetManager.BTN_SLIDEDOWN);
+            TextureRegionDrawable myDrawable = new TextureRegionDrawable(new TextureRegion(closeTex));
+            closeStyle.imageUp = myDrawable;
+            closeStyle.imageDown = myDrawable.tint(Color.GRAY);
+        } catch (Exception e) {
+            closeStyle.imageUp = game.skin.newDrawable("white", Color.RED);
+        }
         ImageButton closeBtn = new ImageButton(closeStyle);
-
-        // Optional: Add hover animation if you want it to pop
-        closeBtn.setTransform(true);
-        closeBtn.setOrigin(20, 20); // Center of 40x40
         closeBtn.addListener(new HoverListener());
-
         closeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 hideTileInfo();
             }
         });
-
-        // Keep your original padding logic
         tileInfoTable.add(closeBtn).size(40, 40).padRight(20);
-
-        // 4. POSITIONING
         float panelHeight = 80f;
-        // Ensure X starts at 0 so it doesn't slide diagonally
         tileInfoTable.setPosition(0, -panelHeight);
         tileInfoTable.setSize(stage.getWidth(), panelHeight);
-
         stage.addActor(tileInfoTable);
     }
 
-    // --- PUBLIC METHODS FOR CONTROLLER TO CALL ---
     public void showTileInfo(String name, TextureRegion region) {
-        // 1. Update Data
+        if (summonMenu.getY() > -50) {
+        }
         tileInfoLabel.setText(name);
         tileInfoImage.setDrawable(new TextureRegionDrawable(region));
-
-        // 2. FORCE POSITION & SIZE UPDATES (Fixes the diagonal slide)
-        // Ensure it spans the full width of the CURRENT screen size
         tileInfoTable.setWidth(stage.getWidth());
-        // Force X to 0 so it doesn't start from the right/center
         tileInfoTable.setX(0);
-
-        // 3. ANIMATION
         tileInfoTable.clearActions();
         bottomContainer.clearActions();
-
-        // Move straight UP to Y=0
         tileInfoTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
-
-        // Hide Bottom HUD
         bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
     public void hideTileInfo() {
         tileInfoTable.clearActions();
         bottomContainer.clearActions();
-
-        // Move Tile Info DOWN (Hidden)
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
-
-        // Move Bottom Buttons UP (Visible)
-        // We use moveTo(x, 0) because 0 is the default bottom position in the Root Table
-        // Note: Since it's in a Table layout, '0' is relative to its cell. 
-        // Ideally, we just reset the translation offset to 0.
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
-    }
-
-    private void configureSummonMenu(final GameInputController inputController,
-            final UnitFactory unitFactory) {
-        summonMenu.setVisible(false);
-        summonMenu.setBackground(game.skin.newDrawable("white", Color.DARK_GRAY));
-        summonMenu.setSize(200, 150);
-
-        // Position set in resize()
-        Label summonLabel = new Label("Summon Unit", game.skin);
-        TextButton recruitBtn = new TextButton("Recruit", game.skin);
-        TextButton cancelBtn = new TextButton("Cancel", game.skin);
-
-        recruitBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                int tx = inputController.getLastClickedX();
-                int ty = inputController.getLastClickedY();
-
-                if (tx != -1 && ty != -1) {
-                    unitFactory.createRecruit(tx, ty, currentBaseOwner);
-                    summonMenu.setVisible(false);
-                    inputController.resetLastClicked();
-                }
-            }
-        });
-
-        cancelBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                summonMenu.setVisible(false);
-                inputController.resetLastClicked();
-            }
-        });
-
-        recruitBtn.addListener(new HoverListener());
-        cancelBtn.addListener(new HoverListener());
-
-        summonMenu.add(summonLabel).pad(10).row();
-        summonMenu.add(recruitBtn).fillX().pad(5).row();
-        summonMenu.add(cancelBtn).fillX().pad(5);
-
-        stage.addActor(summonMenu);
     }
 
     private void createSettingsOverlay(final GameScreen screen) {
         settingsOverlay = new Table();
         settingsOverlay.setFillParent(true);
         settingsOverlay.setVisible(false);
-
         Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         p.setColor(0, 0, 0, 0.85f);
         p.fill();
         settingsOverlay.setBackground(new TextureRegionDrawable(new TextureRegion(new Texture(p))));
         p.dispose();
-
         Table menuBox = new Table();
         menuBox.setBackground(game.skin.newDrawable("white", Color.DARK_GRAY));
-
         Label title = new Label("PAUSED", game.skin);
         title.setFontScale(1.5f);
-
-        // --- NEW: FOG TOGGLE ---
         final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin);
         fogBtn.addListener(new HoverListener());
         fogBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                boolean newState = screen.toggleFog(); // Call toggle method
+                boolean newState = screen.toggleFog();
                 fogBtn.setText("Toggle Fog: " + (newState ? "ON" : "OFF"));
             }
         });
-
         TextButton saveExitBtn = new TextButton("Save & Exit", game.skin);
         saveExitBtn.addListener(new HoverListener());
         saveExitBtn.addListener(new ClickListener() {
@@ -348,7 +310,6 @@ public class GameHUD {
                 screen.saveAndExit();
             }
         });
-
         TextButton resumeBtn = new TextButton("Resume", game.skin);
         resumeBtn.addListener(new HoverListener());
         resumeBtn.addListener(new ClickListener() {
@@ -357,13 +318,11 @@ public class GameHUD {
                 settingsOverlay.setVisible(false);
             }
         });
-
         menuBox.add(title).pad(20).row();
-        menuBox.add(fogBtn).size(200, 50).pad(10).row(); // Add fog button
+        menuBox.add(fogBtn).size(200, 50).pad(10).row();
         menuBox.add(saveExitBtn).size(200, 50).pad(10).row();
         menuBox.add(resumeBtn).size(200, 50).pad(10);
-        settingsOverlay.add(menuBox).size(300, 300); // Increased height
-
+        settingsOverlay.add(menuBox).size(300, 300);
         stage.addActor(settingsOverlay);
     }
 
@@ -373,17 +332,6 @@ public class GameHUD {
         titleLbl.setFontScale(0.8f);
         Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
         valLbl.setFontScale(1.2f);
-
-        if (title.equals("XP")) {
-            xpLabel = valLbl;
-        }
-        if (title.equals("Funding")) {
-            fundsLabel = valLbl;
-        }
-        if (title.equals("Turn")) {
-            turnLabel = valLbl;
-        }
-
         t.add(titleLbl).row();
         t.add(valLbl);
         return t;
@@ -391,35 +339,22 @@ public class GameHUD {
 
     private ImageButton createCircleButton(String iconName) {
         ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
-
         try {
-            // 1. Load the Texture Region once
-            Texture texture = new Texture(iconName + ".png");
-            // Linear filter makes scaling look smoother
+            Texture texture = assets.get(iconName + ".png");
+            if (texture == null) {
+                texture = new Texture(iconName + ".png");
+            }
             texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            TextureRegion region = new TextureRegion(texture);
-
-            // 2. Create the "Normal" Drawable
-            TextureRegionDrawable drawable = new TextureRegionDrawable(region);
+            TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(texture));
             style.imageUp = drawable;
-
-            // 3. Create the "Clicked" Drawable (Highlight)
-            // .tint(Color) creates a new drawable that is colored automatically.
-            // Color.GRAY makes it look dark/pressed. 
-            // You could use Color.YELLOW if you want it to glow gold.
             style.imageDown = drawable.tint(Color.GRAY);
-
         } catch (Exception e) {
-            Gdx.app.error("HUD", "Icon not found: " + iconName);
+            style.imageUp = game.skin.newDrawable("white", Color.GRAY);
         }
-
         ImageButton btn = new ImageButton(style);
-
-        // Enable Animation Settings
         btn.setTransform(true);
         btn.setSize(60, 60);
-        btn.setOrigin(btn.getWidth() / 2f, btn.getHeight() / 2f);
-
+        btn.setOrigin(30, 30);
         return btn;
     }
 

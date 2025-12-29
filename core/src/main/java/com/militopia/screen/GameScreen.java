@@ -113,7 +113,7 @@ public class GameScreen implements Screen {
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if ("RECRUIT".equals(u.type)) {
-                    unitFactory.createRecruit(u.x, u.y, u.owner);
+                    unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner);
                 }
             }
         }
@@ -196,6 +196,10 @@ public class GameScreen implements Screen {
     public void dispose() {
         engine.clearPools();
         gameHUD.dispose();
+    }
+    
+    public boolean isFogEnabled() {
+        return isFogEnabled;
     }
 
     @Override

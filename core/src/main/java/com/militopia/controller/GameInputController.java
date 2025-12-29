@@ -8,14 +8,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array; // Use LibGDX Array
+import com.badlogic.gdx.utils.Array;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.MovementComponent;
 import com.militopia.components.StatsComponent;
-import com.militopia.components.TextureComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.factories.EntityFactory;
@@ -34,29 +32,13 @@ public class GameInputController extends InputAdapter {
     private final EntityFactory entityFactory;
     private final GameHUD gameHUD;
 
-    // State Variables
     private int lastTouchX, lastTouchY;
     private int lastClickedX = -1, lastClickedY = -1;
     private Entity selectedUnitEntity = null;
-
-    // BOUNCE VARIABLES
     private int bouncingX = -1, bouncingY = -1;
     private float bounceTimer = 0;
-
-    //Track Hover Position
     private int hoveredX = -1, hoveredY = -1;
-
-    // Selection Cycling State
     private int selectionIndex = 0;
-
-    // Add getters for the renderer to use
-    public int getHoveredX() {
-        return hoveredX;
-    }
-
-    public int getHoveredY() {
-        return hoveredY;
-    }
 
     public GameInputController(GameScreen screen, OrthographicCamera camera, PooledEngine engine,
             MapGenerator.GameMap gameMap, UnitFactory unitFactory,
@@ -70,33 +52,19 @@ public class GameInputController extends InputAdapter {
         this.gameHUD = gameHUD;
     }
 
-    // --- GETTERS ---
-    public int getLastClickedX() {
-        return lastClickedX;
-    }
-
-    public int getLastClickedY() {
-        return lastClickedY;
-    }
-
-    public int getBouncingX() {
-        return bouncingX;
-    }
-
-    public int getBouncingY() {
-        return bouncingY;
-    }
-
-    public float getBounceTimer() {
-        return bounceTimer;
-    }
-
+    public int getHoveredX() { return hoveredX; }
+    public int getHoveredY() { return hoveredY; }
+    public int getBouncingX() { return bouncingX; }
+    public int getBouncingY() { return bouncingY; }
+    public float getBounceTimer() { return bounceTimer; }
+    public int getLastClickedX() { return lastClickedX; }
+    public int getLastClickedY() { return lastClickedY; }
+    
     public void resetLastClicked() {
         this.lastClickedX = -1;
         this.lastClickedY = -1;
     }
 
-    // --- CRITICAL: Call this from GameScreen.render() ---
     public void update(float deltaTime) {
         if (bounceTimer > 0) {
             bounceTimer -= deltaTime;
@@ -123,72 +91,58 @@ public class GameInputController extends InputAdapter {
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
-
         float halfW = GameConfig.TILE_WIDTH / 2.0f;
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
-
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
-        System.out.println("Clicked Grid: " + gridX + ", " + gridY);
-
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
-
-            // --- PRIORITY 0: MOVEMENT (Always Check First) ---
-            // If we have a unit selected and we click a valid Move Marker, 
-            // we MOVE. We do NOT cycle selection here.
             Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
+            
+            boolean isVisible = gameMap.visibleTiles[gridX][gridY];
+            // If Fog is ON and the tile is NOT visible...
+            if (screen.isFogEnabled() && !isVisible) {
+                // Clear any existing selection and do nothing else
+                clearMarkers();
+                selectedUnitEntity = null;
+                gameHUD.hideSummonMenu();
+                gameHUD.hideTileInfo();
+                lastClickedX = -1;
+                lastClickedY = -1;
+                System.out.println("Ignored click on Fog.");
+                return true; // Stop processing
+            }
+            
             if (clickedMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
             }
 
-            // --- SELECTION CYCLING LOGIC ---
-            // 1. Check if we clicked the SAME tile as before
             if (gridX == lastClickedX && gridY == lastClickedY) {
-                selectionIndex++; // Go to next item
+                selectionIndex++;
             } else {
-                selectionIndex = 0; // New tile, start at top
+                selectionIndex = 0;
             }
-
-            // Update Global Last Clicked
             lastClickedX = gridX;
             lastClickedY = gridY;
 
-            // 2. Build the Stack of Selectable Things (Top to Bottom)
-            // Use a simple List or ArrayList to hold the "types" of things found
             java.util.List<String> selectionStack = new java.util.ArrayList<>();
-
             Entity foundUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
             MapGenerator.ObjectType foundObject = gameMap.objects[gridX][gridY];
             boolean hasObject = (foundObject != MapGenerator.ObjectType.NONE);
 
-            // LAYER 1: UNIT (Z-Index High)
-            if (foundUnit != null) {
-                selectionStack.add("UNIT");
-            }
-
-            // LAYER 2: OBJECT/BASE (Z-Index Medium)
-            if (hasObject) {
-                selectionStack.add("OBJECT");
-            }
-
-            // LAYER 3: TERRAIN (Z-Index Low - Always there)
+            if (foundUnit != null) selectionStack.add("UNIT");
+            if (hasObject) selectionStack.add("OBJECT");
             selectionStack.add("TERRAIN");
 
-            // 3. Pick the Target based on Index
-            // The modulo (%) operator makes it loop safely (0, 1, 2, 0, 1...)
             String targetType = selectionStack.get(selectionIndex % selectionStack.size());
 
-            // 4. RESET UI STATE (Before selecting new thing)
+            // Reset UI
             clearMarkers();
-            // Don't nullify selectedUnitEntity if we are just clicking the same unit again,
-            // but for safety, let's re-select it explicitly below.
             selectedUnitEntity = null;
-            gameHUD.summonMenu.setVisible(false);
+            gameHUD.hideSummonMenu(); // <--- FIXED: Use animation close, not setVisible(false)
             triggerBounce(gridX, gridY);
 
-            // 5. EXECUTE SELECTION
             if (targetType.equals("UNIT")) {
                 handleUnitSelection(foundUnit, gridX, gridY);
             } else if (targetType.equals("OBJECT")) {
@@ -201,69 +155,53 @@ public class GameInputController extends InputAdapter {
             // Clicked Outside
             clearMarkers();
             selectedUnitEntity = null;
-            gameHUD.summonMenu.setVisible(false);
             gameHUD.hideTileInfo();
+            gameHUD.hideSummonMenu(); // <--- FIXED: Use animation close
             lastClickedX = -1;
             lastClickedY = -1;
-            selectionIndex = 0; // Reset
+            selectionIndex = 0;
         }
         return true;
     }
 
-    // 1. HANDLE UNIT SELECTION
     private void handleUnitSelection(Entity unit, int x, int y) {
         selectedUnitEntity = unit;
         showMovementMarkers(x, y);
-
-        // Use Factory to get consistent Name and Icon
-        // (Later you can get specific type from StatsComponent)
         UnitFactory.UiInfo info = unitFactory.getUnitUi("RECRUIT");
-
         gameHUD.showTileInfo(info.name, info.region);
-        System.out.println("Selected: " + info.name);
     }
 
-    // 2. HANDLE OBJECT SELECTION
     private void handleObjectSelection(MapGenerator.ObjectType obj, int x, int y) {
-        // Use Factory lookup
-        UnitFactory.UiInfo info = unitFactory.getObjectUi(obj);
-
-        gameHUD.showTileInfo(info.name, info.region);
-
-        // Logic for opening menu remains the same
+        // 1. CHECK FOR BASE (Summon Menu)
         if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
             int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
             gameHUD.openSummonMenu(owner);
+            System.out.println("Selected: Base (Opening Summon Menu)");
+            return; // <--- CRITICAL FIX: Stop here! Don't show Tile Info.
         }
 
+        // 2. STANDARD OBJECT INFO
+        UnitFactory.UiInfo info = unitFactory.getObjectUi(obj);
+        gameHUD.showTileInfo(info.name, info.region);
         System.out.println("Selected: " + info.name);
     }
 
-    // 3. HANDLE TERRAIN SELECTION
     private void handleTerrainSelection(int x, int y) {
         MapGenerator.TerrainType type = gameMap.terrain[x][y];
-
-        // Use Factory lookup
         UnitFactory.UiInfo info = unitFactory.getTerrainUi(type);
-
         gameHUD.showTileInfo(info.name, info.region);
-        System.out.println("Selected: " + info.name);
     }
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        // 1. Convert Screen -> Grid (Same math as touchDown)
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
-
         float halfW = GameConfig.TILE_WIDTH / 2.0f;
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
-
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
-        // 2. Update Hover State
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
             this.hoveredX = gridX;
             this.hoveredY = gridY;
@@ -271,7 +209,7 @@ public class GameInputController extends InputAdapter {
             this.hoveredX = -1;
             this.hoveredY = -1;
         }
-        return false; // Let other systems handle it if needed
+        return false;
     }
 
     @Override
@@ -294,105 +232,94 @@ public class GameInputController extends InputAdapter {
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
-
-        // Add movement component for smooth sliding
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
-
-        // Update logical position immediately so other units can't move here
         pos.x = targetX;
         pos.y = targetY;
-
-        // CRITICAL: Clear markers immediately to prevent "Ghost Markers"
         clearMarkers();
         selectedUnitEntity = null;
     }
 
     private boolean isWalkable(int x, int y) {
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
-            return false;
-        }
-
-        // Check Water
-        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER
-                || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) {
-            return false;
-        }
-
-        // Check for Units
-        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) {
-            return false;
-        }
-
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return false;
+        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) return false;
+        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) return false;
         return true;
     }
 
-    private void showMovementMarkers(int startX, int startY) {
+private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
-        int moveRange = (stats != null) ? stats.moveRange : 3; // Ensure your Component uses 'movement' or 'moveRange' correctly
+        int moveRange = (stats != null) ? stats.moveRange : 3;
 
-        boolean[][] visited = new boolean[GameConfig.MAP_WIDTH][GameConfig.MAP_HEIGHT];
+        // FIX: Use an int array to track "Max Fuel Left" at each tile.
+        // Initialize with -1 because 0 is a valid "moves left" state.
+        int[][] visitedMoves = new int[GameConfig.MAP_WIDTH][GameConfig.MAP_HEIGHT];
+        for (int i = 0; i < GameConfig.MAP_WIDTH; i++) {
+            for (int j = 0; j < GameConfig.MAP_HEIGHT; j++) {
+                visitedMoves[i][j] = -1; 
+            }
+        }
 
-        // Start Flood Fill
-        floodFill(startX, startY, moveRange, visited, startX, startY);
+        floodFill(startX, startY, moveRange, visitedMoves, startX, startY);
     }
 
-    private void floodFill(int x, int y, int remainingMoves, boolean[][] visited, int startX, int startY) {
-        if (remainingMoves < 0) {
-            return;
-        }
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+    private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY) {
+        // 1. Basic Validation
+        if (remainingMoves < 0) return;
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return;
+
+        // 2. OPTIMIZATION CHECK (The Fix)
+        // If we have already reached this tile with MORE (or equal) energy, 
+        // this current path is worse/redundant. Stop.
+        if (visitedMoves[x][y] >= remainingMoves) {
             return;
         }
 
-        // If we already visited this tile with MORE or EQUAL moves, skip it.
-        // (This simple boolean check is okay for uniform cost, but if diagonals cost more, you'd need a cost array)
-        if (visited[x][y]) {
-            return;
-        }
-
-        // Is this the unit's starting tile?
+        // 3. Walkability Check
         boolean isStart = (x == startX && y == startY);
-
-        // Check Walkability (Skip check for start tile so we can "expand" out of it)
         if (!isStart && !isWalkable(x, y)) {
             return;
         }
 
-        // Mark as visited
-        visited[x][y] = true;
+        // 4. Record State
+        // We found a better (or first) path to this tile. Record how much fuel we have.
+        visitedMoves[x][y] = remainingMoves;
 
-        // Spawn Marker (Don't put a marker under the unit itself)
+        // 5. Spawn Marker
+        // Only spawn if it's not the start node AND we haven't already put a marker here 
+        // (Check if entity exists to avoid duplicates, or just rely on clearMarkers clearing them later)
+        // Note: Since we might visit a tile multiple times with better paths, avoid spawning duplicate entities.
         if (!isStart) {
-            entityFactory.createMovementMarker(x, y);
+            // Optimization: Only spawn if marker doesn't exist yet
+            if (getEntityAt(x, y, TypeComponent.Type.MARKER) == null) {
+                entityFactory.createMovementMarker(x, y);
+            }
         }
 
-        // --- RECURSE: CARDINAL DIRECTIONS (4) ---
-        floodFill(x + 1, y, remainingMoves - 1, visited, startX, startY); // Right
-        floodFill(x - 1, y, remainingMoves - 1, visited, startX, startY); // Left
-        floodFill(x, y + 1, remainingMoves - 1, visited, startX, startY); // Up
-        floodFill(x, y - 1, remainingMoves - 1, visited, startX, startY); // Down
+        // 6. Recurse (Cost is 1 per tile)
+        int nextMove = remainingMoves - 1;
+        
+        // Cardinal
+        floodFill(x + 1, y, nextMove, visitedMoves, startX, startY);
+        floodFill(x - 1, y, nextMove, visitedMoves, startX, startY);
+        floodFill(x, y + 1, nextMove, visitedMoves, startX, startY);
+        floodFill(x, y - 1, nextMove, visitedMoves, startX, startY);
 
-        // --- RECURSE: DIAGONAL DIRECTIONS (4) - ADD THESE! ---
-        floodFill(x + 1, y + 1, remainingMoves - 1, visited, startX, startY); // Top-Right
-        floodFill(x - 1, y + 1, remainingMoves - 1, visited, startX, startY); // Top-Left
-        floodFill(x + 1, y - 1, remainingMoves - 1, visited, startX, startY); // Bottom-Right
-        floodFill(x - 1, y - 1, remainingMoves - 1, visited, startX, startY); // Bottom-Left
+        // Diagonal
+        floodFill(x + 1, y + 1, nextMove, visitedMoves, startX, startY);
+        floodFill(x - 1, y + 1, nextMove, visitedMoves, startX, startY);
+        floodFill(x + 1, y - 1, nextMove, visitedMoves, startX, startY);
+        floodFill(x - 1, y - 1, nextMove, visitedMoves, startX, startY);
     }
 
     private void clearMarkers() {
-        // SAFE REMOVAL: Copy entities to a list first
         ImmutableArray<Entity> markers = engine.getEntitiesFor(Family.all(TypeComponent.class).get());
         Array<Entity> toRemove = new Array<>();
-
         for (Entity e : markers) {
             if (e.getComponent(TypeComponent.class).type == TypeComponent.Type.MARKER) {
                 toRemove.add(e);
             }
         }
-
-        for (Entity e : toRemove) {
-            engine.removeEntity(e);
-        }
+        for (Entity e : toRemove) engine.removeEntity(e);
     }
 
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
@@ -400,9 +327,7 @@ public class GameInputController extends InputAdapter {
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TypeComponent t = e.getComponent(TypeComponent.class);
-            if (pos.x == x && pos.y == y && t.type == type) {
-                return e;
-            }
+            if (pos.x == x && pos.y == y && t.type == type) return e;
         }
         return null;
     }

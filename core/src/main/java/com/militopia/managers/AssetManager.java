@@ -42,6 +42,7 @@ public class AssetManager {
     public static final String ICON_STATS = "icon_stats.png";
     public static final String ICON_END = "icon_end.png";
     public static final String BTN_SLIDEDOWN = "slidedown_btn.png";
+    public static final String CIRCLE_UI = "circle_ui.png";
     public static final String UISKIN = "uiskin.json";
     
     // Fonts
@@ -58,7 +59,7 @@ public class AssetManager {
         manager.load(TILE_DEEPWATER, Texture.class);
         manager.load(TILE_SAND, Texture.class);
         manager.load(TILE_MOUNTAIN, Texture.class);
-        manager.load(FOG_OF_WAR, Texture.class); // <--- LOAD
+        manager.load(FOG_OF_WAR, Texture.class);
 
         manager.load(OBJ_TREE, Texture.class);
         manager.load(OBJ_RUINS, Texture.class);
@@ -78,6 +79,7 @@ public class AssetManager {
         manager.load(ICON_STATS, Texture.class);
         manager.load(ICON_END, Texture.class);
         manager.load(BTN_SLIDEDOWN, Texture.class);
+        manager.load(CIRCLE_UI, Texture.class);
 
         manager.load(UISKIN, Skin.class);
 
