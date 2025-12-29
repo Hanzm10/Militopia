@@ -54,33 +54,32 @@ public class GameScreen implements Screen {
         this.game = game;
         this.gameState = loadedState;
 
-        // 1. SETUP CAMERA
+        // ... camera code ...
         camera = new OrthographicCamera();
         camera.setToOrtho(false, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
-
-        // Calculate Center of Map
+        // ... (keep camera pos logic) ...
         float midGridX = GameConfig.MAP_WIDTH / 2f;
         float midGridY = GameConfig.MAP_HEIGHT / 2f;
         float isoCenterX = (midGridX - midGridY) * (GameConfig.TILE_WIDTH / 2.0f);
         float isoCenterY = (midGridX + midGridY) * (GameConfig.TILE_HEIGHT / 2.0f);
-
         camera.position.set(isoCenterX, isoCenterY, 0);
         camera.zoom = GameConfig.STARTUP_ZOOM;
         camera.update();
-
         viewport = new ExtendViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
 
         // 2. SETUP ENGINE & FACTORIES
         engine = new PooledEngine();
-        entityFactory = new EntityFactory(engine);
-        unitFactory = new UnitFactory(engine);
+
+        // FIX: Pass game.assets to factories
+        entityFactory = new EntityFactory(engine, game.assets);
+        unitFactory = new UnitFactory(engine, game.assets);
+
         saveManager = new SaveManager();
 
         // 3. GENERATE MAP
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT, loadedState.seed);
 
-        // This loop turns every Tree and Mountain into a sorted Entity
         for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
             for (int y = 0; y < GameConfig.MAP_HEIGHT; y++) {
                 MapGenerator.ObjectType type = gameMap.objects[x][y];
@@ -93,14 +92,15 @@ public class GameScreen implements Screen {
         // 4. ADD SYSTEMS
         engine.addSystem(new MovementSystem());
 
-        // Ensure MapRenderSystem constructor accepts MapGenerator.GameMap
-        mapRenderSystem = new MapRenderSystem(game.batch, game, gameMap, loadedState.p1Name, loadedState.p2Name);
+        // FIX: Pass UnitFactory (not Game)
+        mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
         engine.addSystem(mapRenderSystem);
 
         unitRenderSystem = new UnitRenderSystem(game.batch);
         engine.addSystem(unitRenderSystem);
 
-        // 5. RESTORE UNITS FROM SAVE
+        // ... (Rest of code remains the same) ...
+        // ... restore units ...
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if ("RECRUIT".equals(u.type)) {
@@ -109,23 +109,16 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 6. INITIALIZE HUD
         gameHUD = new GameHUD(game);
-
-        font = game.skin.getFont("default-font");
+        font = game.skin.getFont("default-font"); // This now works because we fixed MilitopiaGame
         font.getData().setScale(0.5f);
 
-        // 7. SETUP INPUT CONTROLLER
-        // Ensure GameInputController constructor accepts MapGenerator.GameMap
         inputController = new GameInputController(
                 this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD
         );
 
-        // 8. BUILD THE HUD
-        // (We removed GameMap from here in the previous step, so this is clean)
         gameHUD.build(this, inputController, unitFactory);
 
-        // 9. SETUP INPUT MULTIPLEXER
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
         multiplexer.addProcessor(inputController);
