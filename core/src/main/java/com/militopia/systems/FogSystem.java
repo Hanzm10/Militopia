@@ -12,12 +12,19 @@ public class FogSystem extends EntitySystem {
 
     private final MapGenerator.GameMap gameMap;
     private ImmutableArray<Entity> entities;
-    private final int playerID; 
+    
+    // Changed from final to allow switching
+    private int playerID; 
 
-    public FogSystem(MapGenerator.GameMap map, int playerID) {
+    public FogSystem(MapGenerator.GameMap map, int initialPlayerID) {
         this.gameMap = map;
-        this.playerID = playerID;
+        this.playerID = initialPlayerID;
         this.priority = 0; 
+    }
+    
+    // --- NEW: Switch Active Player ---
+    public void setPlayer(int id) {
+        this.playerID = id;
     }
 
     @Override
@@ -27,7 +34,7 @@ public class FogSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
-        // 1. Reset Visibility (Fog everything)
+        // 1. Reset Visibility
         for (int x = 0; x < gameMap.width; x++) {
             for (int y = 0; y < gameMap.height; y++) {
                 gameMap.visibleTiles[x][y] = false;
@@ -39,18 +46,14 @@ public class FogSystem extends EntitySystem {
             StatsComponent stats = e.getComponent(StatsComponent.class);
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
 
-            // Clear fog for CURRENT PLAYER's units
-            if (stats.owner == 1 || stats.owner == 2) {
+            // FIX: Only clear fog for the CURRENT ACTIVE PLAYER
+            if (stats.owner == playerID) {
                 clearFog(pos.x, pos.y, stats.vision);
             }
-            // OPTIONAL: If you want Player 2 to ALSO clear fog (God Mode / Shared Vision), 
-            // you can change the condition above to: 
-            // if (stats.owner == 1 || stats.owner == 2)
         }
     }
 
     private void clearFog(int centerX, int centerY, int radius) {
-        // FIX: Removed Manhattan check. Now it clears a full SQUARE (8 tiles around).
         for (int x = centerX - radius; x <= centerX + radius; x++) {
             for (int y = centerY - radius; y <= centerY + radius; y++) {
                 if (isValid(x, y)) {

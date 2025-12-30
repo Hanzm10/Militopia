@@ -121,6 +121,15 @@ public class GameHUD {
                 settingsOverlay.setVisible(true);
             }
         });
+        
+        endTurnBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // Call the new method in GameScreen
+                screen.endTurnAction();
+            }
+        });
+        
         settingsBtn.addListener(new HoverListener());
         statsBtn.addListener(new HoverListener());
         endTurnBtn.addListener(new HoverListener());

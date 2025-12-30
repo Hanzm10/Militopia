@@ -24,6 +24,9 @@ public class UnitRenderSystem extends EntitySystem {
     
     private final MapGenerator.GameMap gameMap; 
     private boolean fogEnabled = true;
+    
+    // --- NEW: Track Active Player ---
+    private int activePlayer = 1; 
 
     private int selectedX = -1, selectedY = -1;
     private int bouncingX = -1, bouncingY = -1;
@@ -34,6 +37,11 @@ public class UnitRenderSystem extends EntitySystem {
         this.gameMap = map;
         this.comparator = new ZComparator();
         this.priority = 1; 
+    }
+    
+    // --- NEW: Setter for Turn Switching ---
+    public void setPlayer(int playerID) {
+        this.activePlayer = playerID;
     }
     
     public void setFogEnabled(boolean enabled) {
@@ -70,17 +78,18 @@ public class UnitRenderSystem extends EntitySystem {
             TypeComponent typeC = e.getComponent(TypeComponent.class);
             StatsComponent stats = e.getComponent(StatsComponent.class);
 
-            // Check type early
             boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
 
             // --- VISIBILITY CHECK ---
             if (fogEnabled) {
                 if (!gameMap.visibleTiles[pos.x][pos.y]) {
                     
-                    boolean isVisibleUnit = (stats != null && (stats.owner == 1 || stats.owner == 2));
+                    // FIX: Only show units if they belong to the ACTIVE PLAYER
+                    // Enemy units and neutral objects in fog will now be hidden.
+                    boolean isMyUnit = (stats != null && stats.owner == activePlayer);
                     
-                    // FIX: Draw if it's a Player Unit OR a Movement Marker
-                    if (!isVisibleUnit && !isMarker) {
+                    // Draw if it's MY Unit OR a Movement Marker
+                    if (!isMyUnit && !isMarker) {
                         continue; 
                     }
                 }

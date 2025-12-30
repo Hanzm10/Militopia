@@ -8,14 +8,14 @@ public class GameState {
     public long seed;
     public String p1Name;
     public String p2Name;
-    public String saveName; // The filename
-    public String timestamp; // e.g., "2023-10-27 10:00"
+    public String saveName;
+    public String timestamp;
     public ArrayList<UnitData> units = new ArrayList<>();
     
-    // Later you will add unit positions here like:
+    // --- NEW: TURN TRACKING ---
+    public int currentPlayer = 1; // 1 or 2
+    public int turnCount = 1;
     
-    
-    // Empty constructor is required for JSON deserialization
     public GameState() {} 
     
     public GameState(long seed, String p1, String p2, String saveName) {
