@@ -52,14 +52,34 @@ public class GameInputController extends InputAdapter {
         this.gameHUD = gameHUD;
     }
 
-    public int getHoveredX() { return hoveredX; }
-    public int getHoveredY() { return hoveredY; }
-    public int getBouncingX() { return bouncingX; }
-    public int getBouncingY() { return bouncingY; }
-    public float getBounceTimer() { return bounceTimer; }
-    public int getLastClickedX() { return lastClickedX; }
-    public int getLastClickedY() { return lastClickedY; }
-    
+    public int getHoveredX() {
+        return hoveredX;
+    }
+
+    public int getHoveredY() {
+        return hoveredY;
+    }
+
+    public int getBouncingX() {
+        return bouncingX;
+    }
+
+    public int getBouncingY() {
+        return bouncingY;
+    }
+
+    public float getBounceTimer() {
+        return bounceTimer;
+    }
+
+    public int getLastClickedX() {
+        return lastClickedX;
+    }
+
+    public int getLastClickedY() {
+        return lastClickedY;
+    }
+
     public void resetLastClicked() {
         this.lastClickedX = -1;
         this.lastClickedY = -1;
@@ -97,22 +117,30 @@ public class GameInputController extends InputAdapter {
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
+
+            // Check for marker first
             Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
-            
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
+
+            // --- FOG OF WAR CHECK ---
             // If Fog is ON and the tile is NOT visible...
             if (screen.isFogEnabled() && !isVisible) {
-                // Clear any existing selection and do nothing else
-                clearMarkers();
-                selectedUnitEntity = null;
-                gameHUD.hideSummonMenu();
-                gameHUD.hideTileInfo();
-                lastClickedX = -1;
-                lastClickedY = -1;
-                System.out.println("Ignored click on Fog.");
-                return true; // Stop processing
+                // FIX: If there is a marker here (move target), ALLOW THE CLICK.
+                if (clickedMarker != null) {
+                    // Do nothing here, let it fall through to the movement logic below
+                } else {
+                    // Otherwise, block interaction with hidden tiles
+                    clearMarkers();
+                    selectedUnitEntity = null;
+                    gameHUD.hideSummonMenu();
+                    gameHUD.hideTileInfo();
+                    lastClickedX = -1;
+                    lastClickedY = -1;
+                    return true;
+                }
             }
-            
+            // ------------------------
+
             if (clickedMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
@@ -131,16 +159,19 @@ public class GameInputController extends InputAdapter {
             MapGenerator.ObjectType foundObject = gameMap.objects[gridX][gridY];
             boolean hasObject = (foundObject != MapGenerator.ObjectType.NONE);
 
-            if (foundUnit != null) selectionStack.add("UNIT");
-            if (hasObject) selectionStack.add("OBJECT");
+            if (foundUnit != null) {
+                selectionStack.add("UNIT");
+            }
+            if (hasObject) {
+                selectionStack.add("OBJECT");
+            }
             selectionStack.add("TERRAIN");
 
             String targetType = selectionStack.get(selectionIndex % selectionStack.size());
 
-            // Reset UI
             clearMarkers();
             selectedUnitEntity = null;
-            gameHUD.hideSummonMenu(); // <--- FIXED: Use animation close, not setVisible(false)
+            gameHUD.hideSummonMenu();
             triggerBounce(gridX, gridY);
 
             if (targetType.equals("UNIT")) {
@@ -152,11 +183,10 @@ public class GameInputController extends InputAdapter {
             }
 
         } else {
-            // Clicked Outside
             clearMarkers();
             selectedUnitEntity = null;
             gameHUD.hideTileInfo();
-            gameHUD.hideSummonMenu(); // <--- FIXED: Use animation close
+            gameHUD.hideSummonMenu();
             lastClickedX = -1;
             lastClickedY = -1;
             selectionIndex = 0;
@@ -240,13 +270,19 @@ public class GameInputController extends InputAdapter {
     }
 
     private boolean isWalkable(int x, int y) {
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return false;
-        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) return false;
-        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) return false;
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+            return false;
+        }
+        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) {
+            return false;
+        }
+        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) {
+            return false;
+        }
         return true;
     }
 
-private void showMovementMarkers(int startX, int startY) {
+    private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
         int moveRange = (stats != null) ? stats.moveRange : 3;
 
@@ -255,7 +291,7 @@ private void showMovementMarkers(int startX, int startY) {
         int[][] visitedMoves = new int[GameConfig.MAP_WIDTH][GameConfig.MAP_HEIGHT];
         for (int i = 0; i < GameConfig.MAP_WIDTH; i++) {
             for (int j = 0; j < GameConfig.MAP_HEIGHT; j++) {
-                visitedMoves[i][j] = -1; 
+                visitedMoves[i][j] = -1;
             }
         }
 
@@ -264,8 +300,12 @@ private void showMovementMarkers(int startX, int startY) {
 
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY) {
         // 1. Basic Validation
-        if (remainingMoves < 0) return;
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return;
+        if (remainingMoves < 0) {
+            return;
+        }
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+            return;
+        }
 
         // 2. OPTIMIZATION CHECK (The Fix)
         // If we have already reached this tile with MORE (or equal) energy, 
@@ -297,7 +337,7 @@ private void showMovementMarkers(int startX, int startY) {
 
         // 6. Recurse (Cost is 1 per tile)
         int nextMove = remainingMoves - 1;
-        
+
         // Cardinal
         floodFill(x + 1, y, nextMove, visitedMoves, startX, startY);
         floodFill(x - 1, y, nextMove, visitedMoves, startX, startY);
@@ -319,7 +359,9 @@ private void showMovementMarkers(int startX, int startY) {
                 toRemove.add(e);
             }
         }
-        for (Entity e : toRemove) engine.removeEntity(e);
+        for (Entity e : toRemove) {
+            engine.removeEntity(e);
+        }
     }
 
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
@@ -327,7 +369,9 @@ private void showMovementMarkers(int startX, int startY) {
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TypeComponent t = e.getComponent(TypeComponent.class);
-            if (pos.x == x && pos.y == y && t.type == type) return e;
+            if (pos.x == x && pos.y == y && t.type == type) {
+                return e;
+            }
         }
         return null;
     }

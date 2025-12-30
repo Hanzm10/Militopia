@@ -83,8 +83,7 @@ public class UnitFactory {
         entity.add(new TextureComponent(recruitRightRegion));
         entity.add(new FacingComponent(recruitLeftRegion, recruitRightRegion));
         entity.add(new TypeComponent(TypeComponent.Type.UNIT));
-        // Stats: Range 1, Vision 1
-        entity.add(new StatsComponent("Recruit", 3, 10, 5, 1, StatsComponent.MoveType.LAND, owner));
+        entity.add(new StatsComponent("Recruit", 1, 10, 5, 1, StatsComponent.MoveType.LAND, owner));
         engine.addEntity(entity);
     }
 

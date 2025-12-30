@@ -21,7 +21,6 @@ public class MapRenderSystem extends EntitySystem {
     private int bouncingX, bouncingY;
     private float bounceTimer;
     
-    // FOG STATE
     private boolean fogEnabled = true;
 
     public MapRenderSystem(SpriteBatch batch, UnitFactory factory, MapGenerator.GameMap map) {
@@ -65,28 +64,30 @@ public class MapRenderSystem extends EntitySystem {
         float isoY = coords[1];
         float animY = coords[2];
 
-        // 1. Check Fog
+        TextureRegion regionToDraw = null;
+
+        // 1. Determine what to draw (Fog vs Terrain)
         boolean isVisible = gameMap.visibleTiles[x][y];
         
         if (fogEnabled && !isVisible) {
-            // DRAW FOG
-            batch.draw(unitFactory.fogRegion, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-            return; // Stop drawing terrain info
+            // It's Fog!
+            regionToDraw = unitFactory.fogRegion;
+        } else {
+            // It's Visible Terrain!
+            regionToDraw = unitFactory.getTextureForTerrain(gameMap.terrain[x][y].ordinal());
         }
 
-        // 2. Draw Terrain if Visible
-        TextureRegion t = unitFactory.getTextureForTerrain(gameMap.terrain[x][y].ordinal());
-        if (t != null) {
-            batch.draw(t, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        // 2. Draw the Tile (Fog or Terrain)
+        if (regionToDraw != null) {
+            batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
         }
 
-        if (x == selectedX && y == selectedY && t != null) {
-            drawHighlight(t, isoX - xOffset, isoY - yOffset + animY);
+        // 3. Draw Highlight (This now applies to Fog too!)
+        if (x == selectedX && y == selectedY && regionToDraw != null) {
+            drawHighlight(regionToDraw, isoX - xOffset, isoY - yOffset + animY);
         }
     }
     
-    // ... (Keep existing methods: renderBordersPass, getIsoCoords, getTileOwner, isBase, drawHighlight) ...
-    // ... Copy from previous file ...
     private void renderBordersPass() {
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         Gdx.gl.glBlendFunc(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
@@ -107,6 +108,7 @@ public class MapRenderSystem extends EntitySystem {
         }
         shapeRenderer.end();
     }
+    
     private float[] getIsoCoords(int x, int y) {
         float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
         float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
@@ -117,6 +119,7 @@ public class MapRenderSystem extends EntitySystem {
         }
         return new float[]{isoX, isoY, animY};
     }
+    
     private void drawHighlight(TextureRegion t, float x, float y) {
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
@@ -125,6 +128,7 @@ public class MapRenderSystem extends EntitySystem {
         batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
         batch.setColor(Color.WHITE);
     }
+    
     private void drawSmartBorders(int x, int y, int currentOwner) {
         float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
         float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
@@ -145,6 +149,7 @@ public class MapRenderSystem extends EntitySystem {
         float leftY = centerY;
         float thick = 2.0f;
         float jointSize = thick / 2f;
+
         if (getTileOwner(x, y + 1) != currentOwner) {
             shapeRenderer.rectLine(leftX, leftY, topX, topY, thick);
             shapeRenderer.circle(leftX, leftY, jointSize);
@@ -166,6 +171,7 @@ public class MapRenderSystem extends EntitySystem {
             shapeRenderer.circle(botX, botY, jointSize);
         }
     }
+    
     private int getTileOwner(int x, int y) {
         if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return 0;
         if (isBase(x, y, 1)) return 1;
@@ -182,6 +188,7 @@ public class MapRenderSystem extends EntitySystem {
         }
         return 0;
     }
+    
     private boolean isBase(int x, int y, int player) {
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
         if (player == 1) return obj == MapGenerator.ObjectType.BASE_P1;

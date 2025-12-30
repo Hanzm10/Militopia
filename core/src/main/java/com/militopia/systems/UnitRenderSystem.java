@@ -70,21 +70,22 @@ public class UnitRenderSystem extends EntitySystem {
             TypeComponent typeC = e.getComponent(TypeComponent.class);
             StatsComponent stats = e.getComponent(StatsComponent.class);
 
-            // --- UPDATED VISIBILITY CHECK ---
+            // Check type early
+            boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
+
+            // --- VISIBILITY CHECK ---
             if (fogEnabled) {
-                // If the tile is covered in fog...
                 if (!gameMap.visibleTiles[pos.x][pos.y]) {
                     
-                    // FIX: Allow drawing units if they belong to Player 1 OR Player 2
-                    // This lets you see the enemy units sitting in the dark (for now).
                     boolean isVisibleUnit = (stats != null && (stats.owner == 1 || stats.owner == 2));
                     
-                    if (!isVisibleUnit) {
-                        continue; // Skip neutral objects/trees in the fog
+                    // FIX: Draw if it's a Player Unit OR a Movement Marker
+                    if (!isVisibleUnit && !isMarker) {
+                        continue; 
                     }
                 }
             }
-            // --------------------------------
+            // ------------------------
 
             float isoX, isoY;
 
@@ -111,10 +112,9 @@ public class UnitRenderSystem extends EntitySystem {
             float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
             float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
 
-            boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
             float verticalOffset = isMarker ? 5f : 10f;
 
-            if (typeC.type == TypeComponent.Type.MARKER) {
+            if (isMarker) {
                 batch.setColor(Color.WHITE);
             } else if (stats != null && stats.owner == 2) {
                 batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
