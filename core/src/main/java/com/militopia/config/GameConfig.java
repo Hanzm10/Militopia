@@ -38,4 +38,6 @@ public class GameConfig {
     
     //UI LAYOUT SETTINGS
     public static final float UI_WIDTH = 300f;
+    
+    public static final boolean TESTING_MODE = false;
 }

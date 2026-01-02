@@ -125,17 +125,19 @@ public class UnitRenderSystem extends EntitySystem {
 
             if (isMarker) {
                 batch.setColor(Color.WHITE);
-            } // Only Tint UNITS (Recruits), leave OBJECTS (Bases/Towns) natural
-            else if (typeC.type == TypeComponent.Type.UNIT) {
-                if (stats != null && stats.owner == 2) {
+            } else if (typeC.type == TypeComponent.Type.UNIT) {
+                // NEW: Check if exhausted (and not in testing mode)
+                if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
+                    batch.setColor(Color.GRAY); // Darken unit to show it's done
+                } // Existing Owner Logic
+                else if (stats != null && stats.owner == 2) {
                     batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); // Red Tint
                 } else if (stats != null && stats.owner == 1) {
                     batch.setColor(0.6f, 0.6f, 1.0f, 1.0f); // Blue Tint
                 } else {
                     batch.setColor(Color.WHITE);
                 }
-            } // Objects (Bases, Towns, Trees) are drawn normally
-            else {
+            } else {
                 batch.setColor(Color.WHITE);
             }
 

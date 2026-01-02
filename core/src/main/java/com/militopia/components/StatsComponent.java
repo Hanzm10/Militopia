@@ -12,10 +12,11 @@ public class StatsComponent implements Component {
     public int maxHealth;
     public int currentHealth;
     public int attackDamage;
-    public int vision; // <--- NEW
+    public int vision; 
     public String name;
     public MoveType moveType;
     public int owner;
+    public boolean hasActed = false;
 
     // Updated Constructor
     public StatsComponent(String name, int range, int hp, int atk, int vision, MoveType type, int owner) {
@@ -24,8 +25,9 @@ public class StatsComponent implements Component {
         this.maxHealth = hp;
         this.currentHealth = hp;
         this.attackDamage = atk;
-        this.vision = vision; // <--- Set
+        this.vision = vision; 
         this.moveType = type;
         this.owner = owner;
+        this.hasActed = false;
     }
 }

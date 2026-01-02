@@ -1,6 +1,9 @@
 package com.militopia.screen;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
@@ -11,6 +14,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.militopia.MilitopiaGame;
+import com.militopia.components.StatsComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
@@ -123,6 +127,10 @@ public class GameScreen implements Screen {
         multiplexer.addProcessor(inputController);
         Gdx.input.setInputProcessor(multiplexer);
     }
+    
+    public int getCurrentPlayer() {
+        return gameState.currentPlayer;
+    }
 
     public void endTurnAction() {
         if (turnState == TurnState.PLAYING) {
@@ -162,6 +170,14 @@ public class GameScreen implements Screen {
         unitRenderSystem.setFogEnabled(isFogEnabled);
         return isFogEnabled;
     }
+    
+    private void resetUnitActions() {
+        ImmutableArray<Entity> units = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
+        for (Entity entity : units) {
+            StatsComponent stats = entity.getComponent(StatsComponent.class);
+            stats.hasActed = false; // Refresh everyone
+        }
+    }
 
     @Override
     public void render(float delta) {
@@ -175,6 +191,8 @@ public class GameScreen implements Screen {
 
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
                 gameState.turnCount++;
+                
+                resetUnitActions();
                 
                 gameHUD.updateTurn(gameState.turnCount);
 

@@ -190,12 +190,34 @@ public class GameInputController extends InputAdapter {
 
             if (targetType.equals("UNIT")) {
 
+                // --- NEW: CHECK TURN OWNERSHIP ---
+                StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
+
+                // If the unit belongs to the enemy...
+                if (unitStats != null && unitStats.owner != screen.getCurrentPlayer()) {
+                    // 1. Show info (so we can see what the enemy is)
+                    UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase()); // or check type string
+                    gameHUD.showTileInfo(unitStats.name + " (Enemy)", info.region);
+
+                    // 2. Deselect any of our own units
+                    clearMarkers();
+                    selectedUnitEntity = null;
+                    gameHUD.hideSummonMenu();
+
+                    System.out.println("Cannot control enemy unit.");
+                    return true; // STOP HERE! Do not allow movement/selection.
+                }
+
+                if (!GameConfig.TESTING_MODE && unitStats != null && unitStats.hasActed) {
+                    System.out.println("Unit has already acted this turn.");
+                    return true; // Ignore click
+                }
+
                 // --- CAPTURE CHECK (Backup Manual Trigger) ---
                 Entity objectEntity = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
 
                 if (objectEntity != null) {
                     StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
-                    StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
 
                     // FIX: Same logic here
                     if (objStats != null && unitStats != null
@@ -304,10 +326,23 @@ public class GameInputController extends InputAdapter {
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
         pos.x = targetX;
         pos.y = targetY;
+
+        // --- NEW: MARK AS ACTED ---
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        if (stats != null) {
+            stats.hasActed = true;
+        }
+        // --------------------------
+
         gameHUD.hideSummonMenu();
         clearMarkers();
-        selectedUnitEntity = null;
+        selectedUnitEntity = null; // Important: Clear selection so we can't capture immediately after
 
+        // Auto-trigger capture check (Optional: If you want moving to forbid capture, comment this out)
+        // But usually, moving onto a base allows capture NEXT turn. 
+        // If you want "Move OR Capture", keep this commented out or logic gated.
+        // For now, let's keep it, but since we set 'hasActed=true' above, 
+        // they won't be able to select the unit again after this move finishes.
         checkAndTriggerCapture(unit, targetX, targetY);
     }
 
