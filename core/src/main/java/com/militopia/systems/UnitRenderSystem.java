@@ -21,12 +21,12 @@ public class UnitRenderSystem extends EntitySystem {
     private SpriteBatch batch;
     private ImmutableArray<Entity> entities;
     private ZComparator comparator;
-    
-    private final MapGenerator.GameMap gameMap; 
+
+    private final MapGenerator.GameMap gameMap;
     private boolean fogEnabled = true;
-    
+
     // --- NEW: Track Active Player ---
-    private int activePlayer = 1; 
+    private int activePlayer = 1;
 
     private int selectedX = -1, selectedY = -1;
     private int bouncingX = -1, bouncingY = -1;
@@ -36,14 +36,14 @@ public class UnitRenderSystem extends EntitySystem {
         this.batch = batch;
         this.gameMap = map;
         this.comparator = new ZComparator();
-        this.priority = 1; 
+        this.priority = 1;
     }
-    
+
     // --- NEW: Setter for Turn Switching ---
     public void setPlayer(int playerID) {
         this.activePlayer = playerID;
     }
-    
+
     public void setFogEnabled(boolean enabled) {
         this.fogEnabled = enabled;
     }
@@ -69,8 +69,8 @@ public class UnitRenderSystem extends EntitySystem {
         }
         Collections.sort(sortedEntities, comparator);
 
-        batch.begin(); 
-        
+        batch.begin();
+
         for (Entity e : sortedEntities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TextureComponent tex = e.getComponent(TextureComponent.class);
@@ -83,14 +83,14 @@ public class UnitRenderSystem extends EntitySystem {
             // --- VISIBILITY CHECK ---
             if (fogEnabled) {
                 if (!gameMap.visibleTiles[pos.x][pos.y]) {
-                    
+
                     // FIX: Only show units if they belong to the ACTIVE PLAYER
                     // Enemy units and neutral objects in fog will now be hidden.
                     boolean isMyUnit = (stats != null && stats.owner == activePlayer);
-                    
+
                     // Draw if it's MY Unit OR a Movement Marker
                     if (!isMyUnit && !isMarker) {
-                        continue; 
+                        continue;
                     }
                 }
             }
@@ -125,11 +125,17 @@ public class UnitRenderSystem extends EntitySystem {
 
             if (isMarker) {
                 batch.setColor(Color.WHITE);
-            } else if (stats != null && stats.owner == 2) {
-                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
-            } else if (stats != null && stats.owner == 1) {
-                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
-            } else {
+            } // Only Tint UNITS (Recruits), leave OBJECTS (Bases/Towns) natural
+            else if (typeC.type == TypeComponent.Type.UNIT) {
+                if (stats != null && stats.owner == 2) {
+                    batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); // Red Tint
+                } else if (stats != null && stats.owner == 1) {
+                    batch.setColor(0.6f, 0.6f, 1.0f, 1.0f); // Blue Tint
+                } else {
+                    batch.setColor(Color.WHITE);
+                }
+            } // Objects (Bases, Towns, Trees) are drawn normally
+            else {
                 batch.setColor(Color.WHITE);
             }
 
@@ -143,7 +149,7 @@ public class UnitRenderSystem extends EntitySystem {
             if (!isMarker && pos.x == selectedX && pos.y == selectedY) {
                 Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
                 batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-                batch.setColor(0.4f, 0.4f, 0.4f, 1f); 
+                batch.setColor(0.4f, 0.4f, 0.4f, 1f);
 
                 batch.draw(tex.region,
                         isoX - xOffset,

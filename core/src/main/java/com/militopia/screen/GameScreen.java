@@ -116,6 +116,7 @@ public class GameScreen implements Screen {
         );
 
         gameHUD.build(this, inputController, unitFactory);
+        gameHUD.updateTurn(gameState.turnCount);
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
@@ -174,6 +175,8 @@ public class GameScreen implements Screen {
 
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
                 gameState.turnCount++;
+                
+                gameHUD.updateTurn(gameState.turnCount);
 
                 fogSystem.setPlayer(gameState.currentPlayer);
                 fogSystem.update(0);

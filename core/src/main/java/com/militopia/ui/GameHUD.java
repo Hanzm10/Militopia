@@ -1,5 +1,6 @@
 package com.militopia.ui;
 
+import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -24,6 +25,7 @@ import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
+import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.HoverListener;
 
@@ -39,6 +41,11 @@ public class GameHUD {
     private Table bottomContainer;
     private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
     private Label tileInfoLabel;
+
+    private Label xpLabel;
+    private Label fundsLabel;
+    private Label turnLabel;
+
     private int currentBaseOwner = 1;
 
     public GameHUD(MilitopiaGame game) {
@@ -99,7 +106,6 @@ public class GameHUD {
 
         // Add Listeners to Bottom Buttons (They need color setting too for the whiten effect to work)
         // Note: We removed the setColor(LIGHT_GRAY) logic previously to keep them white.
-        
         bottomContent.add(createIconGroup(settingsBtn, "Settings")).expandX();
         bottomContent.add(createIconGroup(statsBtn, "Game Stats")).expandX();
         bottomContent.add(createIconGroup(endTurnBtn, "End Turn")).expandX();
@@ -121,7 +127,7 @@ public class GameHUD {
                 settingsOverlay.setVisible(true);
             }
         });
-        
+
         endTurnBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -129,10 +135,22 @@ public class GameHUD {
                 screen.endTurnAction();
             }
         });
-        
+
         settingsBtn.addListener(new HoverListener());
         statsBtn.addListener(new HoverListener());
         endTurnBtn.addListener(new HoverListener());
+    }
+
+    public void updateTurn(int turn) {
+        if (turnLabel != null) {
+            turnLabel.setText(String.valueOf(turn));
+        }
+    }
+
+    public void updateFunding(int funding) {
+        if (fundsLabel != null) {
+            fundsLabel.setText(String.valueOf(funding));
+        }
     }
 
     private void configureSummonMenu(final GameInputController inputController, final UnitFactory unitFactory) {
@@ -145,7 +163,6 @@ public class GameHUD {
         addSummonButton(contentTable, "RECRUIT", inputController, unitFactory);
 
         // --- CANCEL BUTTON REMOVED ---
-
         // Add content centered
         summonMenu.add(contentTable).expandX().center();
 
@@ -189,7 +206,7 @@ public class GameHUD {
 
         // --- FIX 2: SET INITIAL ORIGIN ---
         buttonStack.setOrigin(40, 40); // Center of 80x80
-        
+
         buttonStack.addListener(new HoverListener());
 
         buttonStack.addListener(new ClickListener() {
@@ -234,6 +251,109 @@ public class GameHUD {
         summonMenu.addAction(Actions.moveTo(0, -summonMenu.getHeight(), 0.3f, Interpolation.pow2In));
         bottomContainer.clearActions();
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
+    }
+
+    public void openCaptureMenu(final Entity townEntity, final int newOwner,
+            final UnitFactory factory, final GameInputController controller,
+            final MapGenerator.GameMap map) {
+
+        summonMenu.clear();
+        summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
+
+        Table contentTable = new Table();
+
+        // Pass args to helper
+        addCaptureButton(contentTable, townEntity, newOwner, factory, controller, map);
+
+        TextButton closeBtn = new TextButton("Cancel", game.skin);
+        closeBtn.addListener(new HoverListener());
+        closeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                hideSummonMenu();
+                // Optional: deselect logic here too if you want cancel to clear selection
+                controller.deselect();
+            }
+        });
+
+        summonMenu.add(contentTable).expandX().center();
+        summonMenu.add(closeBtn).padRight(20);
+
+        float panelHeight = 140f;
+        summonMenu.setSize(stage.getWidth(), panelHeight);
+        summonMenu.setPosition(0, -panelHeight);
+        stage.addActor(summonMenu);
+
+        // Animations...
+        tileInfoTable.clearActions();
+        tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
+        summonMenu.clearActions();
+        summonMenu.setX(0);
+        summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
+        bottomContainer.clearActions();
+        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+    }
+
+    private void addCaptureButton(Table container, final Entity townEntity, final int newOwner,
+            final UnitFactory factory, final GameInputController controller,
+            final MapGenerator.GameMap map) {
+
+        TextureRegion baseRegion;
+        if (newOwner == 1) {
+            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P1).region;
+        } else {
+            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P2).region;
+        }
+
+        TextureRegionDrawable circleDrawable;
+        try {
+            Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
+            circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            circleDrawable = new TextureRegionDrawable(new TextureRegion(circleTex));
+        } catch (Exception e) {
+            circleDrawable = (TextureRegionDrawable) game.skin.newDrawable("white", Color.DARK_GRAY);
+        }
+
+        Stack buttonStack = new Stack();
+        buttonStack.setTransform(true);
+
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        circleBg.setScaling(Scaling.fit);
+        buttonStack.add(circleBg);
+
+        com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(baseRegion);
+        unitIcon.setScaling(Scaling.fit);
+
+        Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
+        iconContainer.size(50, 50).center();
+        buttonStack.add(iconContainer);
+
+        buttonStack.setOrigin(40, 40);
+        buttonStack.addListener(new HoverListener());
+
+        // INTERACTION: Capture logic
+        buttonStack.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // 1. Convert Logic (Updates Map + Stats)
+                factory.convertTownToBase(townEntity, newOwner, map);
+
+                // 2. Hide Menu
+                hideSummonMenu();
+
+                // 3. FIX ISSUE 1: Deselect everything (Clear markers)
+                controller.deselect();
+            }
+        });
+
+        Table group = new Table();
+        group.add(buttonStack).size(80, 80).row();
+
+        Label nameLbl = new Label("Capture Town", game.skin, "default-font", Color.WHITE);
+        nameLbl.setFontScale(0.7f);
+        group.add(nameLbl).padTop(5);
+
+        container.add(group).pad(10);
     }
 
     private void createTileInfoPanel() {
@@ -339,8 +459,21 @@ public class GameHUD {
         Table t = new Table();
         Label titleLbl = new Label(title, game.skin, "default-font", Color.WHITE);
         titleLbl.setFontScale(0.8f);
+
         Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
         valLbl.setFontScale(1.2f);
+
+        // SAVE REFERENCES
+        if (title.equals("XP")) {
+            xpLabel = valLbl;
+        }
+        if (title.equals("Funding")) {
+            fundsLabel = valLbl;
+        }
+        if (title.equals("Turn")) {
+            turnLabel = valLbl;
+        }
+
         t.add(titleLbl).row();
         t.add(valLbl);
         return t;

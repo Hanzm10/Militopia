@@ -24,7 +24,6 @@ import com.militopia.ui.GameHUD;
 
 public class GameInputController extends InputAdapter {
 
-    // ... (Fields remain same) ...
     private final GameScreen screen;
     private final OrthographicCamera camera;
     private final PooledEngine engine;
@@ -41,7 +40,6 @@ public class GameInputController extends InputAdapter {
     private int hoveredX = -1, hoveredY = -1;
     private int selectionIndex = 0;
     
-    // --- NEW: Input Lock ---
     private boolean inputEnabled = true;
 
     public GameInputController(GameScreen screen, OrthographicCamera camera, PooledEngine engine,
@@ -58,18 +56,19 @@ public class GameInputController extends InputAdapter {
     
     public void setInputEnabled(boolean enabled) {
         this.inputEnabled = enabled;
-        // If disabled, clear any pending actions
-        if (!enabled) {
-            clearMarkers();
-            selectedUnitEntity = null;
-            gameHUD.hideSummonMenu();
-            gameHUD.hideTileInfo();
-            hoveredX = -1;
-            hoveredY = -1;
-        }
+        if (!enabled) deselect();
     }
 
-    // ... (getters) ...
+    public void deselect() {
+        clearMarkers();
+        selectedUnitEntity = null;
+        gameHUD.hideSummonMenu();
+        gameHUD.hideTileInfo();
+        lastClickedX = -1;
+        lastClickedY = -1;
+    }
+
+    // ... (getters: getHoveredX, getBouncingX, etc.) ...
     public int getHoveredX() { return hoveredX; }
     public int getHoveredY() { return hoveredY; }
     public int getBouncingX() { return bouncingX; }
@@ -77,11 +76,7 @@ public class GameInputController extends InputAdapter {
     public float getBounceTimer() { return bounceTimer; }
     public int getLastClickedX() { return lastClickedX; }
     public int getLastClickedY() { return lastClickedY; }
-    
-    public void resetLastClicked() {
-        this.lastClickedX = -1;
-        this.lastClickedY = -1;
-    }
+    public void resetLastClicked() { this.lastClickedX = -1; this.lastClickedY = -1; }
 
     public void update(float deltaTime) {
         if (bounceTimer > 0) {
@@ -95,8 +90,7 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
-        if (!inputEnabled) return false; // BLOCK INPUT
-        
+        if (!inputEnabled) return false; 
         camera.zoom += amountY * GameConfig.ZOOM_SPEED;
         camera.zoom = MathUtils.clamp(camera.zoom, GameConfig.ZOOM_MIN, GameConfig.ZOOM_MAX);
         camera.update();
@@ -105,7 +99,7 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        if (!inputEnabled) return false; // BLOCK INPUT
+        if (!inputEnabled) return false; 
         
         lastTouchX = screenX;
         lastTouchY = screenY;
@@ -126,12 +120,7 @@ public class GameInputController extends InputAdapter {
                 if (clickedMarker != null) {
                     // Allowed
                 } else {
-                    clearMarkers();
-                    selectedUnitEntity = null;
-                    gameHUD.hideSummonMenu();
-                    gameHUD.hideTileInfo();
-                    lastClickedX = -1;
-                    lastClickedY = -1;
+                    deselect();
                     return true;
                 }
             }
@@ -166,6 +155,30 @@ public class GameInputController extends InputAdapter {
             triggerBounce(gridX, gridY);
 
             if (targetType.equals("UNIT")) {
+                
+                // --- CAPTURE CHECK ---
+                Entity objectEntity = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
+                handleUnitSelection(foundUnit, gridX, gridY);
+                
+                if (objectEntity != null) {
+                    StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
+                    StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
+                    
+                    // FIX ISSUE 1: Removed 'income > 0' check. Rely on ObjectType.
+                    if (objStats != null 
+                            && objStats.owner != unitStats.owner
+                            && foundObject == MapGenerator.ObjectType.TOWN) { 
+                        
+                        selectedUnitEntity = foundUnit;
+                        showMovementMarkers(gridX, gridY);
+                        
+                        gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
+                        System.out.println("Capture Opportunity Detected!");
+                        return true; 
+                    }
+                }
+                // --------------------------
+
                 handleUnitSelection(foundUnit, gridX, gridY);
             } else if (targetType.equals("OBJECT")) {
                 handleObjectSelection(foundObject, gridX, gridY);
@@ -174,19 +187,11 @@ public class GameInputController extends InputAdapter {
             }
 
         } else {
-            clearMarkers();
-            selectedUnitEntity = null;
-            gameHUD.hideTileInfo();
-            gameHUD.hideSummonMenu();
-            lastClickedX = -1;
-            lastClickedY = -1;
-            selectionIndex = 0;
+            deselect();
         }
         return true;
     }
 
-    // ... (Keep existing selection methods: handleUnitSelection, handleObjectSelection, handleTerrainSelection) ...
-    // Note: Ensure handleObjectSelection logic is consistent with previous
     private void handleUnitSelection(Entity unit, int x, int y) {
         selectedUnitEntity = unit;
         showMovementMarkers(x, y);
@@ -197,7 +202,7 @@ public class GameInputController extends InputAdapter {
     private void handleObjectSelection(MapGenerator.ObjectType obj, int x, int y) {
         if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
             int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
-            gameHUD.openSummonMenu(owner); // Pass Base Owner
+            gameHUD.openSummonMenu(owner);
             System.out.println("Selected: Base (Opening Summon Menu)");
             return;
         }
@@ -212,10 +217,11 @@ public class GameInputController extends InputAdapter {
         gameHUD.showTileInfo(info.name, info.region);
     }
 
+    // ... (Keep mouseMoved, touchDragged, triggerBounce, moveUnit, isWalkable, showMovementMarkers, floodFill, clearMarkers, getEntityAt) ...
+    // Paste existing logic for these methods below
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        if (!inputEnabled) return false; // BLOCK INPUT
-        
+        if (!inputEnabled) return false; 
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
@@ -223,7 +229,6 @@ public class GameInputController extends InputAdapter {
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
-
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
             this.hoveredX = gridX;
             this.hoveredY = gridY;
@@ -233,11 +238,9 @@ public class GameInputController extends InputAdapter {
         }
         return false;
     }
-
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        if (!inputEnabled) return false; // BLOCK INPUT
-        
+        if (!inputEnabled) return false; 
         if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
             float x = Gdx.input.getDeltaX();
             float y = Gdx.input.getDeltaY();
@@ -247,31 +250,51 @@ public class GameInputController extends InputAdapter {
         }
         return false;
     }
-
-    // ... (Keep existing logic methods: triggerBounce, moveUnit, isWalkable, showMovementMarkers, floodFill, clearMarkers, getEntityAt) ...
-    // Paste rest of previous code here to complete the file.
     private void triggerBounce(int x, int y) {
         this.bouncingX = x;
         this.bouncingY = y;
         this.bounceTimer = GameConfig.BOUNCE_DURATION;
     }
-
     private void moveUnit(Entity unit, int targetX, int targetY) {
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
         pos.x = targetX;
         pos.y = targetY;
+        gameHUD.hideSummonMenu();
         clearMarkers();
         selectedUnitEntity = null;
+        
+        checkAndTriggerCapture(unit, targetX, targetY);
     }
+    
+    private void checkAndTriggerCapture(Entity unit, int x, int y) {
+        // 1. Get Object at destination
+        Entity objectEntity = getEntityAt(x, y, TypeComponent.Type.OBJECT);
+        if (objectEntity == null) return;
 
+        // 2. Check Object Type (Using Map Data)
+        MapGenerator.ObjectType type = gameMap.objects[x][y];
+        if (type != MapGenerator.ObjectType.TOWN) return;
+
+        // 3. Check Stats (Ownership)
+        StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
+        StatsComponent unitStats = unit.getComponent(StatsComponent.class);
+
+        if (objStats != null && unitStats != null) {
+            // If owners differ, trigger capture
+            if (objStats.owner != unitStats.owner) {
+                System.out.println("Auto-triggering Capture Menu");
+                gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
+            }
+        }
+    }
+    
     private boolean isWalkable(int x, int y) {
         if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return false;
         if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) return false;
         if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) return false;
         return true;
     }
-
     private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
         int moveRange = (stats != null) ? stats.moveRange : 3;
@@ -283,7 +306,6 @@ public class GameInputController extends InputAdapter {
         }
         floodFill(startX, startY, moveRange, visitedMoves, startX, startY);
     }
-
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY) {
         if (remainingMoves < 0) return;
         if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return;
@@ -306,7 +328,6 @@ public class GameInputController extends InputAdapter {
         floodFill(x + 1, y - 1, nextMove, visitedMoves, startX, startY);
         floodFill(x - 1, y - 1, nextMove, visitedMoves, startX, startY);
     }
-
     private void clearMarkers() {
         ImmutableArray<Entity> markers = engine.getEntitiesFor(Family.all(TypeComponent.class).get());
         Array<Entity> toRemove = new Array<>();
@@ -317,7 +338,6 @@ public class GameInputController extends InputAdapter {
         }
         for (Entity e : toRemove) engine.removeEntity(e);
     }
-
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TypeComponent.class).get());
         for (Entity e : entities) {
