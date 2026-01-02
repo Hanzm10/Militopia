@@ -39,7 +39,7 @@ public class GameInputController extends InputAdapter {
     private float bounceTimer = 0;
     private int hoveredX = -1, hoveredY = -1;
     private int selectionIndex = 0;
-    
+
     private boolean inputEnabled = true;
 
     public GameInputController(GameScreen screen, OrthographicCamera camera, PooledEngine engine,
@@ -53,10 +53,12 @@ public class GameInputController extends InputAdapter {
         this.entityFactory = entityFactory;
         this.gameHUD = gameHUD;
     }
-    
+
     public void setInputEnabled(boolean enabled) {
         this.inputEnabled = enabled;
-        if (!enabled) deselect();
+        if (!enabled) {
+            deselect();
+        }
     }
 
     public void deselect() {
@@ -69,14 +71,38 @@ public class GameInputController extends InputAdapter {
     }
 
     // ... (getters: getHoveredX, getBouncingX, etc.) ...
-    public int getHoveredX() { return hoveredX; }
-    public int getHoveredY() { return hoveredY; }
-    public int getBouncingX() { return bouncingX; }
-    public int getBouncingY() { return bouncingY; }
-    public float getBounceTimer() { return bounceTimer; }
-    public int getLastClickedX() { return lastClickedX; }
-    public int getLastClickedY() { return lastClickedY; }
-    public void resetLastClicked() { this.lastClickedX = -1; this.lastClickedY = -1; }
+    public int getHoveredX() {
+        return hoveredX;
+    }
+
+    public int getHoveredY() {
+        return hoveredY;
+    }
+
+    public int getBouncingX() {
+        return bouncingX;
+    }
+
+    public int getBouncingY() {
+        return bouncingY;
+    }
+
+    public float getBounceTimer() {
+        return bounceTimer;
+    }
+
+    public int getLastClickedX() {
+        return lastClickedX;
+    }
+
+    public int getLastClickedY() {
+        return lastClickedY;
+    }
+
+    public void resetLastClicked() {
+        this.lastClickedX = -1;
+        this.lastClickedY = -1;
+    }
 
     public void update(float deltaTime) {
         if (bounceTimer > 0) {
@@ -90,7 +116,9 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
-        if (!inputEnabled) return false; 
+        if (!inputEnabled) {
+            return false;
+        }
         camera.zoom += amountY * GameConfig.ZOOM_SPEED;
         camera.zoom = MathUtils.clamp(camera.zoom, GameConfig.ZOOM_MIN, GameConfig.ZOOM_MAX);
         camera.update();
@@ -99,8 +127,10 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        if (!inputEnabled) return false; 
-        
+        if (!inputEnabled) {
+            return false;
+        }
+
         lastTouchX = screenX;
         lastTouchY = screenY;
 
@@ -143,8 +173,12 @@ public class GameInputController extends InputAdapter {
             MapGenerator.ObjectType foundObject = gameMap.objects[gridX][gridY];
             boolean hasObject = (foundObject != MapGenerator.ObjectType.NONE);
 
-            if (foundUnit != null) selectionStack.add("UNIT");
-            if (hasObject) selectionStack.add("OBJECT");
+            if (foundUnit != null) {
+                selectionStack.add("UNIT");
+            }
+            if (hasObject) {
+                selectionStack.add("OBJECT");
+            }
             selectionStack.add("TERRAIN");
 
             String targetType = selectionStack.get(selectionIndex % selectionStack.size());
@@ -155,26 +189,29 @@ public class GameInputController extends InputAdapter {
             triggerBounce(gridX, gridY);
 
             if (targetType.equals("UNIT")) {
-                
-                // --- CAPTURE CHECK ---
+
+                // --- CAPTURE CHECK (Backup Manual Trigger) ---
                 Entity objectEntity = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
-                handleUnitSelection(foundUnit, gridX, gridY);
-                
+
                 if (objectEntity != null) {
                     StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
                     StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
-                    
-                    // FIX ISSUE 1: Removed 'income > 0' check. Rely on ObjectType.
-                    if (objStats != null 
-                            && objStats.owner != unitStats.owner
-                            && foundObject == MapGenerator.ObjectType.TOWN) { 
-                        
-                        selectedUnitEntity = foundUnit;
-                        showMovementMarkers(gridX, gridY);
-                        
-                        gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
-                        System.out.println("Capture Opportunity Detected!");
-                        return true; 
+
+                    // FIX: Same logic here
+                    if (objStats != null && unitStats != null
+                            && objStats.owner != unitStats.owner) {
+
+                        MapGenerator.ObjectType type = gameMap.objects[gridX][gridY];
+                        boolean isCapturable = (type == MapGenerator.ObjectType.TOWN
+                                || type == MapGenerator.ObjectType.BASE_P1
+                                || type == MapGenerator.ObjectType.BASE_P2);
+
+                        if (isCapturable) {
+                            selectedUnitEntity = foundUnit;
+                            showMovementMarkers(gridX, gridY);
+                            gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
+                            return true;
+                        }
                     }
                 }
                 // --------------------------
@@ -221,7 +258,9 @@ public class GameInputController extends InputAdapter {
     // Paste existing logic for these methods below
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        if (!inputEnabled) return false; 
+        if (!inputEnabled) {
+            return false;
+        }
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
@@ -238,9 +277,12 @@ public class GameInputController extends InputAdapter {
         }
         return false;
     }
+
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        if (!inputEnabled) return false; 
+        if (!inputEnabled) {
+            return false;
+        }
         if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
             float x = Gdx.input.getDeltaX();
             float y = Gdx.input.getDeltaY();
@@ -250,11 +292,13 @@ public class GameInputController extends InputAdapter {
         }
         return false;
     }
+
     private void triggerBounce(int x, int y) {
         this.bouncingX = x;
         this.bouncingY = y;
         this.bounceTimer = GameConfig.BOUNCE_DURATION;
     }
+
     private void moveUnit(Entity unit, int targetX, int targetY) {
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
@@ -263,55 +307,78 @@ public class GameInputController extends InputAdapter {
         gameHUD.hideSummonMenu();
         clearMarkers();
         selectedUnitEntity = null;
-        
+
         checkAndTriggerCapture(unit, targetX, targetY);
     }
-    
+
     private void checkAndTriggerCapture(Entity unit, int x, int y) {
-        // 1. Get Object at destination
         Entity objectEntity = getEntityAt(x, y, TypeComponent.Type.OBJECT);
-        if (objectEntity == null) return;
+        if (objectEntity == null) {
+            return;
+        }
 
-        // 2. Check Object Type (Using Map Data)
         MapGenerator.ObjectType type = gameMap.objects[x][y];
-        if (type != MapGenerator.ObjectType.TOWN) return;
 
-        // 3. Check Stats (Ownership)
+        // FIX: Allow capturing Towns OR Enemy Bases
+        boolean isCapturable = (type == MapGenerator.ObjectType.TOWN
+                || type == MapGenerator.ObjectType.BASE_P1
+                || type == MapGenerator.ObjectType.BASE_P2);
+
+        if (!isCapturable) {
+            return;
+        }
+
         StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
         StatsComponent unitStats = unit.getComponent(StatsComponent.class);
 
         if (objStats != null && unitStats != null) {
-            // If owners differ, trigger capture
+            // Trigger if owners differ
             if (objStats.owner != unitStats.owner) {
                 System.out.println("Auto-triggering Capture Menu");
                 gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
             }
         }
     }
-    
+
     private boolean isWalkable(int x, int y) {
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return false;
-        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) return false;
-        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) return false;
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+            return false;
+        }
+        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) {
+            return false;
+        }
+        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) {
+            return false;
+        }
         return true;
     }
+
     private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
         int moveRange = (stats != null) ? stats.moveRange : 3;
         int[][] visitedMoves = new int[GameConfig.MAP_WIDTH][GameConfig.MAP_HEIGHT];
         for (int i = 0; i < GameConfig.MAP_WIDTH; i++) {
             for (int j = 0; j < GameConfig.MAP_HEIGHT; j++) {
-                visitedMoves[i][j] = -1; 
+                visitedMoves[i][j] = -1;
             }
         }
         floodFill(startX, startY, moveRange, visitedMoves, startX, startY);
     }
+
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY) {
-        if (remainingMoves < 0) return;
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return;
-        if (visitedMoves[x][y] >= remainingMoves) return;
+        if (remainingMoves < 0) {
+            return;
+        }
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+            return;
+        }
+        if (visitedMoves[x][y] >= remainingMoves) {
+            return;
+        }
         boolean isStart = (x == startX && y == startY);
-        if (!isStart && !isWalkable(x, y)) return;
+        if (!isStart && !isWalkable(x, y)) {
+            return;
+        }
         visitedMoves[x][y] = remainingMoves;
         if (!isStart) {
             if (getEntityAt(x, y, TypeComponent.Type.MARKER) == null) {
@@ -328,6 +395,7 @@ public class GameInputController extends InputAdapter {
         floodFill(x + 1, y - 1, nextMove, visitedMoves, startX, startY);
         floodFill(x - 1, y - 1, nextMove, visitedMoves, startX, startY);
     }
+
     private void clearMarkers() {
         ImmutableArray<Entity> markers = engine.getEntitiesFor(Family.all(TypeComponent.class).get());
         Array<Entity> toRemove = new Array<>();
@@ -336,14 +404,19 @@ public class GameInputController extends InputAdapter {
                 toRemove.add(e);
             }
         }
-        for (Entity e : toRemove) engine.removeEntity(e);
+        for (Entity e : toRemove) {
+            engine.removeEntity(e);
+        }
     }
+
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TypeComponent.class).get());
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TypeComponent t = e.getComponent(TypeComponent.class);
-            if (pos.x == x && pos.y == y && t.type == type) return e;
+            if (pos.x == x && pos.y == y && t.type == type) {
+                return e;
+            }
         }
         return null;
     }

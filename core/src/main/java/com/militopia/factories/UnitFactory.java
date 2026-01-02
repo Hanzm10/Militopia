@@ -55,7 +55,7 @@ public class UnitFactory {
         this.oilRegion = new TextureRegion(assets.get(AssetManager.OBJ_OIL));
         this.cactusRegion = new TextureRegion(assets.get(AssetManager.OBJ_CACTUS));
         this.mountainObjRegion = new TextureRegion(assets.get(AssetManager.OBJ_MOUNTAIN));
-        
+
         this.fogRegion = new TextureRegion(assets.get(AssetManager.FOG_OF_WAR));
     }
 
@@ -78,16 +78,18 @@ public class UnitFactory {
         entity.add(new StatsComponent("Recruit", 1, 10, 5, 1, StatsComponent.MoveType.LAND, owner));
         engine.addEntity(entity);
     }
-    
+
     public void createObjectEntity(int x, int y, MapGenerator.ObjectType type) {
         UiInfo info = getObjectUi(type);
-        if (info.region == null) return;
-        
+        if (info.region == null) {
+            return;
+        }
+
         Entity entity = engine.createEntity();
         entity.add(new GridPositionComponent(x, y, 1));
         entity.add(new TextureComponent(info.region));
-        entity.add(new TypeComponent(TypeComponent.Type.OBJECT)); 
-        
+        entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
+
         int owner = 0;
         int vision = 1; // Default vision for objects (Trees, Towns, etc)
 
@@ -105,21 +107,25 @@ public class UnitFactory {
     }
 
     // --- Convert Town to Base ---
-    public void convertTownToBase(Entity objectEntity, int newOwner, MapGenerator.GameMap map) {
+    public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map) {
+        // 1. Update Texture to the new owner's Base
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
         if (newOwner == 1) {
             tex.region = baseP1Region;
         } else if (newOwner == 2) {
             tex.region = baseP2Region;
         }
-        
+
+        // 2. Update Stats (Owner and Income)
         StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.owner = newOwner;
             stats.name = (newOwner == 1) ? "Blue Base" : "Red Base";
-            stats.vision = GameConfig.BORDER_RADIUS; // FIX: Sync vision on capture
+//            stats.income = 5;
+            stats.vision = GameConfig.BORDER_RADIUS;
         }
-        
+
+        // 3. Update GameMap Data (Crucial for borders and future captures)
         GridPositionComponent pos = objectEntity.getComponent(GridPositionComponent.class);
         if (pos != null) {
             if (newOwner == 1) {
@@ -132,44 +138,74 @@ public class UnitFactory {
 
     // ... (Keep existing methods: getUnitUi, getTerrainUi, getObjectUi, getTextureForTerrain, UiInfo) ...
     public UiInfo getUnitUi(String unitType) {
-        if ("RECRUIT".equals(unitType)) return new UiInfo("Infantry Recruit", recruitDisplayRegion);
+        if ("RECRUIT".equals(unitType)) {
+            return new UiInfo("Infantry Recruit", recruitDisplayRegion);
+        }
         return new UiInfo("Unknown Unit", recruitDisplayRegion);
     }
+
     public UiInfo getTerrainUi(MapGenerator.TerrainType type) {
         switch (type) {
-            case WATER: return new UiInfo("Shallow Water", waterRegion);
-            case DEEP_WATER: return new UiInfo("Deep Ocean", deepWaterRegion);
-            case SAND: return new UiInfo("Desert", sandRegion);
-            case MOUNTAIN: return new UiInfo("Mountain Range", mountainRegion);
-            default: return new UiInfo("Grassland", grassRegion);
+            case WATER:
+                return new UiInfo("Shallow Water", waterRegion);
+            case DEEP_WATER:
+                return new UiInfo("Deep Ocean", deepWaterRegion);
+            case SAND:
+                return new UiInfo("Desert", sandRegion);
+            case MOUNTAIN:
+                return new UiInfo("Mountain Range", mountainRegion);
+            default:
+                return new UiInfo("Grassland", grassRegion);
         }
     }
+
     public UiInfo getObjectUi(MapGenerator.ObjectType type) {
         switch (type) {
-            case BASE_P1: return new UiInfo("Blue Base", baseP1Region);
-            case BASE_P2: return new UiInfo("Red Base", baseP2Region);
-            case TOWN: return new UiInfo("Town", townRegion);
-            case TREE: return new UiInfo("Oak Tree", treeRegion);
-            case RUINS: return new UiInfo("Ancient Ruins", ruinsRegion);
-            case OIL: return new UiInfo("Oil Reservoir", oilRegion);
-            case CACTUS: return new UiInfo("Cactus", cactusRegion);
-            case MOUNTAIN_OBJ: return new UiInfo("Mountain", mountainObjRegion);
-            default: return new UiInfo("Unknown Object", grassRegion);
+            case BASE_P1:
+                return new UiInfo("Blue Base", baseP1Region);
+            case BASE_P2:
+                return new UiInfo("Red Base", baseP2Region);
+            case TOWN:
+                return new UiInfo("Town", townRegion);
+            case TREE:
+                return new UiInfo("Oak Tree", treeRegion);
+            case RUINS:
+                return new UiInfo("Ancient Ruins", ruinsRegion);
+            case OIL:
+                return new UiInfo("Oil Reservoir", oilRegion);
+            case CACTUS:
+                return new UiInfo("Cactus", cactusRegion);
+            case MOUNTAIN_OBJ:
+                return new UiInfo("Mountain", mountainObjRegion);
+            default:
+                return new UiInfo("Unknown Object", grassRegion);
         }
     }
+
     public TextureRegion getTextureForTerrain(int terrainId) {
         MapGenerator.TerrainType[] allTypes = MapGenerator.TerrainType.values();
-        if (terrainId < 0 || terrainId >= allTypes.length) return grassRegion;
+        if (terrainId < 0 || terrainId >= allTypes.length) {
+            return grassRegion;
+        }
         MapGenerator.TerrainType type = allTypes[terrainId];
-        if (type == MapGenerator.TerrainType.WATER) return waterRegion;
-        else if (type == MapGenerator.TerrainType.DEEP_WATER) return deepWaterRegion;
-        else if (type == MapGenerator.TerrainType.SAND) return sandRegion;
-        else if (type == MapGenerator.TerrainType.MOUNTAIN) return mountainRegion;
-        else return grassRegion;
+        if (type == MapGenerator.TerrainType.WATER) {
+            return waterRegion;
+        } else if (type == MapGenerator.TerrainType.DEEP_WATER) {
+            return deepWaterRegion;
+        } else if (type == MapGenerator.TerrainType.SAND) {
+            return sandRegion;
+        } else if (type == MapGenerator.TerrainType.MOUNTAIN) {
+            return mountainRegion;
+        } else {
+            return grassRegion;
+        }
     }
+
     public static class UiInfo {
+
         public String name;
         public TextureRegion region;
+
         public UiInfo(String name, TextureRegion region) {
             this.name = name;
             this.region = region;

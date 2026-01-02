@@ -21,6 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
+import com.militopia.components.StatsComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.factories.UnitFactory;
@@ -294,9 +295,9 @@ public class GameHUD {
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
-    private void addCaptureButton(Table container, final Entity townEntity, final int newOwner,
-            final UnitFactory factory, final GameInputController controller,
-            final MapGenerator.GameMap map) {
+    private void addCaptureButton(Table container, final Entity structureEntity, final int newOwner, 
+                                  final UnitFactory factory, final GameInputController controller, 
+                                  final MapGenerator.GameMap map) {
 
         TextureRegion baseRegion;
         if (newOwner == 1) {
@@ -335,13 +336,8 @@ public class GameHUD {
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // 1. Convert Logic (Updates Map + Stats)
-                factory.convertTownToBase(townEntity, newOwner, map);
-
-                // 2. Hide Menu
+                factory.captureStructure(structureEntity, newOwner, map);
                 hideSummonMenu();
-
-                // 3. FIX ISSUE 1: Deselect everything (Clear markers)
                 controller.deselect();
             }
         });
@@ -349,7 +345,20 @@ public class GameHUD {
         Table group = new Table();
         group.add(buttonStack).size(80, 80).row();
 
-        Label nameLbl = new Label("Capture Town", game.skin, "default-font", Color.WHITE);
+        String labelText = "Capture Structure";
+
+        StatsComponent stats = structureEntity.getComponent(StatsComponent.class);
+        if (stats != null) {
+            // Check if it is a Town
+            if (stats.name.contains("Town")) {
+                labelText = "Capture Town";
+            } else {
+                // If it's not a Town, it's a Base (and since we are capturing it, it's an Enemy Base)
+                labelText = "Capture Enemy Base";
+            }
+        }
+
+        Label nameLbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
 
