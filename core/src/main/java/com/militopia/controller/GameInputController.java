@@ -70,39 +70,14 @@ public class GameInputController extends InputAdapter {
         lastClickedY = -1;
     }
 
-    // ... (getters: getHoveredX, getBouncingX, etc.) ...
-    public int getHoveredX() {
-        return hoveredX;
-    }
-
-    public int getHoveredY() {
-        return hoveredY;
-    }
-
-    public int getBouncingX() {
-        return bouncingX;
-    }
-
-    public int getBouncingY() {
-        return bouncingY;
-    }
-
-    public float getBounceTimer() {
-        return bounceTimer;
-    }
-
-    public int getLastClickedX() {
-        return lastClickedX;
-    }
-
-    public int getLastClickedY() {
-        return lastClickedY;
-    }
-
-    public void resetLastClicked() {
-        this.lastClickedX = -1;
-        this.lastClickedY = -1;
-    }
+    public int getHoveredX() { return hoveredX; }
+    public int getHoveredY() { return hoveredY; }
+    public int getBouncingX() { return bouncingX; }
+    public int getBouncingY() { return bouncingY; }
+    public float getBounceTimer() { return bounceTimer; }
+    public int getLastClickedX() { return lastClickedX; }
+    public int getLastClickedY() { return lastClickedY; }
+    public void resetLastClicked() { this.lastClickedX = -1; this.lastClickedY = -1; }
 
     public void update(float deltaTime) {
         if (bounceTimer > 0) {
@@ -116,9 +91,7 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
-        if (!inputEnabled) {
-            return false;
-        }
+        if (!inputEnabled) return false;
         camera.zoom += amountY * GameConfig.ZOOM_SPEED;
         camera.zoom = MathUtils.clamp(camera.zoom, GameConfig.ZOOM_MIN, GameConfig.ZOOM_MAX);
         camera.update();
@@ -127,9 +100,7 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        if (!inputEnabled) {
-            return false;
-        }
+        if (!inputEnabled) return false;
 
         lastTouchX = screenX;
         lastTouchY = screenY;
@@ -143,23 +114,25 @@ public class GameInputController extends InputAdapter {
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
+            
+            // 1. FOG CHECK
             Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
 
             if (screen.isFogEnabled() && !isVisible) {
-                if (clickedMarker != null) {
-                    // Allowed
-                } else {
+                if (clickedMarker == null) {
                     deselect();
                     return true;
                 }
             }
 
+            // 2. MOVEMENT CHECK
             if (clickedMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
             }
 
+            // 3. CLICK CYCLE
             if (gridX == lastClickedX && gridY == lastClickedY) {
                 selectionIndex++;
             } else {
@@ -173,12 +146,8 @@ public class GameInputController extends InputAdapter {
             MapGenerator.ObjectType foundObject = gameMap.objects[gridX][gridY];
             boolean hasObject = (foundObject != MapGenerator.ObjectType.NONE);
 
-            if (foundUnit != null) {
-                selectionStack.add("UNIT");
-            }
-            if (hasObject) {
-                selectionStack.add("OBJECT");
-            }
+            if (foundUnit != null) selectionStack.add("UNIT");
+            if (hasObject) selectionStack.add("OBJECT");
             selectionStack.add("TERRAIN");
 
             String targetType = selectionStack.get(selectionIndex % selectionStack.size());
@@ -188,57 +157,62 @@ public class GameInputController extends InputAdapter {
             gameHUD.hideSummonMenu();
             triggerBounce(gridX, gridY);
 
+            // =================================================================
+            // LOGIC HIERARCHY
+            // =================================================================
             if (targetType.equals("UNIT")) {
-
-                // --- NEW: CHECK TURN OWNERSHIP ---
                 StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
 
-                // If the unit belongs to the enemy...
+                // A. ENEMY UNIT -> SHOW INFO
                 if (unitStats != null && unitStats.owner != screen.getCurrentPlayer()) {
-                    // 1. Show info (so we can see what the enemy is)
-                    UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase()); // or check type string
+                    UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
                     gameHUD.showTileInfo(unitStats.name + " (Enemy)", info.region);
-
-                    // 2. Deselect any of our own units
-                    clearMarkers();
-                    selectedUnitEntity = null;
-                    gameHUD.hideSummonMenu();
-
-                    System.out.println("Cannot control enemy unit.");
-                    return true; // STOP HERE! Do not allow movement/selection.
+                    return true;
                 }
 
-                if (!GameConfig.TESTING_MODE && unitStats != null && unitStats.hasActed) {
-                    System.out.println("Unit has already acted this turn.");
-                    return true; // Ignore click
-                }
-
-                // --- CAPTURE CHECK (Backup Manual Trigger) ---
+                boolean isUnitExhausted = (!GameConfig.TESTING_MODE && unitStats != null && unitStats.hasActed);
                 Entity objectEntity = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
 
+                // B. STRUCTURE CHECK
                 if (objectEntity != null) {
                     StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
+                    if (objStats != null && unitStats != null) {
+                        
+                        boolean isStructure = (foundObject == MapGenerator.ObjectType.TOWN || 
+                                               foundObject == MapGenerator.ObjectType.BASE_P1 || 
+                                               foundObject == MapGenerator.ObjectType.BASE_P2);
 
-                    // FIX: Same logic here
-                    if (objStats != null && unitStats != null
-                            && objStats.owner != unitStats.owner) {
-
-                        MapGenerator.ObjectType type = gameMap.objects[gridX][gridY];
-                        boolean isCapturable = (type == MapGenerator.ObjectType.TOWN
-                                || type == MapGenerator.ObjectType.BASE_P1
-                                || type == MapGenerator.ObjectType.BASE_P2);
-
-                        if (isCapturable) {
-                            selectedUnitEntity = foundUnit;
-                            showMovementMarkers(gridX, gridY);
-                            gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
-                            return true;
+                        if (isStructure) {
+                            // CASE B1: FRIENDLY STRUCTURE
+                            if (objStats.owner == unitStats.owner) {
+                                // --- CHANGE: BLOCK SUMMONING IF UNIT IS HERE ---
+                                if (isUnitExhausted) {
+                                    System.out.println("Unit exhausted on base. Summoning blocked.");
+                                    return true; // Just stop, don't open menu
+                                }
+                                // If Fresh: Fall through to C (Select Unit)
+                            } 
+                            // CASE B2: ENEMY STRUCTURE
+                            else {
+                                if (!isUnitExhausted) {
+                                    selectedUnitEntity = foundUnit;
+                                    showMovementMarkers(gridX, gridY);
+                                    gameHUD.openCaptureMenu(objectEntity, foundUnit, unitFactory, this, gameMap); // CAPTURE
+                                    return true;
+                                }
+                            }
                         }
                     }
                 }
-                // --------------------------
 
+                // C. UNIT SELECTION (MOVE)
+                if (isUnitExhausted) {
+                    System.out.println("Unit exhausted.");
+                    return true;
+                }
+                
                 handleUnitSelection(foundUnit, gridX, gridY);
+
             } else if (targetType.equals("OBJECT")) {
                 handleObjectSelection(foundObject, gridX, gridY);
             } else if (targetType.equals("TERRAIN")) {
@@ -259,30 +233,44 @@ public class GameInputController extends InputAdapter {
     }
 
     private void handleObjectSelection(MapGenerator.ObjectType obj, int x, int y) {
+        // If selecting Base directly (cycle or no unit), open Summon Menu
         if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
+            
+            // Safety check: Only open for my own base
             int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
-            gameHUD.openSummonMenu(owner);
-            System.out.println("Selected: Base (Opening Summon Menu)");
-            return;
+            if (owner == screen.getCurrentPlayer()) {
+                
+                // --- NEW CHECK: IS BASE BLOCKED? ---
+                Entity unitOnTop = getEntityAt(x, y, TypeComponent.Type.UNIT);
+                if (unitOnTop != null) {
+                    System.out.println("Base Blocked by Unit.");
+                    gameHUD.showTileInfo("Base (Blocked)", unitFactory.getObjectUi(obj).region);
+                    return; // EXIT: Do not open summon menu
+                }
+                // -----------------------------------
+
+                gameHUD.openSummonMenu(owner);
+                System.out.println("Selected: Base (Opening Summon Menu)");
+                return;
+            }
         }
+        
         UnitFactory.UiInfo info = unitFactory.getObjectUi(obj);
         gameHUD.showTileInfo(info.name, info.region);
         System.out.println("Selected: " + info.name);
     }
 
+    // ... (rest of methods: handleTerrainSelection, mouseMoved, touchDragged, triggerBounce, moveUnit, etc.) ...
+    
     private void handleTerrainSelection(int x, int y) {
         MapGenerator.TerrainType type = gameMap.terrain[x][y];
         UnitFactory.UiInfo info = unitFactory.getTerrainUi(type);
         gameHUD.showTileInfo(info.name, info.region);
     }
 
-    // ... (Keep mouseMoved, touchDragged, triggerBounce, moveUnit, isWalkable, showMovementMarkers, floodFill, clearMarkers, getEntityAt) ...
-    // Paste existing logic for these methods below
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        if (!inputEnabled) {
-            return false;
-        }
+        if (!inputEnabled) return false;
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
@@ -302,9 +290,7 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        if (!inputEnabled) {
-            return false;
-        }
+        if (!inputEnabled) return false;
         if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
             float x = Gdx.input.getDeltaX();
             float y = Gdx.input.getDeltaY();
@@ -327,64 +313,21 @@ public class GameInputController extends InputAdapter {
         pos.x = targetX;
         pos.y = targetY;
 
-        // --- NEW: MARK AS ACTED ---
+        // --- MARK ACTED ---
         StatsComponent stats = unit.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.hasActed = true;
         }
-        // --------------------------
 
         gameHUD.hideSummonMenu();
         clearMarkers();
-        selectedUnitEntity = null; // Important: Clear selection so we can't capture immediately after
-
-        // Auto-trigger capture check (Optional: If you want moving to forbid capture, comment this out)
-        // But usually, moving onto a base allows capture NEXT turn. 
-        // If you want "Move OR Capture", keep this commented out or logic gated.
-        // For now, let's keep it, but since we set 'hasActed=true' above, 
-        // they won't be able to select the unit again after this move finishes.
-        checkAndTriggerCapture(unit, targetX, targetY);
-    }
-
-    private void checkAndTriggerCapture(Entity unit, int x, int y) {
-        Entity objectEntity = getEntityAt(x, y, TypeComponent.Type.OBJECT);
-        if (objectEntity == null) {
-            return;
-        }
-
-        MapGenerator.ObjectType type = gameMap.objects[x][y];
-
-        // FIX: Allow capturing Towns OR Enemy Bases
-        boolean isCapturable = (type == MapGenerator.ObjectType.TOWN
-                || type == MapGenerator.ObjectType.BASE_P1
-                || type == MapGenerator.ObjectType.BASE_P2);
-
-        if (!isCapturable) {
-            return;
-        }
-
-        StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
-        StatsComponent unitStats = unit.getComponent(StatsComponent.class);
-
-        if (objStats != null && unitStats != null) {
-            // Trigger if owners differ
-            if (objStats.owner != unitStats.owner) {
-                System.out.println("Auto-triggering Capture Menu");
-                gameHUD.openCaptureMenu(objectEntity, unitStats.owner, unitFactory, this, gameMap);
-            }
-        }
+        selectedUnitEntity = null;
     }
 
     private boolean isWalkable(int x, int y) {
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
-            return false;
-        }
-        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) {
-            return false;
-        }
-        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) {
-            return false;
-        }
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return false;
+        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) return false;
+        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) return false;
         return true;
     }
 
@@ -394,26 +337,18 @@ public class GameInputController extends InputAdapter {
         int[][] visitedMoves = new int[GameConfig.MAP_WIDTH][GameConfig.MAP_HEIGHT];
         for (int i = 0; i < GameConfig.MAP_WIDTH; i++) {
             for (int j = 0; j < GameConfig.MAP_HEIGHT; j++) {
-                visitedMoves[i][j] = -1;
+                visitedMoves[i][j] = -1; 
             }
         }
         floodFill(startX, startY, moveRange, visitedMoves, startX, startY);
     }
 
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY) {
-        if (remainingMoves < 0) {
-            return;
-        }
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
-            return;
-        }
-        if (visitedMoves[x][y] >= remainingMoves) {
-            return;
-        }
+        if (remainingMoves < 0) return;
+        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return;
+        if (visitedMoves[x][y] >= remainingMoves) return;
         boolean isStart = (x == startX && y == startY);
-        if (!isStart && !isWalkable(x, y)) {
-            return;
-        }
+        if (!isStart && !isWalkable(x, y)) return;
         visitedMoves[x][y] = remainingMoves;
         if (!isStart) {
             if (getEntityAt(x, y, TypeComponent.Type.MARKER) == null) {
@@ -439,9 +374,7 @@ public class GameInputController extends InputAdapter {
                 toRemove.add(e);
             }
         }
-        for (Entity e : toRemove) {
-            engine.removeEntity(e);
-        }
+        for (Entity e : toRemove) engine.removeEntity(e);
     }
 
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
@@ -449,9 +382,7 @@ public class GameInputController extends InputAdapter {
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TypeComponent t = e.getComponent(TypeComponent.class);
-            if (pos.x == x && pos.y == y && t.type == type) {
-                return e;
-            }
+            if (pos.x == x && pos.y == y && t.type == type) return e;
         }
         return null;
     }

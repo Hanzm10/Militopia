@@ -21,7 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
-import com.militopia.components.StatsComponent;
+import com.militopia.components.StatsComponent; // Required
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.factories.UnitFactory;
@@ -48,6 +48,10 @@ public class GameHUD {
     private Label turnLabel;
 
     private int currentBaseOwner = 1;
+    
+    // --- NEW: Stored References ---
+    private GameInputController inputController;
+    private UnitFactory unitFactory;
 
     public GameHUD(MilitopiaGame game) {
         this.game = game;
@@ -58,6 +62,10 @@ public class GameHUD {
     }
 
     public void build(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory) {
+        // Save references for later use in openSummonMenu
+        this.inputController = inputController;
+        this.unitFactory = unitFactory;
+        
         setupHUD(screen, inputController, unitFactory);
     }
 
@@ -105,8 +113,6 @@ public class GameHUD {
         ImageButton statsBtn = createCircleButton("icon_stats");
         ImageButton endTurnBtn = createCircleButton("icon_end");
 
-        // Add Listeners to Bottom Buttons (They need color setting too for the whiten effect to work)
-        // Note: We removed the setColor(LIGHT_GRAY) logic previously to keep them white.
         bottomContent.add(createIconGroup(settingsBtn, "Settings")).expandX();
         bottomContent.add(createIconGroup(statsBtn, "Game Stats")).expandX();
         bottomContent.add(createIconGroup(endTurnBtn, "End Turn")).expandX();
@@ -119,22 +125,17 @@ public class GameHUD {
         stage.addActor(rootTable);
 
         createTileInfoPanel();
-        configureSummonMenu(inputController, unitFactory);
+        
+        // Initial setup (hidden)
+        configureSummonMenu(); 
+        
         createSettingsOverlay(screen);
 
         settingsBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                settingsOverlay.setVisible(true);
-            }
+            @Override public void clicked(InputEvent event, float x, float y) { settingsOverlay.setVisible(true); }
         });
-
         endTurnBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                // Call the new method in GameScreen
-                screen.endTurnAction();
-            }
+            @Override public void clicked(InputEvent event, float x, float y) { screen.endTurnAction(); }
         });
 
         settingsBtn.addListener(new HoverListener());
@@ -143,34 +144,47 @@ public class GameHUD {
     }
 
     public void updateTurn(int turn) {
-        if (turnLabel != null) {
-            turnLabel.setText(String.valueOf(turn));
-        }
+        if (turnLabel != null) turnLabel.setText(String.valueOf(turn));
     }
 
     public void updateFunding(int funding) {
-        if (fundsLabel != null) {
-            fundsLabel.setText(String.valueOf(funding));
-        }
+        if (fundsLabel != null) fundsLabel.setText(String.valueOf(funding));
     }
 
-    private void configureSummonMenu(final GameInputController inputController, final UnitFactory unitFactory) {
+    // --- REFACTORED: Helper to populate Summon Menu ---
+    private void configureSummonMenu() {
+        populateSummonMenu(); // Call the logic
+        
+        // Initial positioning
+        float panelHeight = 140f;
+        summonMenu.setSize(stage.getWidth(), panelHeight);
+        summonMenu.setPosition(0, -panelHeight);
+        stage.addActor(summonMenu);
+    }
+    
+    // --- NEW: Logic to Rebuild Summon Menu (Clears Capture Buttons) ---
+    private void populateSummonMenu() {
         summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
 
         Table contentTable = new Table();
 
-        // 1. ADD UNITS
+        // 1. ADD UNITS (Recruit)
         addSummonButton(contentTable, "RECRUIT", inputController, unitFactory);
 
-        // --- CANCEL BUTTON REMOVED ---
-        // Add content centered
-        summonMenu.add(contentTable).expandX().center();
+        // 2. CANCEL BUTTON
+        TextButton closeBtn = new TextButton("Cancel", game.skin);
+        closeBtn.addListener(new HoverListener());
+        closeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                hideSummonMenu();
+                inputController.resetLastClicked();
+            }
+        });
 
-        float panelHeight = 140f;
-        summonMenu.setSize(stage.getWidth(), panelHeight);
-        summonMenu.setPosition(0, -panelHeight);
-        stage.addActor(summonMenu);
+        summonMenu.add(contentTable).expandX().center();
+        // summonMenu.add(closeBtn).padRight(20); // Optional cancel button
     }
 
     private void addSummonButton(Table container, final String unitType,
@@ -178,7 +192,6 @@ public class GameHUD {
 
         UnitFactory.UiInfo info = factory.getUnitUi(unitType);
 
-        // ... (Asset loading stays the same) ...
         TextureRegionDrawable circleDrawable;
         try {
             Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
@@ -189,9 +202,6 @@ public class GameHUD {
         }
 
         Stack buttonStack = new Stack();
-
-        // --- FIX 1: ENABLE TRANSFORM ---
-        // This allows the Group (Stack) to Scale and Rotate!
         buttonStack.setTransform(true);
 
         com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
@@ -205,9 +215,7 @@ public class GameHUD {
         iconContainer.size(50, 50).center();
         buttonStack.add(iconContainer);
 
-        // --- FIX 2: SET INITIAL ORIGIN ---
-        buttonStack.setOrigin(40, 40); // Center of 80x80
-
+        buttonStack.setOrigin(40, 40); 
         buttonStack.addListener(new HoverListener());
 
         buttonStack.addListener(new ClickListener() {
@@ -233,8 +241,13 @@ public class GameHUD {
         container.add(group).pad(10);
     }
 
+    // --- FIX: Rebuild UI every time it opens ---
     public void openSummonMenu(int owner) {
         this.currentBaseOwner = owner;
+        
+        // CRITICAL: Wipe stale "Capture" buttons and put "Recruit" buttons back!
+        populateSummonMenu(); 
+        
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
 
@@ -254,17 +267,17 @@ public class GameHUD {
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
     }
 
-    public void openCaptureMenu(final Entity townEntity, final int newOwner,
+    // --- CAPTURE MENU (Wipes Summon Buttons) ---
+    public void openCaptureMenu(final Entity townEntity, final Entity capturingUnit,
             final UnitFactory factory, final GameInputController controller,
             final MapGenerator.GameMap map) {
 
-        summonMenu.clear();
+        summonMenu.clear(); // WIPE
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
 
         Table contentTable = new Table();
 
-        // Pass args to helper
-        addCaptureButton(contentTable, townEntity, newOwner, factory, controller, map);
+        addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map);
 
         TextButton closeBtn = new TextButton("Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
@@ -272,7 +285,6 @@ public class GameHUD {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 hideSummonMenu();
-                // Optional: deselect logic here too if you want cancel to clear selection
                 controller.deselect();
             }
         });
@@ -285,7 +297,7 @@ public class GameHUD {
         summonMenu.setPosition(0, -panelHeight);
         stage.addActor(summonMenu);
 
-        // Animations...
+        // Animations
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
         summonMenu.clearActions();
@@ -295,16 +307,19 @@ public class GameHUD {
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
-    private void addCaptureButton(Table container, final Entity structureEntity, final int newOwner, 
-                                  final UnitFactory factory, final GameInputController controller, 
-                                  final MapGenerator.GameMap map) {
-
+    // ... (addCaptureButton, createTileInfoPanel, createSettingsOverlay, createStatGroup, createCircleButton, etc. remain the same) ...
+    // Note: Ensure addCaptureButton uses 'StatsComponent' correctly (imported or fully qualified)
+    
+    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit, 
+            final UnitFactory factory, final GameInputController controller, 
+            final MapGenerator.GameMap map) {
+        
+        final int newOwner = capturingUnit.getComponent(StatsComponent.class).owner;
+        
+        // ... (Icon logic) ...
         TextureRegion baseRegion;
-        if (newOwner == 1) {
-            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P1).region;
-        } else {
-            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P2).region;
-        }
+        if (newOwner == 1) baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P1).region;
+        else baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P2).region;
 
         TextureRegionDrawable circleDrawable;
         try {
@@ -317,26 +332,29 @@ public class GameHUD {
 
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-
+        
         com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
 
         com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(baseRegion);
         unitIcon.setScaling(Scaling.fit);
-
+        
         Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
-        iconContainer.size(50, 50).center();
+        iconContainer.size(50, 50).center(); 
         buttonStack.add(iconContainer);
 
         buttonStack.setOrigin(40, 40);
         buttonStack.addListener(new HoverListener());
 
-        // INTERACTION: Capture logic
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 factory.captureStructure(structureEntity, newOwner, map);
+                
+                StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
+                if (unitStats != null) unitStats.hasActed = true;
+
                 hideSummonMenu();
                 controller.deselect();
             }
@@ -344,27 +362,23 @@ public class GameHUD {
 
         Table group = new Table();
         group.add(buttonStack).size(80, 80).row();
-
+        
         String labelText = "Capture Structure";
-
         StatsComponent stats = structureEntity.getComponent(StatsComponent.class);
         if (stats != null) {
-            // Check if it is a Town
-            if (stats.name.contains("Town")) {
-                labelText = "Capture Town";
-            } else {
-                // If it's not a Town, it's a Base (and since we are capturing it, it's an Enemy Base)
-                labelText = "Capture Enemy Base";
-            }
+            if (stats.name.contains("Town")) labelText = "Capture Town";
+            else labelText = "Capture Enemy Base";
         }
-
+        
         Label nameLbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
 
         container.add(group).pad(10);
     }
-
+    
+    // ... (Paste rest of your existing helper methods here: createTileInfoPanel, createSettingsOverlay, etc.) ...
+    // These methods do not need changes.
     private void createTileInfoPanel() {
         tileInfoTable = new Table();
         tileInfoTable.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.9f)));
@@ -386,10 +400,7 @@ public class GameHUD {
         ImageButton closeBtn = new ImageButton(closeStyle);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                hideTileInfo();
-            }
+            @Override public void clicked(InputEvent event, float x, float y) { hideTileInfo(); }
         });
         tileInfoTable.add(closeBtn).size(40, 40).padRight(20);
         float panelHeight = 80f;
@@ -397,10 +408,7 @@ public class GameHUD {
         tileInfoTable.setSize(stage.getWidth(), panelHeight);
         stage.addActor(tileInfoTable);
     }
-
     public void showTileInfo(String name, TextureRegion region) {
-        if (summonMenu.getY() > -50) {
-        }
         tileInfoLabel.setText(name);
         tileInfoImage.setDrawable(new TextureRegionDrawable(region));
         tileInfoTable.setWidth(stage.getWidth());
@@ -410,14 +418,12 @@ public class GameHUD {
         tileInfoTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
-
     public void hideTileInfo() {
         tileInfoTable.clearActions();
         bottomContainer.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
     }
-
     private void createSettingsOverlay(final GameScreen screen) {
         settingsOverlay = new Table();
         settingsOverlay.setFillParent(true);
@@ -434,8 +440,7 @@ public class GameHUD {
         final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin);
         fogBtn.addListener(new HoverListener());
         fogBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
+            @Override public void clicked(InputEvent event, float x, float y) {
                 boolean newState = screen.toggleFog();
                 fogBtn.setText("Toggle Fog: " + (newState ? "ON" : "OFF"));
             }
@@ -443,18 +448,12 @@ public class GameHUD {
         TextButton saveExitBtn = new TextButton("Save & Exit", game.skin);
         saveExitBtn.addListener(new HoverListener());
         saveExitBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                screen.saveAndExit();
-            }
+            @Override public void clicked(InputEvent event, float x, float y) { screen.saveAndExit(); }
         });
         TextButton resumeBtn = new TextButton("Resume", game.skin);
         resumeBtn.addListener(new HoverListener());
         resumeBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                settingsOverlay.setVisible(false);
-            }
+            @Override public void clicked(InputEvent event, float x, float y) { settingsOverlay.setVisible(false); }
         });
         menuBox.add(title).pad(20).row();
         menuBox.add(fogBtn).size(200, 50).pad(10).row();
@@ -463,38 +462,24 @@ public class GameHUD {
         settingsOverlay.add(menuBox).size(300, 300);
         stage.addActor(settingsOverlay);
     }
-
     private Table createStatGroup(String title, String placeholderValue) {
         Table t = new Table();
         Label titleLbl = new Label(title, game.skin, "default-font", Color.WHITE);
         titleLbl.setFontScale(0.8f);
-
         Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
         valLbl.setFontScale(1.2f);
-
-        // SAVE REFERENCES
-        if (title.equals("XP")) {
-            xpLabel = valLbl;
-        }
-        if (title.equals("Funding")) {
-            fundsLabel = valLbl;
-        }
-        if (title.equals("Turn")) {
-            turnLabel = valLbl;
-        }
-
+        if (title.equals("XP")) xpLabel = valLbl;
+        if (title.equals("Funding")) fundsLabel = valLbl;
+        if (title.equals("Turn")) turnLabel = valLbl;
         t.add(titleLbl).row();
         t.add(valLbl);
         return t;
     }
-
     private ImageButton createCircleButton(String iconName) {
         ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
         try {
             Texture texture = assets.get(iconName + ".png");
-            if (texture == null) {
-                texture = new Texture(iconName + ".png");
-            }
+            if (texture == null) texture = new Texture(iconName + ".png");
             texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(texture));
             style.imageUp = drawable;
@@ -508,7 +493,6 @@ public class GameHUD {
         btn.setOrigin(30, 30);
         return btn;
     }
-
     private Table createIconGroup(ImageButton btn, String labelText) {
         Table t = new Table();
         t.add(btn).size(60, 60).row();
@@ -517,7 +501,6 @@ public class GameHUD {
         t.add(lbl).padTop(5);
         return t;
     }
-
     private TextureRegionDrawable createGradientDrawable(int height, boolean isTopDown) {
         Pixmap pixmap = new Pixmap(1, height, Pixmap.Format.RGBA8888);
         for (int y = 0; y < height; y++) {

@@ -106,9 +106,8 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
-    // --- Convert Town to Base ---
     public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map) {
-        // 1. Update Texture to the new owner's Base
+        // 1. Update Texture (Visual)
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
         if (newOwner == 1) {
             tex.region = baseP1Region;
@@ -116,16 +115,15 @@ public class UnitFactory {
             tex.region = baseP2Region;
         }
 
-        // 2. Update Stats (Owner and Income)
+        // 2. Update Stats (Data) -> CRITICAL for ownership checks
         StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.owner = newOwner;
             stats.name = (newOwner == 1) ? "Blue Base" : "Red Base";
-//            stats.income = 5;
             stats.vision = GameConfig.BORDER_RADIUS;
         }
 
-        // 3. Update GameMap Data (Crucial for borders and future captures)
+        // 3. Update GameMap (Logic) -> CRITICAL for identifying it as a Base later
         GridPositionComponent pos = objectEntity.getComponent(GridPositionComponent.class);
         if (pos != null) {
             if (newOwner == 1) {
