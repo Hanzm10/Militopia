@@ -6,6 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.militopia.components.*;
 import com.militopia.config.GameConfig; // Import GameConfig
+import com.militopia.data.GameState;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
 
@@ -59,6 +60,13 @@ public class UnitFactory {
         this.fogRegion = new TextureRegion(assets.get(AssetManager.FOG_OF_WAR));
     }
 
+    public int getUnitCost(String unitType) {
+        if ("RECRUIT".equals(unitType)) {
+            return 3;
+        }
+        return 0; 
+    }
+    
     public void createUnit(String unitType, int x, int y, int owner) {
         switch (unitType) {
             case "RECRUIT":
@@ -106,8 +114,9 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
-    public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map) {
-        // 1. Update Texture (Visual)
+// --- UPDATE: Accept GameState for XP Calculation ---
+    public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map, GameState state) {
+        // 1. Update Texture
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
         if (newOwner == 1) {
             tex.region = baseP1Region;
@@ -115,7 +124,7 @@ public class UnitFactory {
             tex.region = baseP2Region;
         }
 
-        // 2. Update Stats (Data) -> CRITICAL for ownership checks
+        // 2. Update Stats
         StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.owner = newOwner;
@@ -123,7 +132,7 @@ public class UnitFactory {
             stats.vision = GameConfig.BORDER_RADIUS;
         }
 
-        // 3. Update GameMap (Logic) -> CRITICAL for identifying it as a Base later
+        // 3. Update Map Data
         GridPositionComponent pos = objectEntity.getComponent(GridPositionComponent.class);
         if (pos != null) {
             if (newOwner == 1) {
@@ -132,6 +141,20 @@ public class UnitFactory {
                 map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             }
         }
+
+        // --- 4. NEW: CALCULATE AND ADD XP ---
+        int radius = GameConfig.BORDER_RADIUS;
+        int side = (radius * 2) + 1; // e.g. Radius 2 -> 5x5 square
+        int area = side * side;      // 25 tiles
+        int xpGain = area * 10;      // 250 XP
+
+        if (newOwner == 1) {
+            state.p1XP += xpGain;
+        } else if (newOwner == 2) {
+            state.p2XP += xpGain;
+        }
+
+        Gdx.app.log("XP", "Player " + newOwner + " gained " + xpGain + " XP! Total: " + (newOwner == 1 ? state.p1XP : state.p2XP));
     }
 
     // ... (Keep existing methods: getUnitUi, getTerrainUi, getObjectUi, getTextureForTerrain, UiInfo) ...

@@ -12,9 +12,17 @@ public class GameState {
     public String timestamp;
     public ArrayList<UnitData> units = new ArrayList<>();
     
-    // --- NEW: TURN TRACKING ---
-    public int currentPlayer = 1; // 1 or 2
+    // Turn Tracking
+    public int currentPlayer = 1;
     public int turnCount = 1;
+    
+    // XP System
+    public int p1XP = 500;
+    public int p2XP = 500;
+
+    // --- NEW: FUNDING SYSTEM ---
+    public int p1Funding = 5;
+    public int p2Funding = 5;
     
     public GameState() {} 
     

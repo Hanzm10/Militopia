@@ -24,6 +24,7 @@ import com.militopia.MilitopiaGame;
 import com.militopia.components.StatsComponent; // Required
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
+import com.militopia.data.GameState;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
@@ -48,7 +49,7 @@ public class GameHUD {
     private Label turnLabel;
 
     private int currentBaseOwner = 1;
-    
+
     // --- NEW: Stored References ---
     private GameInputController inputController;
     private UnitFactory unitFactory;
@@ -61,12 +62,12 @@ public class GameHUD {
         rootTable = new Table();
     }
 
-    public void build(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory) {
-        // Save references for later use in openSummonMenu
+    public void build(final GameScreen screen, final GameInputController inputController,
+            final UnitFactory unitFactory, final GameState state) {
         this.inputController = inputController;
         this.unitFactory = unitFactory;
-        
-        setupHUD(screen, inputController, unitFactory);
+
+        setupHUD(screen, inputController, unitFactory, state);
     }
 
     public void resize(int width, int height) {
@@ -91,7 +92,7 @@ public class GameHUD {
         stage.dispose();
     }
 
-    private void setupHUD(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory) {
+    private void setupHUD(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory, final GameState state) {
         rootTable.clear();
         rootTable.setFillParent(true);
         TextureRegionDrawable topBg = createGradientDrawable(80, true);
@@ -125,17 +126,22 @@ public class GameHUD {
         stage.addActor(rootTable);
 
         createTileInfoPanel();
-        
+
         // Initial setup (hidden)
-        configureSummonMenu(); 
-        
+        configureSummonMenu(state);
         createSettingsOverlay(screen);
 
         settingsBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) { settingsOverlay.setVisible(true); }
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                settingsOverlay.setVisible(true);
+            }
         });
         endTurnBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) { screen.endTurnAction(); }
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                screen.endTurnAction();
+            }
         });
 
         settingsBtn.addListener(new HoverListener());
@@ -143,36 +149,45 @@ public class GameHUD {
         endTurnBtn.addListener(new HoverListener());
     }
 
+    // --- NEW: Update XP Label ---
+    public void updateXP(int xp) {
+        if (xpLabel != null) {
+            xpLabel.setText(String.valueOf(xp));
+        }
+    }
+
     public void updateTurn(int turn) {
-        if (turnLabel != null) turnLabel.setText(String.valueOf(turn));
+        if (turnLabel != null) {
+            turnLabel.setText(String.valueOf(turn));
+        }
     }
 
     public void updateFunding(int funding) {
-        if (fundsLabel != null) fundsLabel.setText(String.valueOf(funding));
+        if (fundsLabel != null) {
+            fundsLabel.setText(String.valueOf(funding));
+        }
     }
 
     // --- REFACTORED: Helper to populate Summon Menu ---
-    private void configureSummonMenu() {
-        populateSummonMenu(); // Call the logic
-        
-        // Initial positioning
+    private void configureSummonMenu(GameState state) {
+        populateSummonMenu(state); // Call logic with state
+
         float panelHeight = 140f;
         summonMenu.setSize(stage.getWidth(), panelHeight);
         summonMenu.setPosition(0, -panelHeight);
         stage.addActor(summonMenu);
     }
-    
+
     // --- NEW: Logic to Rebuild Summon Menu (Clears Capture Buttons) ---
-    private void populateSummonMenu() {
+    private void populateSummonMenu(GameState state) {
         summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
 
         Table contentTable = new Table();
 
-        // 1. ADD UNITS (Recruit)
-        addSummonButton(contentTable, "RECRUIT", inputController, unitFactory);
+        // Pass state to button creator
+        addSummonButton(contentTable, "RECRUIT", inputController, unitFactory, state);
 
-        // 2. CANCEL BUTTON
         TextButton closeBtn = new TextButton("Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
@@ -184,14 +199,15 @@ public class GameHUD {
         });
 
         summonMenu.add(contentTable).expandX().center();
-        // summonMenu.add(closeBtn).padRight(20); // Optional cancel button
     }
 
     private void addSummonButton(Table container, final String unitType,
-            final GameInputController controller, final UnitFactory factory) {
+            final GameInputController controller, final UnitFactory factory, final GameState state) {
 
         UnitFactory.UiInfo info = factory.getUnitUi(unitType);
+        final int cost = factory.getUnitCost(unitType); // Get Cost
 
+        // ... (Icon/Texture setup remains the same) ...
         TextureRegionDrawable circleDrawable;
         try {
             Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
@@ -215,18 +231,39 @@ public class GameHUD {
         iconContainer.size(50, 50).center();
         buttonStack.add(iconContainer);
 
-        buttonStack.setOrigin(40, 40); 
+        buttonStack.setOrigin(40, 40);
         buttonStack.addListener(new HoverListener());
 
+        // CLICK LISTENER WITH FUNDING CHECK
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                int tx = controller.getLastClickedX();
-                int ty = controller.getLastClickedY();
-                if (tx != -1 && ty != -1) {
-                    factory.createUnit(unitType, tx, ty, currentBaseOwner);
+                // 1. Check Funds
+                int currentFunds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+
+                if (currentFunds >= cost) {
+                    // 2. Deduct Funds
+                    if (currentBaseOwner == 1) {
+                        state.p1Funding -= cost;
+                    } else {
+                        state.p2Funding -= cost;
+                    }
+
+                    // 3. Create Unit
+                    int tx = controller.getLastClickedX();
+                    int ty = controller.getLastClickedY();
+                    if (tx != -1 && ty != -1) {
+                        factory.createUnit(unitType, tx, ty, currentBaseOwner);
+                    }
+
+                    // 4. Update HUD
+                    updateFunding((currentBaseOwner == 1) ? state.p1Funding : state.p2Funding);
+
                     hideSummonMenu();
                     controller.resetLastClicked();
+                } else {
+                    System.out.println("Not enough funding! Cost: " + cost + ", Have: " + currentFunds);
+                    // Optional: Shake button or play sound here
                 }
             }
         });
@@ -234,7 +271,8 @@ public class GameHUD {
         Table group = new Table();
         group.add(buttonStack).size(80, 80).row();
 
-        Label nameLbl = new Label(info.name, game.skin, "default-font", Color.WHITE);
+        // Update Label to show Cost
+        Label nameLbl = new Label(info.name + " (" + cost + ")", game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
 
@@ -242,12 +280,11 @@ public class GameHUD {
     }
 
     // --- FIX: Rebuild UI every time it opens ---
-    public void openSummonMenu(int owner) {
+    public void openSummonMenu(int owner, GameState state) {
         this.currentBaseOwner = owner;
-        
-        // CRITICAL: Wipe stale "Capture" buttons and put "Recruit" buttons back!
-        populateSummonMenu(); 
-        
+
+        populateSummonMenu(state);
+
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
 
@@ -270,14 +307,14 @@ public class GameHUD {
     // --- CAPTURE MENU (Wipes Summon Buttons) ---
     public void openCaptureMenu(final Entity townEntity, final Entity capturingUnit,
             final UnitFactory factory, final GameInputController controller,
-            final MapGenerator.GameMap map) {
+            final MapGenerator.GameMap map, final GameState state) {
 
         summonMenu.clear(); // WIPE
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
 
         Table contentTable = new Table();
 
-        addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map);
+        addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map, state);
 
         TextButton closeBtn = new TextButton("Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
@@ -309,17 +346,19 @@ public class GameHUD {
 
     // ... (addCaptureButton, createTileInfoPanel, createSettingsOverlay, createStatGroup, createCircleButton, etc. remain the same) ...
     // Note: Ensure addCaptureButton uses 'StatsComponent' correctly (imported or fully qualified)
-    
-    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit, 
-            final UnitFactory factory, final GameInputController controller, 
-            final MapGenerator.GameMap map) {
-        
+    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit,
+            final UnitFactory factory, final GameInputController controller,
+            final MapGenerator.GameMap map, final GameState state) {
+
         final int newOwner = capturingUnit.getComponent(StatsComponent.class).owner;
-        
+
         // ... (Icon logic) ...
         TextureRegion baseRegion;
-        if (newOwner == 1) baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P1).region;
-        else baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P2).region;
+        if (newOwner == 1) {
+            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P1).region;
+        } else {
+            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P2).region;
+        }
 
         TextureRegionDrawable circleDrawable;
         try {
@@ -332,16 +371,16 @@ public class GameHUD {
 
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-        
+
         com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
 
         com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(baseRegion);
         unitIcon.setScaling(Scaling.fit);
-        
+
         Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
-        iconContainer.size(50, 50).center(); 
+        iconContainer.size(50, 50).center();
         buttonStack.add(iconContainer);
 
         buttonStack.setOrigin(40, 40);
@@ -350,11 +389,21 @@ public class GameHUD {
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                factory.captureStructure(structureEntity, newOwner, map);
-                
-                StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
-                if (unitStats != null) unitStats.hasActed = true;
+                // 1. Capture with State
+                factory.captureStructure(structureEntity, capturingUnit.getComponent(StatsComponent.class).owner, map, state);
 
+                // 2. Mark Unit Acted
+                StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
+                if (unitStats != null) {
+                    unitStats.hasActed = true;
+                }
+
+                // 3. Update HUD immediately
+                int newOwner = unitStats.owner;
+                int newTotalXP = (newOwner == 1) ? state.p1XP : state.p2XP;
+                updateXP(newTotalXP);
+
+                // 4. Cleanup
                 hideSummonMenu();
                 controller.deselect();
             }
@@ -362,21 +411,24 @@ public class GameHUD {
 
         Table group = new Table();
         group.add(buttonStack).size(80, 80).row();
-        
+
         String labelText = "Capture Structure";
         StatsComponent stats = structureEntity.getComponent(StatsComponent.class);
         if (stats != null) {
-            if (stats.name.contains("Town")) labelText = "Capture Town";
-            else labelText = "Capture Enemy Base";
+            if (stats.name.contains("Town")) {
+                labelText = "Capture Town";
+            } else {
+                labelText = "Capture Enemy Base";
+            }
         }
-        
+
         Label nameLbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
 
         container.add(group).pad(10);
     }
-    
+
     // ... (Paste rest of your existing helper methods here: createTileInfoPanel, createSettingsOverlay, etc.) ...
     // These methods do not need changes.
     private void createTileInfoPanel() {
@@ -400,7 +452,10 @@ public class GameHUD {
         ImageButton closeBtn = new ImageButton(closeStyle);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) { hideTileInfo(); }
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                hideTileInfo();
+            }
         });
         tileInfoTable.add(closeBtn).size(40, 40).padRight(20);
         float panelHeight = 80f;
@@ -408,6 +463,7 @@ public class GameHUD {
         tileInfoTable.setSize(stage.getWidth(), panelHeight);
         stage.addActor(tileInfoTable);
     }
+
     public void showTileInfo(String name, TextureRegion region) {
         tileInfoLabel.setText(name);
         tileInfoImage.setDrawable(new TextureRegionDrawable(region));
@@ -418,12 +474,14 @@ public class GameHUD {
         tileInfoTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
+
     public void hideTileInfo() {
         tileInfoTable.clearActions();
         bottomContainer.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
     }
+
     private void createSettingsOverlay(final GameScreen screen) {
         settingsOverlay = new Table();
         settingsOverlay.setFillParent(true);
@@ -440,7 +498,8 @@ public class GameHUD {
         final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin);
         fogBtn.addListener(new HoverListener());
         fogBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
                 boolean newState = screen.toggleFog();
                 fogBtn.setText("Toggle Fog: " + (newState ? "ON" : "OFF"));
             }
@@ -448,12 +507,18 @@ public class GameHUD {
         TextButton saveExitBtn = new TextButton("Save & Exit", game.skin);
         saveExitBtn.addListener(new HoverListener());
         saveExitBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) { screen.saveAndExit(); }
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                screen.saveAndExit();
+            }
         });
         TextButton resumeBtn = new TextButton("Resume", game.skin);
         resumeBtn.addListener(new HoverListener());
         resumeBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) { settingsOverlay.setVisible(false); }
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                settingsOverlay.setVisible(false);
+            }
         });
         menuBox.add(title).pad(20).row();
         menuBox.add(fogBtn).size(200, 50).pad(10).row();
@@ -462,24 +527,34 @@ public class GameHUD {
         settingsOverlay.add(menuBox).size(300, 300);
         stage.addActor(settingsOverlay);
     }
+
     private Table createStatGroup(String title, String placeholderValue) {
         Table t = new Table();
         Label titleLbl = new Label(title, game.skin, "default-font", Color.WHITE);
         titleLbl.setFontScale(0.8f);
         Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
         valLbl.setFontScale(1.2f);
-        if (title.equals("XP")) xpLabel = valLbl;
-        if (title.equals("Funding")) fundsLabel = valLbl;
-        if (title.equals("Turn")) turnLabel = valLbl;
+        if (title.equals("XP")) {
+            xpLabel = valLbl;
+        }
+        if (title.equals("Funding")) {
+            fundsLabel = valLbl;
+        }
+        if (title.equals("Turn")) {
+            turnLabel = valLbl;
+        }
         t.add(titleLbl).row();
         t.add(valLbl);
         return t;
     }
+
     private ImageButton createCircleButton(String iconName) {
         ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
         try {
             Texture texture = assets.get(iconName + ".png");
-            if (texture == null) texture = new Texture(iconName + ".png");
+            if (texture == null) {
+                texture = new Texture(iconName + ".png");
+            }
             texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(texture));
             style.imageUp = drawable;
@@ -493,6 +568,7 @@ public class GameHUD {
         btn.setOrigin(30, 30);
         return btn;
     }
+
     private Table createIconGroup(ImageButton btn, String labelText) {
         Table t = new Table();
         t.add(btn).size(60, 60).row();
@@ -501,6 +577,7 @@ public class GameHUD {
         t.add(lbl).padTop(5);
         return t;
     }
+
     private TextureRegionDrawable createGradientDrawable(int height, boolean isTopDown) {
         Pixmap pixmap = new Pixmap(1, height, Pixmap.Format.RGBA8888);
         for (int y = 0; y < height; y++) {

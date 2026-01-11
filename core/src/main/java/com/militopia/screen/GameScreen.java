@@ -119,15 +119,21 @@ public class GameScreen implements Screen {
                 this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD
         );
 
-        gameHUD.build(this, inputController, unitFactory);
+        gameHUD.build(this, inputController, unitFactory, gameState);
         gameHUD.updateTurn(gameState.turnCount);
+        gameHUD.updateXP(gameState.p1XP); // Default to P1 starts
+        gameHUD.updateFunding(gameState.p1Funding);
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
         multiplexer.addProcessor(inputController);
         Gdx.input.setInputProcessor(multiplexer);
     }
-    
+
+    public GameState getGameState() {
+        return gameState;
+    }
+
     public int getCurrentPlayer() {
         return gameState.currentPlayer;
     }
@@ -170,7 +176,7 @@ public class GameScreen implements Screen {
         unitRenderSystem.setFogEnabled(isFogEnabled);
         return isFogEnabled;
     }
-    
+
     private void resetUnitActions() {
         ImmutableArray<Entity> units = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
         for (Entity entity : units) {
@@ -191,10 +197,15 @@ public class GameScreen implements Screen {
 
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
                 gameState.turnCount++;
-                
+
                 resetUnitActions();
-                
+
                 gameHUD.updateTurn(gameState.turnCount);
+                int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
+                gameHUD.updateXP(currentXP);
+
+                int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
+                gameHUD.updateFunding(currentFunds);
 
                 fogSystem.setPlayer(gameState.currentPlayer);
                 fogSystem.update(0);
