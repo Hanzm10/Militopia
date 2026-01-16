@@ -43,12 +43,14 @@ public class GameHUD {
     private Table bottomContainer;
     private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
     private Label tileInfoLabel;
+    private GameScreen gameScreen;
 
     private Label xpLabel;
     private Label fundsLabel;
     private Label turnLabel;
 
     private int currentBaseOwner = 1;
+    private int currentIncome = 0;
 
     // --- NEW: Stored References ---
     private GameInputController inputController;
@@ -64,6 +66,7 @@ public class GameHUD {
 
     public void build(final GameScreen screen, final GameInputController inputController,
             final UnitFactory unitFactory, final GameState state) {
+        this.gameScreen = screen; // <--- Store it
         this.inputController = inputController;
         this.unitFactory = unitFactory;
 
@@ -162,9 +165,10 @@ public class GameHUD {
         }
     }
 
-    public void updateFunding(int funding) {
+    public void updateFunding(int funding, int income) {
+        this.currentIncome = income; // Store it for later use (e.g. inside buttons)
         if (fundsLabel != null) {
-            fundsLabel.setText(String.valueOf(funding));
+            fundsLabel.setText(funding + " (+" + income + ")");
         }
     }
 
@@ -253,11 +257,11 @@ public class GameHUD {
                     int tx = controller.getLastClickedX();
                     int ty = controller.getLastClickedY();
                     if (tx != -1 && ty != -1) {
-                        factory.createUnit(unitType, tx, ty, currentBaseOwner);
+                        factory.createUnit(unitType, tx, ty, currentBaseOwner, true);
                     }
 
                     // 4. Update HUD
-                    updateFunding((currentBaseOwner == 1) ? state.p1Funding : state.p2Funding);
+                    updateFunding((currentBaseOwner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
 
                     hideSummonMenu();
                     controller.resetLastClicked();
@@ -389,19 +393,29 @@ public class GameHUD {
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // 1. Capture with State
-                factory.captureStructure(structureEntity, capturingUnit.getComponent(StatsComponent.class).owner, map, state);
+                // 1. Perform Capture (Logic)
+                // This adds the +1 Funding to state and changes owner
+                factory.captureStructure(structureEntity, newOwner, map, state);
 
-                // 2. Mark Unit Acted
+                // 2. Mark Unit as Acted
                 StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
                 if (unitStats != null) {
                     unitStats.hasActed = true;
                 }
 
-                // 3. Update HUD immediately
-                int newOwner = unitStats.owner;
+                // 3. REFRESH HUD (The Fix)
+                // A. Update XP
                 int newTotalXP = (newOwner == 1) ? state.p1XP : state.p2XP;
                 updateXP(newTotalXP);
+
+                // B. Recalculate Income immediately (because we just gained a Base/Town)
+                int newIncome = gameScreen.calculateIncome(newOwner);
+
+                // C. Get the NEW funding (which includes the +1 from captureStructure)
+                int currentFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
+
+                // D. Update Label immediately
+                updateFunding(currentFunds, newIncome);
 
                 // 4. Cleanup
                 hideSummonMenu();

@@ -219,9 +219,10 @@ public class GameInputController extends InputAdapter {
                             if (objStats.owner == unitStats.owner) {
                                 // --- FIX: Restore Funding Logic Here ---
                                 if (isUnitExhausted) {
-                                    gameHUD.openSummonMenu(objStats.owner, screen.getGameState());
-                                    System.out.println("Unit Acted -> Showing Summon Menu");
-                                    return true;
+                                    System.out.println("Unit exhausted on base. Summoning blocked.");
+                                    // Show "Base (Blocked)" instead of opening menu
+                                    UnitFactory.UiInfo uiInfo = unitFactory.getObjectUi(foundObject);
+                                    gameHUD.showTileInfo(uiInfo.name + " (Blocked)", uiInfo.region);
                                 }
                                 // If Fresh: Fall through to C (Select Unit)
                             } // CASE B: ENEMY STRUCTURE

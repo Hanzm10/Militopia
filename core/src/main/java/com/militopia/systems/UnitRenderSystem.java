@@ -128,7 +128,7 @@ public class UnitRenderSystem extends EntitySystem {
             } else if (typeC.type == TypeComponent.Type.UNIT) {
                 // NEW: Check if exhausted (and not in testing mode)
                 if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
-                    batch.setColor(Color.WHITE); // Darken unit to show it's done
+                    batch.setColor(Color.DARK_GRAY); // Darken unit to show it's done
                 } // Existing Owner Logic
                 else if (stats != null && stats.owner == 2) {
                     batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); // Red Tint

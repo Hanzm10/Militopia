@@ -64,26 +64,31 @@ public class UnitFactory {
         if ("RECRUIT".equals(unitType)) {
             return 3;
         }
-        return 0; 
+        return 0;
     }
-    
-    public void createUnit(String unitType, int x, int y, int owner) {
+
+    public void createUnit(String unitType, int x, int y, int owner, boolean isSummoned) {
         switch (unitType) {
             case "RECRUIT":
-                createRecruit(x, y, owner);
+                createRecruit(x, y, owner, isSummoned);
                 break;
             default:
                 Gdx.app.error("UnitFactory", "Unknown unit type: " + unitType);
         }
     }
 
-    private void createRecruit(int x, int y, int owner) {
+    private void createRecruit(int x, int y, int owner, boolean isSummoned) {
         Entity entity = engine.createEntity();
         entity.add(new GridPositionComponent(x, y, 2));
         entity.add(new TextureComponent(recruitRightRegion));
         entity.add(new FacingComponent(recruitLeftRegion, recruitRightRegion));
         entity.add(new TypeComponent(TypeComponent.Type.UNIT));
-        entity.add(new StatsComponent("Recruit", 1, 10, 5, 1, StatsComponent.MoveType.LAND, owner));
+
+        // Use the flag to set hasActed
+        StatsComponent stats = new StatsComponent("Recruit", 1, 10, 5, 1, 0, StatsComponent.MoveType.LAND, owner);
+        stats.hasActed = isSummoned; // True if summoned, False if starting unit
+        entity.add(stats);
+
         engine.addEntity(entity);
     }
 
@@ -100,17 +105,22 @@ public class UnitFactory {
 
         int owner = 0;
         int vision = 1; // Default vision for objects (Trees, Towns, etc)
+        int income = 0;
 
         if (type == MapGenerator.ObjectType.BASE_P1) {
             owner = 1;
             vision = GameConfig.BORDER_RADIUS; // FIX: Base gets border radius vision
+            income = 2;
         } else if (type == MapGenerator.ObjectType.BASE_P2) {
             owner = 2;
             vision = GameConfig.BORDER_RADIUS; // FIX: Base gets border radius vision
+            income = 2;
+        } else if (type == MapGenerator.ObjectType.TOWN) {
+            income = 0; // <--- Towns give 2 Funding (Potential)
         }
 
         // Use the 7-argument constructor (No income)
-        entity.add(new StatsComponent(info.name, 0, 0, 0, vision, StatsComponent.MoveType.LAND, owner));
+        entity.add(new StatsComponent(info.name, 0, 0, 0, vision, income, StatsComponent.MoveType.LAND, owner));
         engine.addEntity(entity);
     }
 
@@ -130,6 +140,7 @@ public class UnitFactory {
             stats.owner = newOwner;
             stats.name = (newOwner == 1) ? "Blue Base" : "Red Base";
             stats.vision = GameConfig.BORDER_RADIUS;
+            stats.income = 2;
         }
 
         // 3. Update Map Data
@@ -140,6 +151,13 @@ public class UnitFactory {
             } else {
                 map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             }
+        }
+
+        // ONE-TIME +1 FUNDING BONUS
+        if (newOwner == 1) {
+            state.p1Funding += 1;
+        } else {
+            state.p2Funding += 1;
         }
 
         // --- 4. NEW: CALCULATE AND ADD XP ---

@@ -106,7 +106,7 @@ public class GameScreen implements Screen {
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if ("RECRUIT".equals(u.type)) {
-                    unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner);
+                    unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner, false);
                 }
             }
         }
@@ -122,7 +122,9 @@ public class GameScreen implements Screen {
         gameHUD.build(this, inputController, unitFactory, gameState);
         gameHUD.updateTurn(gameState.turnCount);
         gameHUD.updateXP(gameState.p1XP); // Default to P1 starts
-        gameHUD.updateFunding(gameState.p1Funding);
+
+        int startIncome = calculateIncome(gameState.currentPlayer);
+        gameHUD.updateFunding(gameState.p1Funding, startIncome);
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
@@ -196,7 +198,22 @@ public class GameScreen implements Screen {
                 fadeTime = FADE_DURATION;
 
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
-                gameState.turnCount++;
+
+                // Only increment turn count if we cycled back to Player 1
+                if (gameState.currentPlayer == 1) {
+                    gameState.turnCount++;
+                }
+
+                int income = calculateIncome(gameState.currentPlayer);
+
+                if (gameState.currentPlayer == 1) {
+                    gameState.p1Funding += income;
+                } else {
+                    gameState.p2Funding += income;
+                }
+
+                Gdx.app.log("Economy", "Player " + gameState.currentPlayer + " gained " + income + " funding.");
+                // ------------------------------------------
 
                 resetUnitActions();
 
@@ -205,7 +222,7 @@ public class GameScreen implements Screen {
                 gameHUD.updateXP(currentXP);
 
                 int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
-                gameHUD.updateFunding(currentFunds);
+                gameHUD.updateFunding(currentFunds, income);
 
                 fogSystem.setPlayer(gameState.currentPlayer);
                 fogSystem.update(0);
@@ -263,6 +280,20 @@ public class GameScreen implements Screen {
 
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    public int calculateIncome(int playerID) {
+        int totalIncome = 0;
+
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
+
+        for (Entity entity : entities) {
+            StatsComponent stats = entity.getComponent(StatsComponent.class);
+            if (stats.owner == playerID) {
+                totalIncome += stats.income;
+            }
+        }
+        return totalIncome;
     }
 
     @Override
