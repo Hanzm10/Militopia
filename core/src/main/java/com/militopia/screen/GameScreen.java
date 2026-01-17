@@ -67,7 +67,6 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera();
         camera.setToOrtho(false, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
 
-        // --- MOVED DOWN: Can't center camera until Map exists! ---
         viewport = new ExtendViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
 
         engine = new PooledEngine();
@@ -75,12 +74,9 @@ public class GameScreen implements Screen {
         unitFactory = new UnitFactory(engine, game.assets);
         saveManager = new SaveManager();
 
-        // 1. GENERATE MAP (Now gameMap is not null)
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT, loadedState.seed);
 
-        // 2. NOW WE CAN CENTER THE CAMERA
-        // Center on the current player's base (loaded from save or default P1)
         centerCameraOnBase(gameState.currentPlayer);
 
         for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
@@ -106,7 +102,7 @@ public class GameScreen implements Screen {
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if ("RECRUIT".equals(u.type)) {
-                    unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner, false);
+                    unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner, false); // false = not new summon
                 }
             }
         }
@@ -121,10 +117,17 @@ public class GameScreen implements Screen {
 
         gameHUD.build(this, inputController, unitFactory, gameState);
         gameHUD.updateTurn(gameState.turnCount);
-        gameHUD.updateXP(gameState.p1XP); // Default to P1 starts
+        gameHUD.updateXP(gameState.p1XP);
 
+        // Initial Income Calculation (For Display Only)
         int startIncome = calculateIncome(gameState.currentPlayer);
         gameHUD.updateFunding(gameState.p1Funding, startIncome);
+
+        // --- NEW: Print P1 Stats at Game Start ---
+        Gdx.app.log("Economy", "Turn: " + gameState.turnCount
+                + " | Player: " + gameState.currentPlayer
+                + " | Game Start(No Income) "
+                + " | Total Funds: " + gameState.p1Funding);
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
@@ -183,7 +186,7 @@ public class GameScreen implements Screen {
         ImmutableArray<Entity> units = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
         for (Entity entity : units) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
-            stats.hasActed = false; // Refresh everyone
+            stats.hasActed = false;
         }
     }
 
@@ -197,32 +200,49 @@ public class GameScreen implements Screen {
             if (fadeTime >= FADE_DURATION) {
                 fadeTime = FADE_DURATION;
 
+                // 1. Switch Player
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
 
-                // Only increment turn count if we cycled back to Player 1
+                // --- FIX: Round-Based Turn Counting ---
+                // Only increment turn count when P1 starts (End of Round)
                 if (gameState.currentPlayer == 1) {
                     gameState.turnCount++;
                 }
 
+                // 2. Calculate Income
                 int income = calculateIncome(gameState.currentPlayer);
+                int currentTotal = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
 
-                if (gameState.currentPlayer == 1) {
-                    gameState.p1Funding += income;
+                // --- FIX: Apply Income only AFTER Turn 1 ---
+                if (gameState.turnCount > 1) {
+                    if (gameState.currentPlayer == 1) {
+                        gameState.p1Funding += income;
+                        currentTotal = gameState.p1Funding;
+                    } else {
+                        gameState.p2Funding += income;
+                        currentTotal = gameState.p2Funding;
+                    }
+
+                    // --- NEW DEBUG LOG ---
+                    Gdx.app.log("Economy", "Turn: " + gameState.turnCount
+                            + " | Player: " + gameState.currentPlayer
+                            + " | Income: +" + income
+                            + " | Total Funds: " + currentTotal);
                 } else {
-                    gameState.p2Funding += income;
+                    Gdx.app.log("Economy", "Turn: " + gameState.turnCount
+                            + " | Player: " + gameState.currentPlayer
+                            + " | Game Start (No Income) | Total Funds: " + currentTotal);
                 }
-
-                Gdx.app.log("Economy", "Player " + gameState.currentPlayer + " gained " + income + " funding.");
-                // ------------------------------------------
 
                 resetUnitActions();
 
+                // 3. Update HUD
                 gameHUD.updateTurn(gameState.turnCount);
                 int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
                 gameHUD.updateXP(currentXP);
 
-                int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
-                gameHUD.updateFunding(currentFunds, income);
+                // Update label with current funds AND income rate (e.g., "5 (+2)")
+                gameHUD.updateFunding(currentTotal, income);
 
                 fogSystem.setPlayer(gameState.currentPlayer);
                 fogSystem.update(0);
@@ -293,6 +313,7 @@ public class GameScreen implements Screen {
                 totalIncome += stats.income;
             }
         }
+
         return totalIncome;
     }
 

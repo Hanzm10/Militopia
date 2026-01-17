@@ -16,7 +16,6 @@ public class MapGenerator {
         NONE,
         BASE_P1, BASE_P2, TOWN,
         OIL, RUINS, CACTUS, TREE, MOUNTAIN_OBJ
-        // Removed RUINS_P1, OIL_P1, etc. since they are neutral now
     }
 
     public static class GameMap {
@@ -39,6 +38,9 @@ public class MapGenerator {
         Point(int x, int y) { this.x = x; this.y = y; }
     }
 
+    // --- CONFIGURATION ---
+    private static final int MAP_MARGIN = 3; // Rule 4: At least 3 tiles from edges
+
     public GameMap generateMap(int width, int height, long seed) {
         GameMap map = new GameMap(width, height);
         SimpleNoise noise = new SimpleNoise(seed);
@@ -49,17 +51,16 @@ public class MapGenerator {
         // 1. TERRAIN PASS
         generateTerrain(map, width, height, noise, grassTiles);
 
-        // 2. PLAYER BASES PASS (Far apart + On Land)
+        // 2. PLAYER BASES PASS (Far apart + On Land + Margins)
         List<Point> bases = placePlayerBases(map, width, height);
 
-        // 3. FLORA PASS (Trees, Cacti - Decoration)
+        // 3. FLORA PASS (Trees, Cacti - No Random Oil anymore)
         placeFlora(map, width, height);
 
-        // 4. STRUCTURES PASS (Towns spaced apart)
+        // 4. STRUCTURES PASS (Towns spaced apart + Margins)
         List<Point> towns = placeStructures(map, width, height, seed, grassTiles);
 
-        // 5. RESOURCE PASS (Ruins/Oil near Bases/Towns)
-        // Combine lists so we treat Bases and Towns exactly the same for resource generation
+        // 5. RESOURCE PASS (Mandatory Oil near Settlements)
         List<Point> allSettlements = new ArrayList<>(bases);
         allSettlements.addAll(towns);
         
@@ -96,11 +97,11 @@ public class MapGenerator {
 
     private List<Point> placePlayerBases(GameMap map, int width, int height) {
         List<Point> baseLocations = new ArrayList<>();
-        int margin = 3;
 
         // --- 1. Place Player 1 Base ---
-        int p1x = MathUtils.random(margin, width / 3);
-        int p1y = MathUtils.random(margin, height - margin);
+        // Constraint: Within top-left quadrant, but respecting margins
+        int p1x = MathUtils.random(MAP_MARGIN, width / 3);
+        int p1y = MathUtils.random(MAP_MARGIN, height - MAP_MARGIN);
         
         Point p1Point = findNearestLand(map, p1x, p1y);
         setBase(map, p1Point.x, p1Point.y, ObjectType.BASE_P1);
@@ -112,8 +113,8 @@ public class MapGenerator {
         float minDistance = (width + height) / 2.5f; 
 
         while (p2Point == null && attempts < 20) {
-            int rx = MathUtils.random(width / 2, width - margin);
-            int ry = MathUtils.random(margin, height - margin);
+            int rx = MathUtils.random(width / 2, width - MAP_MARGIN);
+            int ry = MathUtils.random(MAP_MARGIN, height - MAP_MARGIN);
             
             if (Vector2.dst(p1Point.x, p1Point.y, rx, ry) > minDistance) {
                 p2Point = findNearestLand(map, rx, ry);
@@ -121,7 +122,8 @@ public class MapGenerator {
             attempts++;
         }
         
-        if (p2Point == null) p2Point = new Point(width - 4, height - 4);
+        // Fallback (Respecting margins)
+        if (p2Point == null) p2Point = new Point(width - (MAP_MARGIN + 1), height - (MAP_MARGIN + 1));
 
         setBase(map, p2Point.x, p2Point.y, ObjectType.BASE_P2);
         baseLocations.add(p2Point);
@@ -137,6 +139,12 @@ public class MapGenerator {
         for (Point p : grassTiles) {
             if (towns.size() >= targetTowns) break;
             
+            // RULE 4 Check: Margin from edges
+            if (p.x < MAP_MARGIN || p.x >= width - MAP_MARGIN || 
+                p.y < MAP_MARGIN || p.y >= height - MAP_MARGIN) {
+                continue;
+            }
+
             if (map.objects[p.x][p.y] != ObjectType.NONE && map.objects[p.x][p.y] != ObjectType.TREE) continue;
 
             boolean tooClose = false;
@@ -160,21 +168,52 @@ public class MapGenerator {
 
     private void placeResourcesAround(GameMap map, List<Point> centers) {
         for (Point center : centers) {
-            // Spawn 1-2 resources (Ruins or Oil)
-            int count = MathUtils.random(1, 2); 
             
-            for (int i = 0; i < count; i++) {
-                // REVISED: Distance 1 to 4
-                int dist = MathUtils.random(1, 4);
-                int angle = MathUtils.random(0, 360);
-                
-                int tx = center.x + (int)(MathUtils.cosDeg(angle) * dist);
-                int ty = center.y + (int)(MathUtils.sinDeg(angle) * dist);
+            // --- RULE 2: MANDATORY OIL (1-2 count) ---
+            int oilCount = MathUtils.random(1, 2);
+            spawnSpecificResource(map, center, oilCount, ObjectType.OIL, 1, 3); // Rule 1: 1-3 tiles
 
-                if (isValid(map, tx, ty) && map.objects[tx][ty] == ObjectType.NONE) {
-                    // 50% chance Ruins, 50% Oil
-                    // Both are NEUTRAL (no player ownership yet)
-                    map.objects[tx][ty] = MathUtils.randomBoolean() ? ObjectType.RUINS : ObjectType.OIL;
+            // --- OPTIONAL: RUINS (0-1 count) ---
+            // Kept for flavor, but less priority
+            int ruinCount = MathUtils.random(0, 1);
+            spawnSpecificResource(map, center, ruinCount, ObjectType.RUINS, 2, 4); 
+        }
+    }
+
+    private void spawnSpecificResource(GameMap map, Point center, int count, ObjectType type, int minDist, int maxDist) {
+        int placed = 0;
+        int attempts = 0;
+        
+        while (placed < count && attempts < 20) {
+            attempts++;
+            
+            int dist = MathUtils.random(minDist, maxDist);
+            int angle = MathUtils.random(0, 360);
+            
+            int tx = center.x + (int)(MathUtils.cosDeg(angle) * dist);
+            int ty = center.y + (int)(MathUtils.sinDeg(angle) * dist);
+
+            // Rule 3 Check: Allow generation (even on water) as long as it's empty
+            if (isValid(map, tx, ty) && map.objects[tx][ty] == ObjectType.NONE) {
+                map.objects[tx][ty] = type;
+                placed++;
+            }
+        }
+    }
+
+    private void placeFlora(GameMap map, int width, int height) {
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (map.objects[x][y] != ObjectType.NONE) continue;
+
+                TerrainType t = map.terrain[x][y];
+                float chance = MathUtils.random();
+
+                if (t == TerrainType.GRASS && chance < 0.20f) {
+                    map.objects[x][y] = ObjectType.TREE;
+                } else if (t == TerrainType.SAND) {
+                    if (chance < 0.05f) map.objects[x][y] = ObjectType.CACTUS;
+                    // Rule 1 Enforcement: REMOVED random Oil generation here.
                 }
             }
         }
@@ -224,24 +263,6 @@ public class MapGenerator {
             }
         }
         return false;
-    }
-
-    private void placeFlora(GameMap map, int width, int height) {
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                if (map.objects[x][y] != ObjectType.NONE) continue;
-
-                TerrainType t = map.terrain[x][y];
-                float chance = MathUtils.random();
-
-                if (t == TerrainType.GRASS && chance < 0.20f) {
-                    map.objects[x][y] = ObjectType.TREE;
-                } else if (t == TerrainType.SAND) {
-                    if (chance < 0.05f) map.objects[x][y] = ObjectType.CACTUS;
-                    else if (chance > 0.98f) map.objects[x][y] = ObjectType.OIL;
-                }
-            }
-        }
     }
 
     private void setBase(GameMap map, int x, int y, ObjectType type) {
