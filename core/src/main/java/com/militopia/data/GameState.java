@@ -16,13 +16,17 @@ public class GameState {
     public int currentPlayer = 1;
     public int turnCount = 1;
     
-    // XP System
+    // XP System (Global)
     public int p1XP = 500;
     public int p2XP = 500;
 
-    // --- NEW: FUNDING SYSTEM ---
+    // Funding System
     public int p1Funding = 5;
     public int p2Funding = 5;
+
+    // --- Base Counters ---
+    public int p1BaseCount = 0;
+    public int p2BaseCount = 0;
     
     public GameState() {} 
     

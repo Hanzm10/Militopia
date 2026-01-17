@@ -19,7 +19,11 @@ public class StatsComponent implements Component {
     public int owner;
     public boolean hasActed = false;
 
-    // Updated Constructor
+    // --- NEW: Base Specific Stats ---
+    public float currentBaseXP = 0;
+    public float maxBaseXP = 2000;
+    public String baseOrdinal = ""; // e.g. "1st", "2nd"
+
     public StatsComponent(String name, int range, int hp, int atk, int vision, int income, MoveType type, int owner) {
         this.name = name;
         this.moveRange = range;

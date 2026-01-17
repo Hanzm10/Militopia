@@ -5,7 +5,7 @@ import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.militopia.components.*;
-import com.militopia.config.GameConfig; // Import GameConfig
+import com.militopia.config.GameConfig;
 import com.militopia.data.GameState;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
@@ -67,6 +67,7 @@ public class UnitFactory {
         return 0;
     }
 
+    // --- RESTORED: isSummoned parameter ---
     public void createUnit(String unitType, int x, int y, int owner, boolean isSummoned) {
         switch (unitType) {
             case "RECRUIT":
@@ -77,6 +78,7 @@ public class UnitFactory {
         }
     }
 
+    // --- RESTORED: isSummoned parameter & Logic ---
     private void createRecruit(int x, int y, int owner, boolean isSummoned) {
         Entity entity = engine.createEntity();
         entity.add(new GridPositionComponent(x, y, 2));
@@ -84,15 +86,15 @@ public class UnitFactory {
         entity.add(new FacingComponent(recruitLeftRegion, recruitRightRegion));
         entity.add(new TypeComponent(TypeComponent.Type.UNIT));
 
-        // Use the flag to set hasActed
         StatsComponent stats = new StatsComponent("Recruit", 1, 10, 5, 1, 0, StatsComponent.MoveType.LAND, owner);
-        stats.hasActed = isSummoned; // True if summoned, False if starting unit
+        // Set hasActed based on whether it was just summoned
+        stats.hasActed = isSummoned;
         entity.add(stats);
 
         engine.addEntity(entity);
     }
 
-    public void createObjectEntity(int x, int y, MapGenerator.ObjectType type) {
+    public void createObjectEntity(int x, int y, MapGenerator.ObjectType type, GameState state) {
         UiInfo info = getObjectUi(type);
         if (info.region == null) {
             return;
@@ -104,78 +106,92 @@ public class UnitFactory {
         entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
 
         int owner = 0;
-        int vision = 1; // Default vision for objects (Trees, Towns, etc)
+        int vision = 1;
         int income = 0;
+        String finalName = info.name;
+        String ordinal = "";
+
+        float startXP = 0;
+        float maxXP = 2000;
 
         if (type == MapGenerator.ObjectType.BASE_P1) {
             owner = 1;
-            vision = GameConfig.BORDER_RADIUS; // FIX: Base gets border radius vision
+            vision = GameConfig.BORDER_RADIUS;
             income = 2;
+            state.p1BaseCount++;
+            ordinal = getOrdinal(state.p1BaseCount);
+            finalName = state.p1Name + "'s " + ordinal + " Base";
+
+            // Base starts with 500 XP
+            startXP = 500;
+
         } else if (type == MapGenerator.ObjectType.BASE_P2) {
             owner = 2;
-            vision = GameConfig.BORDER_RADIUS; // FIX: Base gets border radius vision
+            vision = GameConfig.BORDER_RADIUS;
             income = 2;
+            state.p2BaseCount++;
+            ordinal = getOrdinal(state.p2BaseCount);
+            finalName = state.p2Name + "'s " + ordinal + " Base";
+
+            // Base starts with 500 XP
+            startXP = 500;
+
         } else if (type == MapGenerator.ObjectType.TOWN) {
-            income = 0; // <--- Towns give 2 Funding (Potential)
+            income = 1;
         }
 
-        // Use the 7-argument constructor (No income)
-        entity.add(new StatsComponent(info.name, 0, 0, 0, vision, income, StatsComponent.MoveType.LAND, owner));
+        StatsComponent stats = new StatsComponent(finalName, 0, 0, 0, vision, income, StatsComponent.MoveType.LAND, owner);
+        stats.baseOrdinal = ordinal;
+        stats.currentBaseXP = startXP;
+        stats.maxBaseXP = maxXP;
+
+        entity.add(stats);
         engine.addEntity(entity);
     }
 
-// --- UPDATE: Accept GameState for XP Calculation ---
     public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map, GameState state) {
-        // 1. Update Texture
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
+        StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
+
         if (newOwner == 1) {
             tex.region = baseP1Region;
+            map.objects[objectEntity.getComponent(GridPositionComponent.class).x][objectEntity.getComponent(GridPositionComponent.class).y] = MapGenerator.ObjectType.BASE_P1;
+
+            state.p1BaseCount++;
+            stats.owner = 1;
+            stats.baseOrdinal = getOrdinal(state.p1BaseCount);
+            stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
+            state.p1XP += 250;
+
         } else if (newOwner == 2) {
             tex.region = baseP2Region;
+            map.objects[objectEntity.getComponent(GridPositionComponent.class).x][objectEntity.getComponent(GridPositionComponent.class).y] = MapGenerator.ObjectType.BASE_P2;
+
+            state.p2BaseCount++;
+            stats.owner = 2;
+            stats.baseOrdinal = getOrdinal(state.p2BaseCount);
+            stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
+            state.p2XP += 250;
         }
 
-        // 2. Update Stats
-        StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
-        if (stats != null) {
-            stats.owner = newOwner;
-            stats.name = (newOwner == 1) ? "Blue Base" : "Red Base";
-            stats.vision = GameConfig.BORDER_RADIUS;
-            stats.income = 2;
-        }
-
-        // 3. Update Map Data
-        GridPositionComponent pos = objectEntity.getComponent(GridPositionComponent.class);
-        if (pos != null) {
-            if (newOwner == 1) {
-                map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
-            } else {
-                map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
-            }
-        }
-
-        // ONE-TIME +1 FUNDING BONUS
-        if (newOwner == 1) {
-            state.p1Funding += 1;
-        } else {
-            state.p2Funding += 1;
-        }
-
-        // --- 4. NEW: CALCULATE AND ADD XP ---
-        int radius = GameConfig.BORDER_RADIUS;
-        int side = (radius * 2) + 1; // e.g. Radius 2 -> 5x5 square
-        int area = side * side;      // 25 tiles
-        int xpGain = area * 10;      // 250 XP
-
-        if (newOwner == 1) {
-            state.p1XP += xpGain;
-        } else if (newOwner == 2) {
-            state.p2XP += xpGain;
-        }
-
-        Gdx.app.log("XP", "Player " + newOwner + " gained " + xpGain + " XP! Total: " + (newOwner == 1 ? state.p1XP : state.p2XP));
+        stats.vision = GameConfig.BORDER_RADIUS;
+        stats.income = 2;
+        stats.maxBaseXP = 2000;
+        stats.currentBaseXP = 0;
     }
 
-    // ... (Keep existing methods: getUnitUi, getTerrainUi, getObjectUi, getTextureForTerrain, UiInfo) ...
+    private String getOrdinal(int i) {
+        String[] suffixes = new String[]{"th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"};
+        switch (i % 100) {
+            case 11:
+            case 12:
+            case 13:
+                return i + "th";
+            default:
+                return i + suffixes[i % 10];
+        }
+    }
+
     public UiInfo getUnitUi(String unitType) {
         if ("RECRUIT".equals(unitType)) {
             return new UiInfo("Infantry Recruit", recruitDisplayRegion);
