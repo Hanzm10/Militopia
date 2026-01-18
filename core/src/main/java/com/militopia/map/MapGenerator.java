@@ -15,7 +15,8 @@ public class MapGenerator {
     public enum ObjectType {
         NONE,
         BASE_P1, BASE_P2, TOWN,
-        OIL, RUINS, CACTUS, TREE, MOUNTAIN_OBJ
+        OIL, RUINS, CACTUS, TREE, MOUNTAIN_OBJ,
+        HORSE, FISH, DEER, ZEBRA
     }
 
     public static class GameMap {

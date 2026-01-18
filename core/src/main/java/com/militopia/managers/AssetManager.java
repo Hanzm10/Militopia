@@ -19,7 +19,7 @@ public class AssetManager {
     public static final String TILE_DEEPWATER = "tile_deepwater.png";
     public static final String TILE_SAND = "tile_sand.png";
     public static final String TILE_MOUNTAIN = "tile_mountain.png";
-    public static final String FOG_OF_WAR = "fog_of_war.png"; // <--- NEW
+    public static final String FOG_OF_WAR = "fog_of_war.png";
 
     // Objects
     public static final String OBJ_TREE = "obj_tree.png";
@@ -36,6 +36,17 @@ public class AssetManager {
     public static final String RECRUIT_LEFT = "recruit_left.png";
     public static final String RECRUIT_DISPLAY = "display_recruit.png";
 
+    // Animals
+    public static final String DEER_DISPLAY = "display_deer.png";
+    public static final String FISH_DISPLAY = "display_fish.png";
+    public static final String ZEBRA_DISPLAY = "display_zebra.png";
+    public static final String HORSE_DISPLAY = "display_horse.png";
+
+    public static final String DEER = "deer.png";
+    public static final String FISH = "fish.png";
+    public static final String ZEBRA = "zebra.png";
+    public static final String HORSE = "horse.png";
+
     // UI
     public static final String MARKER_DOT = "marker_dot.png";
     public static final String ICON_SETTINGS = "icon_settings.png";
@@ -44,7 +55,7 @@ public class AssetManager {
     public static final String BTN_SLIDEDOWN = "slidedown_btn.png";
     public static final String CIRCLE_UI = "circle_ui.png";
     public static final String UISKIN = "uiskin.json";
-    
+
     // Fonts
     public static final String GAME_FONT = "game_font.ttf";
 
@@ -74,6 +85,16 @@ public class AssetManager {
         manager.load(RECRUIT_LEFT, Texture.class);
         manager.load(RECRUIT_DISPLAY, Texture.class);
 
+        manager.load(DEER_DISPLAY, Texture.class);
+        manager.load(FISH_DISPLAY, Texture.class);
+        manager.load(ZEBRA_DISPLAY, Texture.class);
+        manager.load(HORSE_DISPLAY, Texture.class);
+
+        manager.load(DEER, Texture.class);
+        manager.load(FISH, Texture.class);
+        manager.load(ZEBRA, Texture.class);
+        manager.load(HORSE, Texture.class);
+
         manager.load(MARKER_DOT, Texture.class);
         manager.load(ICON_SETTINGS, Texture.class);
         manager.load(ICON_STATS, Texture.class);
@@ -92,7 +113,7 @@ public class AssetManager {
         fontParam.fontParameters.size = 24;
         fontParam.fontParameters.minFilter = Texture.TextureFilter.Linear;
         fontParam.fontParameters.magFilter = Texture.TextureFilter.Linear;
-        
+
         manager.load(GAME_FONT, BitmapFont.class, fontParam);
     }
 
@@ -101,7 +122,9 @@ public class AssetManager {
     }
 
     public Texture get(String fileName) {
-        if (!manager.isLoaded(fileName)) return null;
+        if (!manager.isLoaded(fileName)) {
+            return null;
+        }
         Texture t = manager.get(fileName, Texture.class);
         t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         return t;
@@ -110,7 +133,7 @@ public class AssetManager {
     public Skin getSkin() {
         return manager.get(UISKIN, Skin.class);
     }
-    
+
     public BitmapFont getFont() {
         return manager.get(GAME_FONT, BitmapFont.class);
     }

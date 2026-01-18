@@ -14,7 +14,9 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.militopia.MilitopiaGame;
+import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
+import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
@@ -28,6 +30,10 @@ import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.ui.GameHUD;
+// --- NEW IMPORTS ---
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class GameScreen implements Screen {
 
@@ -73,21 +79,19 @@ public class GameScreen implements Screen {
         entityFactory = new EntityFactory(engine, game.assets);
         unitFactory = new UnitFactory(engine, game.assets);
         saveManager = new SaveManager();
-        
-        // Setup Font (Global Scale)
+
         font = game.skin.getFont("default-font");
-        font.getData().setScale(0.5f); 
+        font.getData().setScale(0.5f);
 
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT, loadedState.seed);
 
         centerCameraOnBase(gameState.currentPlayer);
 
-        // --- FIX: Reset Base Counts for New Map ---
         gameState.p1BaseCount = 0;
         gameState.p2BaseCount = 0;
-        // ------------------------------------------
 
+        // 1. Generate Map Objects
         for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
             for (int y = 0; y < GameConfig.MAP_HEIGHT; y++) {
                 MapGenerator.ObjectType type = gameMap.objects[x][y];
@@ -108,10 +112,21 @@ public class GameScreen implements Screen {
         unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
         engine.addSystem(unitRenderSystem);
 
+        // 2. Load Saved Units
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if ("RECRUIT".equals(u.type)) {
                     unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner, false);
+                }
+            }
+        }
+
+        // 3. Load Saved Structures
+        if (loadedState.structures != null) {
+            for (com.militopia.data.StructureData s : loadedState.structures) {
+                Entity e = findEntityAt(s.x, s.y);
+                if (e != null) {
+                    unitFactory.updateStructureFromSave(e, s, gameMap);
                 }
             }
         }
@@ -124,27 +139,50 @@ public class GameScreen implements Screen {
 
         gameHUD.build(this, inputController, unitFactory, gameState);
         gameHUD.updateTurn(gameState.turnCount);
-        gameHUD.updateXP(gameState.p1XP); 
-        
-        int startIncome = calculateIncome(gameState.currentPlayer);
-        gameHUD.updateFunding(gameState.p1Funding, startIncome); 
+        gameHUD.updateXP(gameState.p1XP);
 
-        Gdx.app.log("Economy", "Turn: " + gameState.turnCount + 
-                             " | Player: " + gameState.currentPlayer + 
-                             " | Game Start " + 
-                             " | Total Funds: " + gameState.p1Funding);
+        int startIncome = calculateIncome(gameState.currentPlayer);
+        gameHUD.updateFunding(gameState.p1Funding, startIncome);
+
+        // --- REPLACED: Use the new log method for initial state too ---
+        logBaseXPStatus();
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
         multiplexer.addProcessor(inputController);
         Gdx.input.setInputProcessor(multiplexer);
     }
-    
-    // ... (rest of class unchanged) ...
-    public GameState getGameState() { return gameState; }
-    public int getCurrentPlayer() { return gameState.currentPlayer; }
-    public void endTurnAction() { if (turnState == TurnState.PLAYING) { turnState = TurnState.FADING_OUT; fadeTime = 0f; inputController.setInputEnabled(false); } }
-    
+
+    private Entity findEntityAt(int x, int y) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
+        for (Entity e : entities) {
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+            if (pos.x == x && pos.y == y) {
+                TypeComponent type = e.getComponent(TypeComponent.class);
+                if (type != null && type.type == TypeComponent.Type.OBJECT) {
+                    return e;
+                }
+            }
+        }
+        return null;
+    }
+
+    public GameState getGameState() {
+        return gameState;
+    }
+
+    public int getCurrentPlayer() {
+        return gameState.currentPlayer;
+    }
+
+    public void endTurnAction() {
+        if (turnState == TurnState.PLAYING) {
+            turnState = TurnState.FADING_OUT;
+            fadeTime = 0f;
+            inputController.setInputEnabled(false);
+        }
+    }
+
     private void centerCameraOnBase(int playerID) {
         MapGenerator.ObjectType targetBase = (playerID == 1) ? MapGenerator.ObjectType.BASE_P1 : MapGenerator.ObjectType.BASE_P2;
         for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
@@ -177,8 +215,62 @@ public class GameScreen implements Screen {
         ImmutableArray<Entity> units = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
         for (Entity entity : units) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
-            stats.hasActed = false; 
+            stats.hasActed = false;
         }
+    }
+
+    public int calculateIncome(int playerID) {
+        int totalIncome = 0;
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
+        for (Entity entity : entities) {
+            StatsComponent stats = entity.getComponent(StatsComponent.class);
+            if (stats.owner == playerID) {
+                totalIncome += stats.income;
+            }
+        }
+        return totalIncome;
+    }
+
+    private int processTurnEconomy(int playerID) {
+        int totalIncome = 0;
+        int totalXPGain = 0;
+
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
+
+        for (Entity entity : entities) {
+            StatsComponent stats = entity.getComponent(StatsComponent.class);
+            TypeComponent type = entity.getComponent(TypeComponent.class);
+
+            if (stats.owner == playerID) {
+                totalIncome += stats.income;
+
+//                // --- FIX: Only add XP if we are past Turn 1 ---
+//                // Remove when done with testing
+//                if (gameState.turnCount > 1) {
+//                    if (type.type == TypeComponent.Type.OBJECT && stats.income > 0) {
+//                        int gain = 250;
+//                        if (stats.currentBaseXP < stats.maxBaseXP) {
+//                            stats.currentBaseXP += gain;
+//                            if (stats.currentBaseXP > stats.maxBaseXP) {
+//                                stats.currentBaseXP = stats.maxBaseXP;
+//                            }
+//                        }
+//                        totalXPGain += gain;
+//                    }
+//                }
+            }
+        }
+
+        // --- FIX: Only add Global XP if we are past Turn 1 ---
+//        if (gameState.turnCount > 1) {
+//            if (playerID == 1) {
+//                gameState.p1XP += totalXPGain;
+//            } else {
+//                gameState.p2XP += totalXPGain;
+//            }
+//        }
+
+        return totalIncome;
     }
 
     @Override
@@ -191,10 +283,12 @@ public class GameScreen implements Screen {
             if (fadeTime >= FADE_DURATION) {
                 fadeTime = FADE_DURATION;
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
-                
-                if (gameState.currentPlayer == 1) gameState.turnCount++;
 
-                int income = calculateIncome(gameState.currentPlayer);
+                if (gameState.currentPlayer == 1) {
+                    gameState.turnCount++;
+                }
+
+                int income = processTurnEconomy(gameState.currentPlayer);
                 int currentTotal = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
 
                 if (gameState.turnCount > 1) {
@@ -205,15 +299,19 @@ public class GameScreen implements Screen {
                         gameState.p2Funding += income;
                         currentTotal = gameState.p2Funding;
                     }
-                    Gdx.app.log("Economy", "Turn: " + gameState.turnCount + " | Player: " + gameState.currentPlayer + " | Income: +" + income + " | Total Funds: " + currentTotal);
+                    // --- REPLACED old simple log with detailed log ---
+                    logBaseXPStatus();
+                    // -------------------------------------------------
                 } else {
                     Gdx.app.log("Economy", "Turn: " + gameState.turnCount + " | Player: " + gameState.currentPlayer + " | First Round (No Income) | Total Funds: " + currentTotal);
                 }
 
                 resetUnitActions();
                 gameHUD.updateTurn(gameState.turnCount);
+
                 int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
                 gameHUD.updateXP(currentXP);
+
                 gameHUD.updateFunding(currentTotal, income);
                 fogSystem.setPlayer(gameState.currentPlayer);
                 fogSystem.update(0);
@@ -255,6 +353,62 @@ public class GameScreen implements Screen {
         }
     }
 
+    // --- NEW HELPER: Log XP Status in nice format ---
+    private void logBaseXPStatus() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n========================================\n");
+        sb.append("       TURN ").append(gameState.turnCount).append(" STATUS REPORT       \n");
+        sb.append("========================================\n");
+
+        List<String> p1Logs = new ArrayList<>();
+        List<String> p2Logs = new ArrayList<>();
+
+        // Scan all entities for bases
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class, TypeComponent.class).get());
+
+        for (Entity e : entities) {
+            StatsComponent stats = e.getComponent(StatsComponent.class);
+            TypeComponent type = e.getComponent(TypeComponent.class);
+
+            // Filter for Objects that are owned by P1 or P2 (Bases/Towns)
+            if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
+
+                // Format: "Base Name : 500 / 2000 XP"
+                String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP, stats.maxBaseXP);
+
+                if (stats.owner == 1) {
+                    p1Logs.add(entry);
+                } else {
+                    p2Logs.add(entry);
+                }
+            }
+        }
+
+        // Sort alphabetically so "1st Base" comes before "2nd Base" usually
+        Collections.sort(p1Logs);
+        Collections.sort(p2Logs);
+
+        sb.append("PLAYER 1:\n");
+        if (p1Logs.isEmpty()) {
+            sb.append("  (No Bases)\n");
+        }
+        for (String s : p1Logs) {
+            sb.append(s).append("\n");
+        }
+
+        sb.append("\nPLAYER 2:\n");
+        if (p2Logs.isEmpty()) {
+            sb.append("  (No Bases)\n");
+        }
+        for (String s : p2Logs) {
+            sb.append(s).append("\n");
+        }
+
+        sb.append("========================================\n");
+
+        Gdx.app.log("XP Log", sb.toString());
+    }
+
     private void drawFadeOverlay() {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -266,22 +420,37 @@ public class GameScreen implements Screen {
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
-    
-    public int calculateIncome(int playerID) {
-        int totalIncome = 0;
-        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
-        for (Entity entity : entities) {
-            StatsComponent stats = entity.getComponent(StatsComponent.class);
-            if (stats.owner == playerID) totalIncome += stats.income;
-        }
-        return totalIncome;
+
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height, false);
+        gameHUD.resize(width, height);
     }
 
-    @Override public void resize(int width, int height) { viewport.update(width, height, false); gameHUD.resize(width, height); }
-    @Override public void dispose() { engine.clearPools(); gameHUD.dispose(); shapeRenderer.dispose(); }
-    public boolean isFogEnabled() { return isFogEnabled; }
-    @Override public void show() {}
-    @Override public void pause() {}
-    @Override public void resume() {}
-    @Override public void hide() {}
+    @Override
+    public void dispose() {
+        engine.clearPools();
+        gameHUD.dispose();
+        shapeRenderer.dispose();
+    }
+
+    public boolean isFogEnabled() {
+        return isFogEnabled;
+    }
+
+    @Override
+    public void show() {
+    }
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
 }
