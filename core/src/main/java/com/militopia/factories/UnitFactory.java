@@ -220,7 +220,7 @@ public class UnitFactory {
         spawnAnimalsAroundBase(pos.x, pos.y, map, state);
     }
     
-    private void spawnAnimalsAroundBase(int baseX, int baseY, MapGenerator.GameMap map, GameState state) {
+    public void spawnAnimalsAroundBase(int baseX, int baseY, MapGenerator.GameMap map, GameState state) {
         int radius = GameConfig.BORDER_RADIUS; // e.g. 2 or 3
         List<GridPoint> validSpots = new ArrayList<>();
         

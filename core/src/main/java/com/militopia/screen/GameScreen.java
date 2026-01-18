@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.GridPoint2; // Use LibGDX GridPoint2
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.components.GridPositionComponent;
@@ -30,7 +31,6 @@ import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.ui.GameHUD;
-// --- NEW IMPORTS ---
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -91,14 +91,27 @@ public class GameScreen implements Screen {
         gameState.p1BaseCount = 0;
         gameState.p2BaseCount = 0;
 
+        // --- NEW: Track base locations during generation ---
+        List<GridPoint2> initialBases = new ArrayList<>();
+
         // 1. Generate Map Objects
         for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
             for (int y = 0; y < GameConfig.MAP_HEIGHT; y++) {
                 MapGenerator.ObjectType type = gameMap.objects[x][y];
                 if (type != MapGenerator.ObjectType.NONE) {
                     unitFactory.createObjectEntity(x, y, type, gameState);
+
+                    // Identify Initial Bases
+                    if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
+                        initialBases.add(new GridPoint2(x, y));
+                    }
                 }
             }
+        }
+
+        // --- NEW: Spawn Animals for Initial Bases ---
+        for (GridPoint2 pos : initialBases) {
+            unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
         }
 
         engine.addSystem(new MovementSystem());
@@ -144,7 +157,6 @@ public class GameScreen implements Screen {
         int startIncome = calculateIncome(gameState.currentPlayer);
         gameHUD.updateFunding(gameState.p1Funding, startIncome);
 
-        // --- REPLACED: Use the new log method for initial state too ---
         logBaseXPStatus();
 
         InputMultiplexer multiplexer = new InputMultiplexer();
@@ -244,31 +256,28 @@ public class GameScreen implements Screen {
             if (stats.owner == playerID) {
                 totalIncome += stats.income;
 
-//                // --- FIX: Only add XP if we are past Turn 1 ---
-//                // Remove when done with testing
-//                if (gameState.turnCount > 1) {
-//                    if (type.type == TypeComponent.Type.OBJECT && stats.income > 0) {
-//                        int gain = 250;
-//                        if (stats.currentBaseXP < stats.maxBaseXP) {
-//                            stats.currentBaseXP += gain;
-//                            if (stats.currentBaseXP > stats.maxBaseXP) {
-//                                stats.currentBaseXP = stats.maxBaseXP;
-//                            }
-//                        }
-//                        totalXPGain += gain;
-//                    }
-//                }
+                if (gameState.turnCount > 1) {
+                    if (type.type == TypeComponent.Type.OBJECT && stats.income > 0) {
+                        int gain = 250;
+                        if (stats.currentBaseXP < stats.maxBaseXP) {
+                            stats.currentBaseXP += gain;
+                            if (stats.currentBaseXP > stats.maxBaseXP) {
+                                stats.currentBaseXP = stats.maxBaseXP;
+                            }
+                        }
+                        totalXPGain += gain;
+                    }
+                }
             }
         }
 
-        // --- FIX: Only add Global XP if we are past Turn 1 ---
-//        if (gameState.turnCount > 1) {
-//            if (playerID == 1) {
-//                gameState.p1XP += totalXPGain;
-//            } else {
-//                gameState.p2XP += totalXPGain;
-//            }
-//        }
+        if (gameState.turnCount > 1) {
+            if (playerID == 1) {
+                gameState.p1XP += totalXPGain;
+            } else {
+                gameState.p2XP += totalXPGain;
+            }
+        }
 
         return totalIncome;
     }
@@ -299,9 +308,7 @@ public class GameScreen implements Screen {
                         gameState.p2Funding += income;
                         currentTotal = gameState.p2Funding;
                     }
-                    // --- REPLACED old simple log with detailed log ---
                     logBaseXPStatus();
-                    // -------------------------------------------------
                 } else {
                     Gdx.app.log("Economy", "Turn: " + gameState.turnCount + " | Player: " + gameState.currentPlayer + " | First Round (No Income) | Total Funds: " + currentTotal);
                 }
@@ -353,7 +360,6 @@ public class GameScreen implements Screen {
         }
     }
 
-    // --- NEW HELPER: Log XP Status in nice format ---
     private void logBaseXPStatus() {
         StringBuilder sb = new StringBuilder();
         sb.append("\n========================================\n");
@@ -363,19 +369,14 @@ public class GameScreen implements Screen {
         List<String> p1Logs = new ArrayList<>();
         List<String> p2Logs = new ArrayList<>();
 
-        // Scan all entities for bases
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class, TypeComponent.class).get());
 
         for (Entity e : entities) {
             StatsComponent stats = e.getComponent(StatsComponent.class);
             TypeComponent type = e.getComponent(TypeComponent.class);
 
-            // Filter for Objects that are owned by P1 or P2 (Bases/Towns)
             if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
-
-                // Format: "Base Name : 500 / 2000 XP"
                 String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP, stats.maxBaseXP);
-
                 if (stats.owner == 1) {
                     p1Logs.add(entry);
                 } else {
@@ -384,7 +385,6 @@ public class GameScreen implements Screen {
             }
         }
 
-        // Sort alphabetically so "1st Base" comes before "2nd Base" usually
         Collections.sort(p1Logs);
         Collections.sort(p2Logs);
 
@@ -405,7 +405,6 @@ public class GameScreen implements Screen {
         }
 
         sb.append("========================================\n");
-
         Gdx.app.log("XP Log", sb.toString());
     }
 
