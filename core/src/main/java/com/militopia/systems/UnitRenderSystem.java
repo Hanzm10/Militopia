@@ -206,12 +206,21 @@ public class UnitRenderSystem extends EntitySystem {
         if (isMarker) {
             batch.setColor(Color.WHITE);
         } else if (typeC.type == TypeComponent.Type.UNIT) {
+            // --- UPDATED EXHAUSTED COLOR LOGIC ---
             if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
-                batch.setColor(Color.DARK_GRAY);
-            } else if (stats != null && stats.owner == 2) {
-                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
+                // Exhausted but tinted
+                if (stats.owner == 1) {
+                    batch.setColor(0.3f, 0.3f, 0.6f, 1.0f); // Dark Blueish
+                } else if (stats.owner == 2) {
+                    batch.setColor(0.6f, 0.3f, 0.3f, 1.0f); // Dark Reddish
+                } else {
+                    batch.setColor(Color.DARK_GRAY);
+                }
+            } // --- Normal Colors ---
+            else if (stats != null && stats.owner == 2) {
+                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); // Light Red
             } else if (stats != null && stats.owner == 1) {
-                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
+                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f); // Light Blue
             } else {
                 batch.setColor(Color.WHITE);
             }
