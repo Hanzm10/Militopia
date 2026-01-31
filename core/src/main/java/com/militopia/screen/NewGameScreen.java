@@ -16,7 +16,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
+import com.militopia.managers.AssetManager;
 import com.militopia.utils.HoverListener;
+import com.militopia.utils.RenderUtils;
 
 public class NewGameScreen implements Screen {
 
@@ -117,6 +119,10 @@ public class NewGameScreen implements Screen {
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
+
+        RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
+
+        
         stage.act();
         stage.draw();
     }

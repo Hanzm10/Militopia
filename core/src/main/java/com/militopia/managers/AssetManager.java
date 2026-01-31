@@ -55,6 +55,7 @@ public class AssetManager {
     public static final String BTN_SLIDEDOWN = "slidedown_btn.png";
     public static final String CIRCLE_UI = "circle_ui.png";
     public static final String UISKIN = "uiskin.json";
+    public static final String BACKGROUND = "militopia_background.png";
 
     // Fonts
     public static final String GAME_FONT = "game_font.ttf";
@@ -101,6 +102,7 @@ public class AssetManager {
         manager.load(ICON_END, Texture.class);
         manager.load(BTN_SLIDEDOWN, Texture.class);
         manager.load(CIRCLE_UI, Texture.class);
+        manager.load(BACKGROUND, Texture.class);
 
         manager.load(UISKIN, Skin.class);
 

@@ -277,18 +277,7 @@ public class GameHUD {
         // Add Dynamic Button
         addHuntButton(contentTable, animalEntity, hunterUnit, animalType, factory, controller);
 
-        TextButton closeBtn = new TextButton("Cancel", game.skin);
-        closeBtn.addListener(new HoverListener());
-        closeBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                hideSummonMenu();
-                controller.deselect();
-            }
-        });
-
         summonMenu.add(contentTable).expandX().center();
-        summonMenu.add(closeBtn).padRight(20);
 
         animateMenuOpen();
     }
@@ -348,17 +337,9 @@ public class GameHUD {
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
         Table contentTable = new Table();
         addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map, state);
-        TextButton closeBtn = new TextButton("Cancel", game.skin);
-        closeBtn.addListener(new HoverListener());
-        closeBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                hideSummonMenu();
-                controller.deselect();
-            }
-        });
+
         summonMenu.add(contentTable).expandX().center();
-        summonMenu.add(closeBtn).padRight(20);
+        
         animateMenuOpen();
     }
 
