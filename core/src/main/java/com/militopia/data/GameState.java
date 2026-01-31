@@ -14,6 +14,7 @@ public class GameState {
     // --- SEPARATE LISTS ---
     public ArrayList<UnitData> units = new ArrayList<>();
     public ArrayList<StructureData> structures = new ArrayList<>();
+    public ArrayList<AnimalData> animals = new ArrayList<>();
     
     public int currentPlayer = 1;
     public int turnCount = 1;

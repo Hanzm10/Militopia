@@ -10,18 +10,23 @@ import com.badlogic.gdx.utils.Json;
 import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
 import com.militopia.data.UnitData;
+import com.militopia.data.AnimalData; // Import AnimalData
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
+import com.militopia.map.MapGenerator; // Import MapGenerator
 
 public class SaveManager {
 
-    public void saveGame(GameState state, PooledEngine engine) {
-        // 1. Clear OLD data lists
-        state.units.clear();
-        state.structures.clear(); // Clear new list
+    // --- UPDATED SIGNATURE: Added GameMap map ---
+    public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
 
-        // 2. Extract Data
+        // 1. Clear old data lists
+        state.units.clear();
+        state.structures.clear();
+        state.animals.clear(); // Clear animals
+
+        // 2. Extract Data from Engine
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
 
         for (Entity e : entities) {
@@ -34,24 +39,39 @@ public class SaveManager {
                 state.units.add(new UnitData(pos.x, pos.y, "RECRUIT", stats.owner));
             } 
             else if (type.type == TypeComponent.Type.OBJECT) {
-                // Save Structure (Base/Town)
-                if (stats != null && (stats.owner == 1 || stats.owner == 2 || stats.income > 0)) {
-                     // We only save relevant structures (Bases/Towns) that have stats
-                    state.structures.add(new StructureData(
-                        pos.x, pos.y, stats.owner, 
-                        stats.currentBaseXP, stats.name, stats.baseOrdinal
-                    ));
+                // Check the Map to see what this object really is
+                MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
+
+                // A. Save Structures (Bases / Towns)
+                if (objType == MapGenerator.ObjectType.BASE_P1 || 
+                    objType == MapGenerator.ObjectType.BASE_P2 || 
+                    objType == MapGenerator.ObjectType.TOWN) {
+                    
+                    if (stats != null) {
+                        state.structures.add(new StructureData(
+                            pos.x, pos.y, stats.owner, 
+                            stats.currentBaseXP, stats.name, stats.baseOrdinal
+                        ));
+                    }
+                }
+                // B. Save Animals
+                else if (objType == MapGenerator.ObjectType.HORSE ||
+                         objType == MapGenerator.ObjectType.FISH ||
+                         objType == MapGenerator.ObjectType.DEER ||
+                         objType == MapGenerator.ObjectType.ZEBRA) {
+                    
+                    state.animals.add(new AnimalData(pos.x, pos.y, objType.name()));
                 }
             }
         }
 
-        // 3. Write to JSON
+        // 3. Write to JSON File
         Json json = new Json();
         String jsonText = json.toJson(state);
 
         FileHandle file = Gdx.files.local("saves/" + state.saveName + ".json");
         file.writeString(jsonText, false);
 
-        Gdx.app.log("SaveManager", "Game Saved to " + file.path());
+        System.out.println("Game Saved: " + file.path());
     }
 }

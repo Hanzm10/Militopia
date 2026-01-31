@@ -21,7 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
-import com.militopia.components.StatsComponent; // Required
+import com.militopia.components.StatsComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
@@ -52,7 +52,6 @@ public class GameHUD {
     private int currentBaseOwner = 1;
     private int currentIncome = 0;
 
-    // --- NEW: Stored References ---
     private GameInputController inputController;
     private UnitFactory unitFactory;
 
@@ -66,7 +65,7 @@ public class GameHUD {
 
     public void build(final GameScreen screen, final GameInputController inputController,
             final UnitFactory unitFactory, final GameState state) {
-        this.gameScreen = screen; // <--- Store it
+        this.gameScreen = screen;
         this.inputController = inputController;
         this.unitFactory = unitFactory;
 
@@ -129,8 +128,6 @@ public class GameHUD {
         stage.addActor(rootTable);
 
         createTileInfoPanel();
-
-        // Initial setup (hidden)
         configureSummonMenu(state);
         createSettingsOverlay(screen);
 
@@ -152,7 +149,6 @@ public class GameHUD {
         endTurnBtn.addListener(new HoverListener());
     }
 
-    // --- NEW: Update XP Label ---
     public void updateXP(int xp) {
         if (xpLabel != null) {
             xpLabel.setText(String.valueOf(xp));
@@ -166,32 +162,25 @@ public class GameHUD {
     }
 
     public void updateFunding(int funding, int income) {
-        this.currentIncome = income; // Store it for later use (e.g. inside buttons)
+        this.currentIncome = income;
         if (fundsLabel != null) {
             fundsLabel.setText(funding + " (+" + income + ")");
         }
     }
 
-    // --- REFACTORED: Helper to populate Summon Menu ---
     private void configureSummonMenu(GameState state) {
-        populateSummonMenu(state); // Call logic with state
-
+        populateSummonMenu(state);
         float panelHeight = 140f;
         summonMenu.setSize(stage.getWidth(), panelHeight);
         summonMenu.setPosition(0, -panelHeight);
         stage.addActor(summonMenu);
     }
 
-    // --- NEW: Logic to Rebuild Summon Menu (Clears Capture Buttons) ---
     private void populateSummonMenu(GameState state) {
         summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
-
         Table contentTable = new Table();
-
-        // Pass state to button creator
         addSummonButton(contentTable, "RECRUIT", inputController, unitFactory, state);
-
         TextButton closeBtn = new TextButton("Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
@@ -201,17 +190,12 @@ public class GameHUD {
                 inputController.resetLastClicked();
             }
         });
-
         summonMenu.add(contentTable).expandX().center();
     }
 
-    private void addSummonButton(Table container, final String unitType,
-            final GameInputController controller, final UnitFactory factory, final GameState state) {
-
+    private void addSummonButton(Table container, final String unitType, final GameInputController controller, final UnitFactory factory, final GameState state) {
         UnitFactory.UiInfo info = factory.getUnitUi(unitType);
-        final int cost = factory.getUnitCost(unitType); // Get Cost
-
-        // ... (Icon/Texture setup remains the same) ...
+        final int cost = factory.getUnitCost(unitType);
         TextureRegionDrawable circleDrawable;
         try {
             Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
@@ -220,83 +204,56 @@ public class GameHUD {
         } catch (Exception e) {
             circleDrawable = (TextureRegionDrawable) game.skin.newDrawable("white", Color.DARK_GRAY);
         }
-
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-
         com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
-
         com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(info.region);
         unitIcon.setScaling(Scaling.fit);
-
         Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
         iconContainer.size(50, 50).center();
         buttonStack.add(iconContainer);
-
         buttonStack.setOrigin(40, 40);
         buttonStack.addListener(new HoverListener());
-
-        // CLICK LISTENER WITH FUNDING CHECK
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // 1. Check Funds
                 int currentFunds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
-
                 if (currentFunds >= cost) {
-                    // 2. Deduct Funds
                     if (currentBaseOwner == 1) {
                         state.p1Funding -= cost;
                     } else {
                         state.p2Funding -= cost;
                     }
-
-                    // 3. Create Unit
                     int tx = controller.getLastClickedX();
                     int ty = controller.getLastClickedY();
                     if (tx != -1 && ty != -1) {
                         factory.createUnit(unitType, tx, ty, currentBaseOwner, true);
                     }
-
-                    // 4. Update HUD
                     updateFunding((currentBaseOwner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
-
                     hideSummonMenu();
                     controller.resetLastClicked();
-                } else {
-                    System.out.println("Not enough funding! Cost: " + cost + ", Have: " + currentFunds);
-                    // Optional: Shake button or play sound here
                 }
             }
         });
-
         Table group = new Table();
         group.add(buttonStack).size(80, 80).row();
-
-        // Update Label to show Cost
         Label nameLbl = new Label(info.name + " (" + cost + ")", game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
-
         container.add(group).pad(10);
     }
 
-    // --- FIX: Rebuild UI every time it opens ---
     public void openSummonMenu(int owner, GameState state) {
         this.currentBaseOwner = owner;
-
         populateSummonMenu(state);
-
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
-
         summonMenu.clearActions();
         summonMenu.setWidth(stage.getWidth());
         summonMenu.setX(0);
         summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
-
         bottomContainer.clearActions();
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
@@ -308,17 +265,17 @@ public class GameHUD {
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), 0, 0.3f, Interpolation.pow2In));
     }
 
-    // --- CAPTURE MENU (Wipes Summon Buttons) ---
-    public void openCaptureMenu(final Entity townEntity, final Entity capturingUnit,
-            final UnitFactory factory, final GameInputController controller,
-            final MapGenerator.GameMap map, final GameState state) {
+    // --- NEW: HUNT MENU ---
+    public void openHuntMenu(final Entity animalEntity, final Entity hunterUnit,
+            final MapGenerator.ObjectType animalType,
+            final UnitFactory factory, final GameInputController controller) {
 
-        summonMenu.clear(); // WIPE
+        summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
-
         Table contentTable = new Table();
 
-        addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map, state);
+        // Add Dynamic Button
+        addHuntButton(contentTable, animalEntity, hunterUnit, animalType, factory, controller);
 
         TextButton closeBtn = new TextButton("Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
@@ -333,12 +290,83 @@ public class GameHUD {
         summonMenu.add(contentTable).expandX().center();
         summonMenu.add(closeBtn).padRight(20);
 
+        animateMenuOpen();
+    }
+
+    private void addHuntButton(Table container, final Entity animalEntity, final Entity hunter,
+            final MapGenerator.ObjectType animalType,
+            final UnitFactory factory, final GameInputController controller) {
+
+        // Get Animal UI Info (Icon & Name)
+        UnitFactory.UiInfo info = factory.getObjectUi(animalType);
+
+        // Setup Button Style (Circle)
+        TextureRegionDrawable circleDrawable;
+        try {
+            Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
+            circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            circleDrawable = new TextureRegionDrawable(new TextureRegion(circleTex));
+        } catch (Exception e) {
+            circleDrawable = (TextureRegionDrawable) game.skin.newDrawable("white", Color.DARK_GRAY);
+        }
+        Stack buttonStack = new Stack();
+        buttonStack.setTransform(true);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        circleBg.setScaling(Scaling.fit);
+        buttonStack.add(circleBg);
+        
+        TextureRegion iconRegion = factory.getHudIcon(animalType);
+
+        // The Animal Icon
+        com.badlogic.gdx.scenes.scene2d.ui.Image icon = new com.badlogic.gdx.scenes.scene2d.ui.Image(iconRegion);
+        icon.setScaling(Scaling.fit);
+        Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(icon);
+        iconContainer.size(50, 50).center();
+        buttonStack.add(iconContainer);
+
+        buttonStack.setOrigin(40, 40);
+        buttonStack.addListener(new HoverListener());
+
+        // Click Logic
+        buttonStack.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                controller.performHunt(animalEntity, hunter);
+            }
+        });
+
+        Table group = new Table();
+        group.add(buttonStack).size(80, 80).row();
+        Label nameLbl = new Label("Hunt " + info.name, game.skin, "default-font", Color.WHITE);
+        nameLbl.setFontScale(0.7f);
+        group.add(nameLbl).padTop(5);
+        container.add(group).pad(10);
+    }
+
+    public void openCaptureMenu(final Entity townEntity, final Entity capturingUnit, final UnitFactory factory, final GameInputController controller, final MapGenerator.GameMap map, final GameState state) {
+        summonMenu.clear();
+        summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
+        Table contentTable = new Table();
+        addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map, state);
+        TextButton closeBtn = new TextButton("Cancel", game.skin);
+        closeBtn.addListener(new HoverListener());
+        closeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                hideSummonMenu();
+                controller.deselect();
+            }
+        });
+        summonMenu.add(contentTable).expandX().center();
+        summonMenu.add(closeBtn).padRight(20);
+        animateMenuOpen();
+    }
+
+    private void animateMenuOpen() {
         float panelHeight = 140f;
         summonMenu.setSize(stage.getWidth(), panelHeight);
         summonMenu.setPosition(0, -panelHeight);
         stage.addActor(summonMenu);
-
-        // Animations
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
         summonMenu.clearActions();
@@ -348,22 +376,14 @@ public class GameHUD {
         bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
-    // ... (addCaptureButton, createTileInfoPanel, createSettingsOverlay, createStatGroup, createCircleButton, etc. remain the same) ...
-    // Note: Ensure addCaptureButton uses 'StatsComponent' correctly (imported or fully qualified)
-    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit,
-            final UnitFactory factory, final GameInputController controller,
-            final MapGenerator.GameMap map, final GameState state) {
-
+    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit, final UnitFactory factory, final GameInputController controller, final MapGenerator.GameMap map, final GameState state) {
         final int newOwner = capturingUnit.getComponent(StatsComponent.class).owner;
-
-        // ... (Icon logic) ...
         TextureRegion baseRegion;
         if (newOwner == 1) {
-            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P1).region;
+            baseRegion = factory.getHudIcon(MapGenerator.ObjectType.BASE_P1);
         } else {
-            baseRegion = factory.getObjectUi(MapGenerator.ObjectType.BASE_P2).region;
+            baseRegion = factory.getHudIcon(MapGenerator.ObjectType.BASE_P2);
         }
-
         TextureRegionDrawable circleDrawable;
         try {
             Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
@@ -372,60 +392,37 @@ public class GameHUD {
         } catch (Exception e) {
             circleDrawable = (TextureRegionDrawable) game.skin.newDrawable("white", Color.DARK_GRAY);
         }
-
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-
         com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
-
         com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(baseRegion);
         unitIcon.setScaling(Scaling.fit);
-
         Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
         iconContainer.size(50, 50).center();
         buttonStack.add(iconContainer);
-
         buttonStack.setOrigin(40, 40);
         buttonStack.addListener(new HoverListener());
-
         buttonStack.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // 1. Perform Capture (Logic)
-                // This adds the +1 Funding to state and changes owner
                 factory.captureStructure(structureEntity, newOwner, map, state);
-
-                // 2. Mark Unit as Acted
                 StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
                 if (unitStats != null) {
                     unitStats.hasActed = true;
                 }
-
-                // 3. REFRESH HUD (The Fix)
-                // A. Update XP
                 int newTotalXP = (newOwner == 1) ? state.p1XP : state.p2XP;
                 updateXP(newTotalXP);
-
-                // B. Recalculate Income immediately (because we just gained a Base/Town)
                 int newIncome = gameScreen.calculateIncome(newOwner);
-
-                // C. Get the NEW funding (which includes the +1 from captureStructure)
                 int currentFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
-
-                // D. Update Label immediately
                 updateFunding(currentFunds, newIncome);
-
-                // 4. Cleanup
                 hideSummonMenu();
                 controller.deselect();
             }
         });
-
         Table group = new Table();
         group.add(buttonStack).size(80, 80).row();
-
         String labelText = "Capture Structure";
         StatsComponent stats = structureEntity.getComponent(StatsComponent.class);
         if (stats != null) {
@@ -435,16 +432,13 @@ public class GameHUD {
                 labelText = "Capture Enemy Base";
             }
         }
-
         Label nameLbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
-
         container.add(group).pad(10);
     }
 
-    // ... (Paste rest of your existing helper methods here: createTileInfoPanel, createSettingsOverlay, etc.) ...
-    // These methods do not need changes.
+    // ... (rest of helper methods createTileInfoPanel, createSettingsOverlay, createStatGroup, createCircleButton, createIconGroup, createGradientDrawable unchanged) ...
     private void createTileInfoPanel() {
         tileInfoTable = new Table();
         tileInfoTable.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.9f)));

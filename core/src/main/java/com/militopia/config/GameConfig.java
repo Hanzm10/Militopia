@@ -3,8 +3,8 @@ package com.militopia.config;
 public class GameConfig {
     // Grid Settings
     //width & height of map(by tiles)
-    public static final int MAP_WIDTH = 32;  
-    public static final int MAP_HEIGHT = 32; 
+    public static final int MAP_WIDTH = 16;  
+    public static final int MAP_HEIGHT = 16; 
     //size of tiles
     public static final int TILE_WIDTH = 16;
     public static final int TILE_HEIGHT = 10;
@@ -25,7 +25,11 @@ public class GameConfig {
     public static final float INPUT_OFFSET_X = -8f;
 
     // Territory Settings
-    public static final int BORDER_RADIUS = 2; // "2 tiles wide"
+    public static final int BORDER_RADIUS = 1; // "1 tiles wide"
+    
+    //Wild Animal Count
+    public static final int WILD_ANIMAL_COUNT_MIN = 1;
+    public static final int WILD_ANIMAL_COUNT_MAX = 3;
 
     // Camera Settings
     public static final float ZOOM_MIN = 0.2f; // Closest (Zoomed In)

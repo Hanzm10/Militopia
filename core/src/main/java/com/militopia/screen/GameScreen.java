@@ -12,7 +12,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.GridPoint2; // Use LibGDX GridPoint2
+import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.components.GridPositionComponent;
@@ -20,6 +20,7 @@ import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
+import com.militopia.data.AnimalData; // Import
 import com.militopia.data.GameState;
 import com.militopia.data.UnitData;
 import com.militopia.factories.EntityFactory;
@@ -91,7 +92,6 @@ public class GameScreen implements Screen {
         gameState.p1BaseCount = 0;
         gameState.p2BaseCount = 0;
 
-        // --- NEW: Track base locations during generation ---
         List<GridPoint2> initialBases = new ArrayList<>();
 
         // 1. Generate Map Objects
@@ -101,7 +101,6 @@ public class GameScreen implements Screen {
                 if (type != MapGenerator.ObjectType.NONE) {
                     unitFactory.createObjectEntity(x, y, type, gameState);
 
-                    // Identify Initial Bases
                     if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
                         initialBases.add(new GridPoint2(x, y));
                     }
@@ -109,10 +108,24 @@ public class GameScreen implements Screen {
             }
         }
 
-        // --- NEW: Spawn Animals for Initial Bases ---
-        for (GridPoint2 pos : initialBases) {
-            unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
+        // --- UPDATED ANIMAL SPAWNING LOGIC ---
+        // If we have saved animals, load them. Otherwise, generate new ones.
+        if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
+            Gdx.app.log("GameScreen", "Loading " + loadedState.animals.size() + " saved animals.");
+            for (AnimalData a : loadedState.animals) {
+                MapGenerator.ObjectType type = MapGenerator.ObjectType.valueOf(a.type);
+                // Important: Update the map data so logic (like hunting) works
+                gameMap.objects[a.x][a.y] = type;
+                unitFactory.createObjectEntity(a.x, a.y, type, gameState);
+            }
+        } else {
+            // New Game: Spawn fresh animals
+            Gdx.app.log("GameScreen", "Generating new animals for initial bases.");
+            for (GridPoint2 pos : initialBases) {
+                unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
+            }
         }
+        // -------------------------------------
 
         engine.addSystem(new MovementSystem());
 
@@ -211,8 +224,9 @@ public class GameScreen implements Screen {
         }
     }
 
+    // --- UPDATED: Pass gameMap to saveGame ---
     public void saveAndExit() {
-        saveManager.saveGame(gameState, engine);
+        saveManager.saveGame(gameState, engine, gameMap); //
         game.setScreen(new com.militopia.screen.MenuScreen(game));
     }
 

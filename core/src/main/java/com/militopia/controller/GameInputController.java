@@ -8,6 +8,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
@@ -16,6 +17,7 @@ import com.militopia.components.MovementComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
+import com.militopia.data.GameState; // Added Import
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
@@ -70,6 +72,7 @@ public class GameInputController extends InputAdapter {
         lastClickedY = -1;
     }
 
+    // ... (getters for hover/bounce remain unchanged) ...
     public int getHoveredX() {
         return hoveredX;
     }
@@ -143,7 +146,6 @@ public class GameInputController extends InputAdapter {
 
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
 
-            // 1. FOG CHECK
             Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
 
@@ -154,13 +156,11 @@ public class GameInputController extends InputAdapter {
                 }
             }
 
-            // 2. MOVEMENT CHECK
             if (clickedMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
             }
 
-            // 3. CLICK CYCLE
             if (gridX == lastClickedX && gridY == lastClickedY) {
                 selectionIndex++;
             } else {
@@ -189,13 +189,9 @@ public class GameInputController extends InputAdapter {
             gameHUD.hideSummonMenu();
             triggerBounce(gridX, gridY);
 
-            // =================================================================
-            // LOGIC HIERARCHY
-            // =================================================================
             if (targetType.equals("UNIT")) {
                 StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
 
-                // A. ENEMY UNIT -> SHOW INFO
                 if (unitStats != null && unitStats.owner != screen.getCurrentPlayer()) {
                     UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
                     gameHUD.showTileInfo(unitStats.name + " (Enemy)", info.region);
@@ -205,40 +201,47 @@ public class GameInputController extends InputAdapter {
                 boolean isUnitExhausted = (!GameConfig.TESTING_MODE && unitStats != null && unitStats.hasActed);
                 Entity objectEntity = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
 
-                // B. STRUCTURE CHECK
                 if (objectEntity != null) {
                     StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
-                    if (objStats != null && unitStats != null) {
 
+                    // --- 1. STRUCTURE LOGIC ---
+                    if (objStats != null && unitStats != null) {
                         boolean isStructure = (foundObject == MapGenerator.ObjectType.TOWN
                                 || foundObject == MapGenerator.ObjectType.BASE_P1
                                 || foundObject == MapGenerator.ObjectType.BASE_P2);
 
                         if (isStructure) {
-                            // CASE A: FRIENDLY STRUCTURE
                             if (objStats.owner == unitStats.owner) {
-                                // --- FIX: Restore Funding Logic Here ---
                                 if (isUnitExhausted) {
-                                    System.out.println("Unit exhausted on base. Summoning blocked.");
-                                    // Show "Base (Blocked)" instead of opening menu
                                     UnitFactory.UiInfo uiInfo = unitFactory.getObjectUi(foundObject);
                                     gameHUD.showTileInfo(uiInfo.name + " (Blocked)", uiInfo.region);
                                 }
-                                // If Fresh: Fall through to C (Select Unit)
-                            } // CASE B: ENEMY STRUCTURE
-                            else {
+                            } else {
                                 if (!isUnitExhausted) {
                                     selectedUnitEntity = foundUnit;
                                     showMovementMarkers(gridX, gridY);
-                                    gameHUD.openCaptureMenu(objectEntity, foundUnit, unitFactory, this, gameMap, screen.getGameState()); // CAPTURE
+                                    gameHUD.openCaptureMenu(objectEntity, foundUnit, unitFactory, this, gameMap, screen.getGameState());
                                     return true;
                                 }
                             }
                         }
                     }
+
+                    // --- 2. NEW: ANIMAL HUNT LOGIC ---
+                    boolean isAnimal = (foundObject == MapGenerator.ObjectType.HORSE
+                            || foundObject == MapGenerator.ObjectType.FISH
+                            || foundObject == MapGenerator.ObjectType.DEER
+                            || foundObject == MapGenerator.ObjectType.ZEBRA);
+
+                    if (isAnimal && !isUnitExhausted) {
+                        selectedUnitEntity = foundUnit; // Select so we know who is acting
+                        // Open Hunt Menu
+                        gameHUD.openHuntMenu(objectEntity, foundUnit, foundObject, unitFactory, this);
+                        return true;
+                    }
+                    // ---------------------------------
                 }
 
-                // C. UNIT SELECTION (MOVE)
                 if (isUnitExhausted) {
                     System.out.println("Unit exhausted.");
                     return true;
@@ -258,6 +261,38 @@ public class GameInputController extends InputAdapter {
         return true;
     }
 
+    // --- NEW: Perform Hunt Action ---
+    public void performHunt(Entity animal, Entity hunter) {
+        // 1. Funding Logic
+        StatsComponent hunterStats = hunter.getComponent(StatsComponent.class);
+        GameState state = screen.getGameState();
+
+        if (hunterStats.owner == 1) {
+            state.p1Funding += 1;
+        } else {
+            state.p2Funding += 1;
+        }
+
+        // 2. Remove Animal from Engine and Map
+        GridPositionComponent pos = animal.getComponent(GridPositionComponent.class);
+        if (pos != null) {
+            gameMap.objects[pos.x][pos.y] = MapGenerator.ObjectType.NONE;
+        }
+        engine.removeEntity(animal);
+
+        // 3. Exhaust Unit
+        hunterStats.hasActed = true;
+
+        // 4. Update HUD
+        int income = screen.calculateIncome(hunterStats.owner);
+        gameHUD.updateFunding((hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
+
+        // 5. Cleanup
+        System.out.println("Hunt Successful! +1 Funding.");
+        gameHUD.hideSummonMenu();
+        deselect();
+    }
+
     private void handleUnitSelection(Entity unit, int x, int y) {
         selectedUnitEntity = unit;
         showMovementMarkers(x, y);
@@ -266,39 +301,33 @@ public class GameInputController extends InputAdapter {
     }
 
     private void handleObjectSelection(MapGenerator.ObjectType obj, int x, int y) {
-        // If selecting Base directly (cycle or no unit), open Summon Menu
         if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
-
-            // Safety check: Only open for my own base
             int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
             if (owner == screen.getCurrentPlayer()) {
-
                 Entity unitOnTop = getEntityAt(x, y, TypeComponent.Type.UNIT);
                 if (unitOnTop != null) {
-                    System.out.println("Base Blocked by Unit.");
-                    gameHUD.showTileInfo("Base (Blocked)", unitFactory.getObjectUi(obj).region);
+                    gameHUD.showTileInfo("Base (Blocked)", unitFactory.getHudIcon(obj));
                     return;
                 }
-
-                // --- FIX: Pass GameState ---
                 gameHUD.openSummonMenu(owner, screen.getGameState());
-                System.out.println("Selected: Base (Opening Summon Menu)");
                 return;
             }
         }
 
+        // Use standard method for Name, but getHudIcon for the Image
         UnitFactory.UiInfo info = unitFactory.getObjectUi(obj);
-        gameHUD.showTileInfo(info.name, info.region);
-        System.out.println("Selected: " + info.name);
+        TextureRegion icon = unitFactory.getHudIcon(obj);
+
+        gameHUD.showTileInfo(info.name, icon);
     }
 
-    // ... (rest of methods: handleTerrainSelection, mouseMoved, touchDragged, triggerBounce, moveUnit, etc.) ...
     private void handleTerrainSelection(int x, int y) {
         MapGenerator.TerrainType type = gameMap.terrain[x][y];
         UnitFactory.UiInfo info = unitFactory.getTerrainUi(type);
         gameHUD.showTileInfo(info.name, info.region);
     }
 
+    // ... (rest of methods: mouseMoved, touchDragged, triggerBounce, moveUnit, floodFill, etc. unchanged) ...
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
         if (!inputEnabled) {
@@ -347,13 +376,10 @@ public class GameInputController extends InputAdapter {
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
         pos.x = targetX;
         pos.y = targetY;
-
-        // --- MARK ACTED ---
         StatsComponent stats = unit.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.hasActed = true;
         }
-
         gameHUD.hideSummonMenu();
         clearMarkers();
         selectedUnitEntity = null;
