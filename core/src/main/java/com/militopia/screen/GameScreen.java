@@ -20,7 +20,7 @@ import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
-import com.militopia.data.AnimalData; // Import
+import com.militopia.data.AnimalData; // Ensure Import
 import com.militopia.data.GameState;
 import com.militopia.data.UnitData;
 import com.militopia.factories.EntityFactory;
@@ -108,14 +108,15 @@ public class GameScreen implements Screen {
             }
         }
 
-        // --- UPDATED ANIMAL SPAWNING LOGIC ---
-        // If we have saved animals, load them. Otherwise, generate new ones.
+        // --- LOAD ANIMALS / NEW GAME ANIMALS ---
         if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
             Gdx.app.log("GameScreen", "Loading " + loadedState.animals.size() + " saved animals.");
             for (AnimalData a : loadedState.animals) {
                 MapGenerator.ObjectType type = MapGenerator.ObjectType.valueOf(a.type);
-                // Important: Update the map data so logic (like hunting) works
-                gameMap.objects[a.x][a.y] = type;
+
+                // --- FIX: DO NOT OVERWRITE THE MAP DATA ---
+                // We simply create the entity. The map underneath (Tree/Oil) remains as is.
+                // gameMap.objects[a.x][a.y] = type;  <-- REMOVED THIS LINE
                 unitFactory.createObjectEntity(a.x, a.y, type, gameState);
             }
         } else {
@@ -125,7 +126,7 @@ public class GameScreen implements Screen {
                 unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
             }
         }
-        // -------------------------------------
+        // ---------------------------------------
 
         engine.addSystem(new MovementSystem());
 
@@ -224,9 +225,9 @@ public class GameScreen implements Screen {
         }
     }
 
-    // --- UPDATED: Pass gameMap to saveGame ---
     public void saveAndExit() {
-        saveManager.saveGame(gameState, engine, gameMap); //
+        //
+        saveManager.saveGame(gameState, engine, gameMap);
         game.setScreen(new com.militopia.screen.MenuScreen(game));
     }
 

@@ -17,12 +17,14 @@ import com.militopia.components.MovementComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
-import com.militopia.data.GameState; // Added Import
+import com.militopia.data.GameState;
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.ui.GameHUD;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameInputController extends InputAdapter {
 
@@ -40,9 +42,9 @@ public class GameInputController extends InputAdapter {
     private int bouncingX = -1, bouncingY = -1;
     private float bounceTimer = 0;
     private int hoveredX = -1, hoveredY = -1;
-    private int selectionIndex = 0;
-
     private boolean inputEnabled = true;
+
+    private int selectionIndex = 0;
 
     public GameInputController(GameScreen screen, OrthographicCamera camera, PooledEngine engine,
             MapGenerator.GameMap gameMap, UnitFactory unitFactory,
@@ -70,9 +72,9 @@ public class GameInputController extends InputAdapter {
         gameHUD.hideTileInfo();
         lastClickedX = -1;
         lastClickedY = -1;
+        selectionIndex = 0;
     }
 
-    // ... (getters for hover/bounce remain unchanged) ...
     public int getHoveredX() {
         return hoveredX;
     }
@@ -135,7 +137,6 @@ public class GameInputController extends InputAdapter {
 
         lastTouchX = screenX;
         lastTouchY = screenY;
-
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
@@ -145,17 +146,13 @@ public class GameInputController extends InputAdapter {
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
         if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
-
-            Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
-
             if (screen.isFogEnabled() && !isVisible) {
-                if (clickedMarker == null) {
-                    deselect();
-                    return true;
-                }
+                deselect();
+                return true;
             }
 
+            Entity clickedMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
             if (clickedMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
@@ -169,89 +166,53 @@ public class GameInputController extends InputAdapter {
             lastClickedX = gridX;
             lastClickedY = gridY;
 
-            java.util.List<String> selectionStack = new java.util.ArrayList<>();
-            Entity foundUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
-            MapGenerator.ObjectType foundObject = gameMap.objects[gridX][gridY];
-            boolean hasObject = (foundObject != MapGenerator.ObjectType.NONE);
+            Entity foundUnit = null;
+            Entity foundAnimal = null;
+            Entity foundStructure = null;
 
+            ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
+            for (Entity e : entities) {
+                GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+                if (pos.x == gridX && pos.y == gridY) {
+                    TypeComponent type = e.getComponent(TypeComponent.class);
+                    if (type.type == TypeComponent.Type.UNIT) {
+                        foundUnit = e;
+                    } else if (type.type == TypeComponent.Type.OBJECT) {
+                        if (pos.zIndex == 2) {
+                            foundAnimal = e;
+                        } else {
+                            foundStructure = e;
+                        }
+                    }
+                }
+            }
+
+            List<String> targets = new ArrayList<>();
             if (foundUnit != null) {
-                selectionStack.add("UNIT");
+                targets.add("UNIT");
             }
-            if (hasObject) {
-                selectionStack.add("OBJECT");
+            if (foundAnimal != null) {
+                targets.add("ANIMAL");
             }
-            selectionStack.add("TERRAIN");
+            if (foundStructure != null) {
+                targets.add("STRUCTURE");
+            }
+            targets.add("TERRAIN");
 
-            String targetType = selectionStack.get(selectionIndex % selectionStack.size());
+            String currentTarget = targets.get(selectionIndex % targets.size());
 
             clearMarkers();
             selectedUnitEntity = null;
             gameHUD.hideSummonMenu();
             triggerBounce(gridX, gridY);
 
-            if (targetType.equals("UNIT")) {
-                StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
-
-                if (unitStats != null && unitStats.owner != screen.getCurrentPlayer()) {
-                    UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
-                    gameHUD.showTileInfo(unitStats.name + " (Enemy)", info.region);
-                    return true;
-                }
-
-                boolean isUnitExhausted = (!GameConfig.TESTING_MODE && unitStats != null && unitStats.hasActed);
-                Entity objectEntity = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
-
-                if (objectEntity != null) {
-                    StatsComponent objStats = objectEntity.getComponent(StatsComponent.class);
-
-                    // --- 1. STRUCTURE LOGIC ---
-                    if (objStats != null && unitStats != null) {
-                        boolean isStructure = (foundObject == MapGenerator.ObjectType.TOWN
-                                || foundObject == MapGenerator.ObjectType.BASE_P1
-                                || foundObject == MapGenerator.ObjectType.BASE_P2);
-
-                        if (isStructure) {
-                            if (objStats.owner == unitStats.owner) {
-                                if (isUnitExhausted) {
-                                    UnitFactory.UiInfo uiInfo = unitFactory.getObjectUi(foundObject);
-                                    gameHUD.showTileInfo(uiInfo.name + " (Blocked)", uiInfo.region);
-                                }
-                            } else {
-                                if (!isUnitExhausted) {
-                                    selectedUnitEntity = foundUnit;
-                                    showMovementMarkers(gridX, gridY);
-                                    gameHUD.openCaptureMenu(objectEntity, foundUnit, unitFactory, this, gameMap, screen.getGameState());
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-
-                    // --- 2. NEW: ANIMAL HUNT LOGIC ---
-                    boolean isAnimal = (foundObject == MapGenerator.ObjectType.HORSE
-                            || foundObject == MapGenerator.ObjectType.FISH
-                            || foundObject == MapGenerator.ObjectType.DEER
-                            || foundObject == MapGenerator.ObjectType.ZEBRA);
-
-                    if (isAnimal && !isUnitExhausted) {
-                        selectedUnitEntity = foundUnit; // Select so we know who is acting
-                        // Open Hunt Menu
-                        gameHUD.openHuntMenu(objectEntity, foundUnit, foundObject, unitFactory, this);
-                        return true;
-                    }
-                    // ---------------------------------
-                }
-
-                if (isUnitExhausted) {
-                    System.out.println("Unit exhausted.");
-                    return true;
-                }
-
-                handleUnitSelection(foundUnit, gridX, gridY);
-
-            } else if (targetType.equals("OBJECT")) {
-                handleObjectSelection(foundObject, gridX, gridY);
-            } else if (targetType.equals("TERRAIN")) {
+            if (currentTarget.equals("UNIT")) {
+                handleUnitTarget(foundUnit, foundAnimal, foundStructure, gridX, gridY);
+            } else if (currentTarget.equals("ANIMAL")) {
+                handleAnimalTarget(foundAnimal);
+            } else if (currentTarget.equals("STRUCTURE")) {
+                handleStructureTarget(foundStructure, gridX, gridY);
+            } else {
                 handleTerrainSelection(gridX, gridY);
             }
 
@@ -261,73 +222,110 @@ public class GameInputController extends InputAdapter {
         return true;
     }
 
-    // --- NEW: Perform Hunt Action ---
+    private void handleUnitTarget(Entity foundUnit, Entity foundAnimal, Entity foundStructure, int gridX, int gridY) {
+        StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
+
+        if (unitStats.owner != screen.getCurrentPlayer()) {
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
+            gameHUD.showTileInfo(unitStats.name + " (Enemy)", info.region);
+            return;
+        }
+
+        if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
+            gameHUD.showTileInfo("Unit Exhausted", unitFactory.getUnitUi("RECRUIT").region);
+            return;
+        }
+
+        selectedUnitEntity = foundUnit;
+        showMovementMarkers(gridX, gridY);
+        UnitFactory.UiInfo info = unitFactory.getUnitUi("RECRUIT");
+        gameHUD.showTileInfo(info.name, info.region);
+
+        if (foundAnimal != null) {
+            String animName = foundAnimal.getComponent(StatsComponent.class).name;
+            MapGenerator.ObjectType animType = MapGenerator.ObjectType.HORSE;
+            if (animName.contains("DEER")) {
+                animType = MapGenerator.ObjectType.DEER;
+            } else if (animName.contains("FISH")) {
+                animType = MapGenerator.ObjectType.FISH;
+            } else if (animName.contains("ZEBRA")) {
+                animType = MapGenerator.ObjectType.ZEBRA;
+            }
+
+            gameHUD.openHuntMenu(foundAnimal, foundUnit, animType, unitFactory, this);
+        }
+
+        if (foundStructure != null) {
+            StatsComponent structStats = foundStructure.getComponent(StatsComponent.class);
+
+            // --- FIX: Only allow CAPTURE if it's a BASE or TOWN ---
+            MapGenerator.ObjectType type = gameMap.objects[gridX][gridY];
+            boolean isCapturable = (type == MapGenerator.ObjectType.BASE_P1
+                    || type == MapGenerator.ObjectType.BASE_P2
+                    || type == MapGenerator.ObjectType.TOWN);
+
+            if (isCapturable && structStats.owner != unitStats.owner) {
+                gameHUD.openCaptureMenu(foundStructure, foundUnit, unitFactory, this, gameMap, screen.getGameState());
+            }
+        }
+    }
+
+    private void handleAnimalTarget(Entity foundAnimal) {
+        StatsComponent stats = foundAnimal.getComponent(StatsComponent.class);
+        String rawName = (stats != null) ? stats.name : "";
+        MapGenerator.ObjectType type = MapGenerator.ObjectType.HORSE;
+        if (rawName.contains("DEER")) {
+            type = MapGenerator.ObjectType.DEER;
+        } else if (rawName.contains("FISH")) {
+            type = MapGenerator.ObjectType.FISH;
+        } else if (rawName.contains("ZEBRA")) {
+            type = MapGenerator.ObjectType.ZEBRA;
+        } else if (rawName.contains("HORSE")) {
+            type = MapGenerator.ObjectType.HORSE;
+        }
+
+        UnitFactory.UiInfo info = unitFactory.getObjectUi(type);
+        gameHUD.showTileInfo(info.name, unitFactory.getHudIcon(type));
+    }
+
+    private void handleStructureTarget(Entity foundStructure, int gridX, int gridY) {
+        MapGenerator.ObjectType objType = gameMap.objects[gridX][gridY];
+        if (objType == MapGenerator.ObjectType.BASE_P1 || objType == MapGenerator.ObjectType.BASE_P2) {
+            int owner = (objType == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
+            if (owner == screen.getCurrentPlayer()) {
+                Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                if (unitOnTop == null) {
+                    gameHUD.openSummonMenu(owner, screen.getGameState());
+                    return;
+                }
+            }
+        }
+        UnitFactory.UiInfo info = unitFactory.getObjectUi(objType);
+        gameHUD.showTileInfo(info.name, info.region);
+    }
+
     public void performHunt(Entity animal, Entity hunter) {
-        // 1. Funding Logic
         StatsComponent hunterStats = hunter.getComponent(StatsComponent.class);
         GameState state = screen.getGameState();
-
         if (hunterStats.owner == 1) {
             state.p1Funding += 1;
         } else {
             state.p2Funding += 1;
         }
-
-        // 2. Remove Animal from Engine and Map
-        GridPositionComponent pos = animal.getComponent(GridPositionComponent.class);
-        if (pos != null) {
-            gameMap.objects[pos.x][pos.y] = MapGenerator.ObjectType.NONE;
-        }
         engine.removeEntity(animal);
-
-        // 3. Exhaust Unit
         hunterStats.hasActed = true;
-
-        // 4. Update HUD
         int income = screen.calculateIncome(hunterStats.owner);
         gameHUD.updateFunding((hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
-
-        // 5. Cleanup
         System.out.println("Hunt Successful! +1 Funding.");
         gameHUD.hideSummonMenu();
         deselect();
     }
 
-    private void handleUnitSelection(Entity unit, int x, int y) {
-        selectedUnitEntity = unit;
-        showMovementMarkers(x, y);
-        UnitFactory.UiInfo info = unitFactory.getUnitUi("RECRUIT");
-        gameHUD.showTileInfo(info.name, info.region);
-    }
-
-    private void handleObjectSelection(MapGenerator.ObjectType obj, int x, int y) {
-        if (obj == MapGenerator.ObjectType.BASE_P1 || obj == MapGenerator.ObjectType.BASE_P2) {
-            int owner = (obj == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
-            if (owner == screen.getCurrentPlayer()) {
-                Entity unitOnTop = getEntityAt(x, y, TypeComponent.Type.UNIT);
-                if (unitOnTop != null) {
-                    gameHUD.showTileInfo("Base (Blocked)", unitFactory.getHudIcon(obj));
-                    return;
-                }
-                gameHUD.openSummonMenu(owner, screen.getGameState());
-                return;
-            }
-        }
-
-        // Use standard method for Name, but getHudIcon for the Image
-        UnitFactory.UiInfo info = unitFactory.getObjectUi(obj);
-        TextureRegion icon = unitFactory.getHudIcon(obj);
-
-        gameHUD.showTileInfo(info.name, icon);
-    }
-
     private void handleTerrainSelection(int x, int y) {
         MapGenerator.TerrainType type = gameMap.terrain[x][y];
-        UnitFactory.UiInfo info = unitFactory.getTerrainUi(type);
-        gameHUD.showTileInfo(info.name, info.region);
+        gameHUD.showTileInfo(unitFactory.getTerrainUi(type).name, unitFactory.getTextureForTerrain(type.ordinal()));
     }
 
-    // ... (rest of methods: mouseMoved, touchDragged, triggerBounce, moveUnit, floodFill, etc. unchanged) ...
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
         if (!inputEnabled) {

@@ -10,21 +10,20 @@ import com.badlogic.gdx.utils.Json;
 import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
 import com.militopia.data.UnitData;
-import com.militopia.data.AnimalData; // Import AnimalData
+import com.militopia.data.AnimalData;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
-import com.militopia.map.MapGenerator; // Import MapGenerator
+import com.militopia.map.MapGenerator;
 
 public class SaveManager {
 
-    // --- UPDATED SIGNATURE: Added GameMap map ---
     public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
 
         // 1. Clear old data lists
         state.units.clear();
         state.structures.clear();
-        state.animals.clear(); // Clear animals
+        state.animals.clear();
 
         // 2. Extract Data from Engine
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
@@ -37,30 +36,29 @@ public class SaveManager {
             if (type.type == TypeComponent.Type.UNIT) {
                 // Save Unit
                 state.units.add(new UnitData(pos.x, pos.y, "RECRUIT", stats.owner));
-            } 
-            else if (type.type == TypeComponent.Type.OBJECT) {
-                // Check the Map to see what this object really is
-                MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
+            } else if (type.type == TypeComponent.Type.OBJECT) {
 
-                // A. Save Structures (Bases / Towns)
-                if (objType == MapGenerator.ObjectType.BASE_P1 || 
-                    objType == MapGenerator.ObjectType.BASE_P2 || 
-                    objType == MapGenerator.ObjectType.TOWN) {
-                    
-                    if (stats != null) {
-                        state.structures.add(new StructureData(
-                            pos.x, pos.y, stats.owner, 
-                            stats.currentBaseXP, stats.name, stats.baseOrdinal
-                        ));
+                // --- FIX: DETECT ANIMALS VIA NAME TAG (Layer 2) ---
+                // We check the stats name because animals are no longer in map.objects
+                if (stats != null && stats.name != null && stats.name.startsWith("ANIMAL_")) {
+                    String animalType = stats.name.replace("ANIMAL_", "");
+                    state.animals.add(new AnimalData(pos.x, pos.y, animalType));
+                } // --- DETECT STRUCTURES VIA MAP DATA (Layer 1) ---
+                else {
+                    // Check the Map to see if this is a Base or Town
+                    MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
+
+                    if (objType == MapGenerator.ObjectType.BASE_P1
+                            || objType == MapGenerator.ObjectType.BASE_P2
+                            || objType == MapGenerator.ObjectType.TOWN) {
+
+                        if (stats != null) {
+                            state.structures.add(new StructureData(
+                                    pos.x, pos.y, stats.owner,
+                                    stats.currentBaseXP, stats.name, stats.baseOrdinal
+                            ));
+                        }
                     }
-                }
-                // B. Save Animals
-                else if (objType == MapGenerator.ObjectType.HORSE ||
-                         objType == MapGenerator.ObjectType.FISH ||
-                         objType == MapGenerator.ObjectType.DEER ||
-                         objType == MapGenerator.ObjectType.ZEBRA) {
-                    
-                    state.animals.add(new AnimalData(pos.x, pos.y, objType.name()));
                 }
             }
         }
