@@ -25,8 +25,13 @@ public class NewGameScreen implements Screen {
     final MilitopiaGame game;
     Stage stage;
 
-    TextField nameField, seedField, p1Field, p2Field;
-    Label errorLabel; // The new error message text
+    TextField nameField, seedField;
+    Label errorLabel;
+
+    // Mode Selection
+    TextButton blitzBtn, marathonBtn;
+    int selectedWidth = 16;
+    int selectedHeight = 16;
 
     public NewGameScreen(final MilitopiaGame game) {
         this.game = game;
@@ -37,35 +42,57 @@ public class NewGameScreen implements Screen {
         table.setFillParent(true);
         stage.addActor(table);
 
-        // 1. Create Fields (Empty by default to test validation)
         nameField = new TextField("", game.skin);
-        nameField.setMessageText("Enter Game Name"); // Hint text
+        nameField.setMessageText("Enter Game Name");
 
         seedField = new TextField("", game.skin);
         seedField.setMessageText("Enter Seed");
 
-        p1Field = new TextField("", game.skin);
-        p1Field.setMessageText("Enter Player 1 Name");
-
-        p2Field = new TextField("", game.skin);
-        p2Field.setMessageText("Enter Player 2 Name");
-
-        // 2. Create Error Label (Initially hidden/empty)
         Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default-font"), Color.RED);
-        errorLabel = new Label("", errorStyle); // Start empty
+        errorLabel = new Label("", errorStyle);
+
+        // --- GAME MODE BUTTONS ---
+        blitzBtn = new TextButton("Blitz (16x16)", game.skin, "toggle");
+        marathonBtn = new TextButton("Marathon (32x32)", game.skin, "toggle");
+
+        // Default selection: Blitz
+        blitzBtn.setChecked(true);
+        marathonBtn.setChecked(false);
+
+        blitzBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                selectedWidth = 16;
+                selectedHeight = 16;
+                marathonBtn.setChecked(false); // Manual Toggle
+            }
+        });
+
+        marathonBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                selectedWidth = 32;
+                selectedHeight = 32;
+                blitzBtn.setChecked(false); // Manual Toggle
+            }
+        });
 
         TextButton startBtn = new TextButton("Start Game", game.skin);
         startBtn.addListener(new HoverListener());
         TextButton backBtn = new TextButton("Back", game.skin);
         backBtn.addListener(new HoverListener());
 
-        // 3. Layout
         addInputRow(table, "Map Name:", nameField);
         addInputRow(table, "Seed:", seedField);
-        addInputRow(table, "Player 1:", p1Field);
-        addInputRow(table, "Player 2:", p2Field);
 
-        // Add the error label row (It will appear here if text is set)
+        // Add Mode Selection Row
+        table.row().pad(10);
+        table.add(new Label("Game Mode:", game.skin)).right().pad(5);
+        Table modeTable = new Table();
+        modeTable.add(blitzBtn).width(150).padRight(5);
+        modeTable.add(marathonBtn).width(150);
+        table.add(modeTable).left();
+
         table.row();
         table.add(errorLabel).colspan(2).pad(10);
 
@@ -73,17 +100,12 @@ public class NewGameScreen implements Screen {
         table.add(backBtn).width(100).pad(10);
         table.add(startBtn).width(100).pad(10);
 
-        // 4. Validation Logic
         startBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // Check if ANY field is empty
-                if (isEmpty(nameField) || isEmpty(seedField) || isEmpty(p1Field) || isEmpty(p2Field)) {
-                    // SHOW ERROR
+                if (isEmpty(nameField) || isEmpty(seedField)) {
                     errorLabel.setText("All fields are required!");
-                    // (Optional) Shake animation could go here
                 } else {
-                    // SUCCESS - Proceed
                     long seed;
                     try {
                         seed = Long.parseLong(seedField.getText());
@@ -91,7 +113,8 @@ public class NewGameScreen implements Screen {
                         seed = seedField.getText().hashCode();
                     }
 
-                    GameState newState = new GameState(seed, p1Field.getText(), p2Field.getText(), nameField.getText() + '_' + seed);
+                    // Create GameState with selected Dimensions
+                    GameState newState = new GameState(seed, nameField.getText() + '_' + seed, selectedWidth, selectedHeight);
                     game.setScreen(new GameScreen(game, newState));
                 }
             }
@@ -105,7 +128,6 @@ public class NewGameScreen implements Screen {
         });
     }
 
-    // Helper to check for empty strings
     private boolean isEmpty(TextField field) {
         return field.getText() == null || field.getText().trim().isEmpty();
     }
@@ -119,10 +141,7 @@ public class NewGameScreen implements Screen {
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-
         RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
-
-        
         stage.act();
         stage.draw();
     }

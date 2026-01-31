@@ -20,7 +20,7 @@ public class MapRenderSystem extends EntitySystem {
     private int selectedX, selectedY;
     private int bouncingX, bouncingY;
     private float bounceTimer;
-    
+
     private boolean fogEnabled = true;
 
     public MapRenderSystem(SpriteBatch batch, UnitFactory factory, MapGenerator.GameMap map) {
@@ -38,7 +38,7 @@ public class MapRenderSystem extends EntitySystem {
         this.bouncingY = bY;
         this.bounceTimer = bTimer;
     }
-    
+
     public void setFogEnabled(boolean enabled) {
         this.fogEnabled = enabled;
     }
@@ -47,8 +47,9 @@ public class MapRenderSystem extends EntitySystem {
     public void update(float deltaTime) {
         float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
         float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
-        
+
         batch.begin();
+        // --- UPDATED: Use dynamic width/height ---
         for (int x = gameMap.width - 1; x >= 0; x--) {
             for (int y = gameMap.height - 1; y >= 0; y--) {
                 drawTerrainTile(x, y, xOffset, yOffset);
@@ -66,49 +67,50 @@ public class MapRenderSystem extends EntitySystem {
 
         TextureRegion regionToDraw = null;
 
-        // 1. Determine what to draw (Fog vs Terrain)
         boolean isVisible = gameMap.visibleTiles[x][y];
-        
+
         if (fogEnabled && !isVisible) {
-            // It's Fog!
             regionToDraw = unitFactory.fogRegion;
         } else {
-            // It's Visible Terrain!
             regionToDraw = unitFactory.getTextureForTerrain(gameMap.terrain[x][y].ordinal());
         }
 
-        // 2. Draw the Tile (Fog or Terrain)
         if (regionToDraw != null) {
             batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
         }
 
-        // 3. Draw Highlight (This now applies to Fog too!)
         if (x == selectedX && y == selectedY && regionToDraw != null) {
             drawHighlight(regionToDraw, isoX - xOffset, isoY - yOffset + animY);
         }
     }
-    
+
     private void renderBordersPass() {
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         Gdx.gl.glBlendFunc(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // --- UPDATED: Use dynamic width/height ---
         for (int x = gameMap.width - 1; x >= 0; x--) {
             for (int y = gameMap.height - 1; y >= 0; y--) {
-                // DON'T DRAW BORDERS IN FOG
-                if (fogEnabled && !gameMap.visibleTiles[x][y]) continue;
+                if (fogEnabled && !gameMap.visibleTiles[x][y]) {
+                    continue;
+                }
 
                 int owner = getTileOwner(x, y);
                 if (owner != 0) {
-                    if (owner == 1) shapeRenderer.setColor(Color.BLUE);
-                    else if (owner == 2) shapeRenderer.setColor(Color.RED);
+                    if (owner == 1) {
+                        shapeRenderer.setColor(Color.BLUE);
+                    } else if (owner == 2) {
+                        shapeRenderer.setColor(Color.RED);
+                    }
                     drawSmartBorders(x, y, owner);
                 }
             }
         }
         shapeRenderer.end();
     }
-    
+
     private float[] getIsoCoords(int x, int y) {
         float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
         float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
@@ -119,7 +121,7 @@ public class MapRenderSystem extends EntitySystem {
         }
         return new float[]{isoX, isoY, animY};
     }
-    
+
     private void drawHighlight(TextureRegion t, float x, float y) {
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
@@ -128,7 +130,7 @@ public class MapRenderSystem extends EntitySystem {
         batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
         batch.setColor(Color.WHITE);
     }
-    
+
     private void drawSmartBorders(int x, int y, int currentOwner) {
         float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
         float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
@@ -171,28 +173,44 @@ public class MapRenderSystem extends EntitySystem {
             shapeRenderer.circle(botX, botY, jointSize);
         }
     }
-    
+
     private int getTileOwner(int x, int y) {
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) return 0;
-        if (isBase(x, y, 1)) return 1;
-        if (isBase(x, y, 2)) return 2;
+        // --- UPDATED: Dynamic dimensions ---
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) {
+            return 0;
+        }
+
+        if (isBase(x, y, 1)) {
+            return 1;
+        }
+        if (isBase(x, y, 2)) {
+            return 2;
+        }
         for (int i = -GameConfig.BORDER_RADIUS; i <= GameConfig.BORDER_RADIUS; i++) {
             for (int j = -GameConfig.BORDER_RADIUS; j <= GameConfig.BORDER_RADIUS; j++) {
                 int nx = x + i;
                 int ny = y + j;
-                if (nx >= 0 && nx < GameConfig.MAP_WIDTH && ny >= 0 && ny < GameConfig.MAP_HEIGHT) {
-                    if (isBase(nx, ny, 1)) return 1;
-                    if (isBase(nx, ny, 2)) return 2;
+                if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) { // UPDATED
+                    if (isBase(nx, ny, 1)) {
+                        return 1;
+                    }
+                    if (isBase(nx, ny, 2)) {
+                        return 2;
+                    }
                 }
             }
         }
         return 0;
     }
-    
+
     private boolean isBase(int x, int y, int player) {
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
-        if (player == 1) return obj == MapGenerator.ObjectType.BASE_P1;
-        if (player == 2) return obj == MapGenerator.ObjectType.BASE_P2;
+        if (player == 1) {
+            return obj == MapGenerator.ObjectType.BASE_P1;
+        }
+        if (player == 2) {
+            return obj == MapGenerator.ObjectType.BASE_P2;
+        }
         return false;
     }
 }

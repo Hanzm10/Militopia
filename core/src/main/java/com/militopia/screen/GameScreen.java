@@ -7,7 +7,6 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -20,7 +19,7 @@ import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
-import com.militopia.data.AnimalData; // Ensure Import
+import com.militopia.data.AnimalData;
 import com.militopia.data.GameState;
 import com.militopia.data.UnitData;
 import com.militopia.factories.EntityFactory;
@@ -85,7 +84,7 @@ public class GameScreen implements Screen {
         font.getData().setScale(0.5f);
 
         MapGenerator generator = new MapGenerator();
-        gameMap = generator.generateMap(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT, loadedState.seed);
+        gameMap = generator.generateMap(loadedState.mapWidth, loadedState.mapHeight, loadedState.seed);
 
         centerCameraOnBase(gameState.currentPlayer);
 
@@ -94,9 +93,8 @@ public class GameScreen implements Screen {
 
         List<GridPoint2> initialBases = new ArrayList<>();
 
-        // 1. Generate Map Objects
-        for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
-            for (int y = 0; y < GameConfig.MAP_HEIGHT; y++) {
+        for (int x = 0; x < gameMap.width; x++) {
+            for (int y = 0; y < gameMap.height; y++) {
                 MapGenerator.ObjectType type = gameMap.objects[x][y];
                 if (type != MapGenerator.ObjectType.NONE) {
                     unitFactory.createObjectEntity(x, y, type, gameState);
@@ -108,25 +106,18 @@ public class GameScreen implements Screen {
             }
         }
 
-        // --- LOAD ANIMALS / NEW GAME ANIMALS ---
         if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
             Gdx.app.log("GameScreen", "Loading " + loadedState.animals.size() + " saved animals.");
             for (AnimalData a : loadedState.animals) {
                 MapGenerator.ObjectType type = MapGenerator.ObjectType.valueOf(a.type);
-
-                // --- FIX: DO NOT OVERWRITE THE MAP DATA ---
-                // We simply create the entity. The map underneath (Tree/Oil) remains as is.
-                // gameMap.objects[a.x][a.y] = type;  <-- REMOVED THIS LINE
                 unitFactory.createObjectEntity(a.x, a.y, type, gameState);
             }
         } else {
-            // New Game: Spawn fresh animals
             Gdx.app.log("GameScreen", "Generating new animals for initial bases.");
             for (GridPoint2 pos : initialBases) {
                 unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
             }
         }
-        // ---------------------------------------
 
         engine.addSystem(new MovementSystem());
 
@@ -139,7 +130,6 @@ public class GameScreen implements Screen {
         unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
         engine.addSystem(unitRenderSystem);
 
-        // 2. Load Saved Units
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 if ("RECRUIT".equals(u.type)) {
@@ -148,7 +138,6 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 3. Load Saved Structures
         if (loadedState.structures != null) {
             for (com.militopia.data.StructureData s : loadedState.structures) {
                 Entity e = findEntityAt(s.x, s.y);
@@ -211,8 +200,8 @@ public class GameScreen implements Screen {
 
     private void centerCameraOnBase(int playerID) {
         MapGenerator.ObjectType targetBase = (playerID == 1) ? MapGenerator.ObjectType.BASE_P1 : MapGenerator.ObjectType.BASE_P2;
-        for (int x = 0; x < GameConfig.MAP_WIDTH; x++) {
-            for (int y = 0; y < GameConfig.MAP_HEIGHT; y++) {
+        for (int x = 0; x < gameMap.width; x++) {
+            for (int y = 0; y < gameMap.height; y++) {
                 if (gameMap.objects[x][y] == targetBase) {
                     float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
                     float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
@@ -226,7 +215,6 @@ public class GameScreen implements Screen {
     }
 
     public void saveAndExit() {
-        //
         saveManager.saveGame(gameState, engine, gameMap);
         game.setScreen(new com.militopia.screen.MenuScreen(game));
     }
@@ -235,6 +223,10 @@ public class GameScreen implements Screen {
         isFogEnabled = !isFogEnabled;
         mapRenderSystem.setFogEnabled(isFogEnabled);
         unitRenderSystem.setFogEnabled(isFogEnabled);
+        return isFogEnabled;
+    }
+
+    public boolean isFogEnabled() {
         return isFogEnabled;
     }
 
@@ -446,10 +438,6 @@ public class GameScreen implements Screen {
         engine.clearPools();
         gameHUD.dispose();
         shapeRenderer.dispose();
-    }
-
-    public boolean isFogEnabled() {
-        return isFogEnabled;
     }
 
     @Override

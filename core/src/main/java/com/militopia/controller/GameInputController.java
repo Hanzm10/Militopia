@@ -145,7 +145,8 @@ public class GameInputController extends InputAdapter {
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
-        if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
+        // --- UPDATED: Use dynamic gameMap dimensions ---
+        if (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height) {
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
             if (screen.isFogEnabled() && !isVisible) {
                 deselect();
@@ -258,7 +259,6 @@ public class GameInputController extends InputAdapter {
         if (foundStructure != null) {
             StatsComponent structStats = foundStructure.getComponent(StatsComponent.class);
 
-            // --- FIX: Only allow CAPTURE if it's a BASE or TOWN ---
             MapGenerator.ObjectType type = gameMap.objects[gridX][gridY];
             boolean isCapturable = (type == MapGenerator.ObjectType.BASE_P1
                     || type == MapGenerator.ObjectType.BASE_P2
@@ -338,7 +338,8 @@ public class GameInputController extends InputAdapter {
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
-        if (gridX >= 0 && gridX < GameConfig.MAP_WIDTH && gridY >= 0 && gridY < GameConfig.MAP_HEIGHT) {
+        // --- UPDATED: Dynamic dimensions ---
+        if (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height) {
             this.hoveredX = gridX;
             this.hoveredY = gridY;
         } else {
@@ -384,7 +385,8 @@ public class GameInputController extends InputAdapter {
     }
 
     private boolean isWalkable(int x, int y) {
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+        // --- UPDATED: Dynamic dimensions ---
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) {
             return false;
         }
         if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) {
@@ -399,9 +401,10 @@ public class GameInputController extends InputAdapter {
     private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
         int moveRange = (stats != null) ? stats.moveRange : 3;
-        int[][] visitedMoves = new int[GameConfig.MAP_WIDTH][GameConfig.MAP_HEIGHT];
-        for (int i = 0; i < GameConfig.MAP_WIDTH; i++) {
-            for (int j = 0; j < GameConfig.MAP_HEIGHT; j++) {
+        // --- UPDATED: Dynamic dimensions ---
+        int[][] visitedMoves = new int[gameMap.width][gameMap.height];
+        for (int i = 0; i < gameMap.width; i++) {
+            for (int j = 0; j < gameMap.height; j++) {
                 visitedMoves[i][j] = -1;
             }
         }
@@ -412,7 +415,8 @@ public class GameInputController extends InputAdapter {
         if (remainingMoves < 0) {
             return;
         }
-        if (x < 0 || x >= GameConfig.MAP_WIDTH || y < 0 || y >= GameConfig.MAP_HEIGHT) {
+        // --- UPDATED: Dynamic dimensions ---
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) {
             return;
         }
         if (visitedMoves[x][y] >= remainingMoves) {
