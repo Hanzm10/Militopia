@@ -12,17 +12,18 @@ public class StatsComponent implements Component {
     public int maxHealth;
     public int currentHealth;
     public int attackDamage;
-    public int vision; 
+    public int vision;
     public int income;
     public String name;
     public MoveType moveType;
     public int owner;
     public boolean hasActed = false;
 
-    // --- NEW: Base Specific Stats ---
+    // --- Base Specific Stats ---
+    public int level = 1; //
     public float currentBaseXP = 0;
     public float maxBaseXP = 2000;
-    public String baseOrdinal = ""; // e.g. "1st", "2nd"
+    public String baseOrdinal = "";
 
     public StatsComponent(String name, int range, int hp, int atk, int vision, int income, MoveType type, int owner) {
         this.name = name;
@@ -30,7 +31,7 @@ public class StatsComponent implements Component {
         this.maxHealth = hp;
         this.currentHealth = hp;
         this.attackDamage = atk;
-        this.vision = vision; 
+        this.vision = vision;
         this.income = income;
         this.moveType = type;
         this.owner = owner;

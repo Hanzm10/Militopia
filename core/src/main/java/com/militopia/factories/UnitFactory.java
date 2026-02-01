@@ -354,11 +354,11 @@ public class UnitFactory {
             case MOUNTAIN_OBJ:
                 return new UiInfo("Mountain", mountainObjRegion);
             case HORSE:
-                return new UiInfo("Wild Horse", horseRegion);
+                return new UiInfo("Horse", horseRegion);
             case FISH:
-                return new UiInfo("Fish School", fishRegion);
+                return new UiInfo("Fish", fishRegion);
             case DEER:
-                return new UiInfo("Forest Deer", deerRegion);
+                return new UiInfo("Deer", deerRegion);
             case ZEBRA:
                 return new UiInfo("Zebra", zebraRegion);
             default:
