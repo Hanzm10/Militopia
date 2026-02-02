@@ -336,7 +336,7 @@ public class GameInputController extends InputAdapter {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name, unitFactory.getTextureForTerrain(terrain.ordinal()));
             return;
         }
-        
+
         int owner = screen.getCurrentPlayer();
         int maxLevel = 0;
         boolean isTerritory = false;
@@ -452,63 +452,93 @@ public class GameInputController extends InputAdapter {
         selectedUnitEntity = null;
     }
 
-    private boolean isWalkable(int x, int y) {
-        // --- UPDATED: Dynamic dimensions ---
+    private boolean isWalkable(int x, int y, StatsComponent.MoveType moveType) {
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) {
             return false;
         }
-        if (gameMap.terrain[x][y] == MapGenerator.TerrainType.WATER || gameMap.terrain[x][y] == MapGenerator.TerrainType.DEEP_WATER) {
-            return false;
+
+        MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+
+        // --- FIX: Check Terrain based on MoveType ---
+        if (moveType == StatsComponent.MoveType.LAND) {
+            // Blocked by Water
+            if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER) {
+                return false;
+            }
+        } else if (moveType == StatsComponent.MoveType.SEA) {
+            // Blocked by Land
+            if (terrain != MapGenerator.TerrainType.WATER && terrain != MapGenerator.TerrainType.DEEP_WATER) {
+                return false;
+            }
         }
+        // MoveType.AIR ignores terrain checks (flies over everything)
+
+        // Blocked by other units (Collision)
         if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null) {
             return false;
         }
+
         return true;
     }
 
     private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
-        int moveRange = (stats != null) ? stats.attackRange : 3;
-        // --- UPDATED: Dynamic dimensions ---
+
+        // Check if you are using 'move' (new) or 'moveRange' (old) based on your StatsComponent version
+        // Assuming you updated StatsComponent to use 'move' as planned:
+        int moveRange = (stats != null) ? stats.move : 3;
+
+        StatsComponent.MoveType moveType = (stats != null) ? stats.moveType : StatsComponent.MoveType.LAND;
+
         int[][] visitedMoves = new int[gameMap.width][gameMap.height];
         for (int i = 0; i < gameMap.width; i++) {
             for (int j = 0; j < gameMap.height; j++) {
                 visitedMoves[i][j] = -1;
             }
         }
-        floodFill(startX, startY, moveRange, visitedMoves, startX, startY);
+
+        // Pass moveType
+        floodFill(startX, startY, moveRange, visitedMoves, startX, startY, moveType);
     }
 
-    private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY) {
+    private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves, int startX, int startY, StatsComponent.MoveType moveType) {
         if (remainingMoves < 0) {
             return;
         }
-        // --- UPDATED: Dynamic dimensions ---
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) {
             return;
         }
         if (visitedMoves[x][y] >= remainingMoves) {
             return;
         }
+
         boolean isStart = (x == startX && y == startY);
-        if (!isStart && !isWalkable(x, y)) {
+
+        // Pass moveType to isWalkable
+        if (!isStart && !isWalkable(x, y, moveType)) {
             return;
         }
+
         visitedMoves[x][y] = remainingMoves;
+
         if (!isStart) {
             if (getEntityAt(x, y, TypeComponent.Type.MARKER) == null) {
                 entityFactory.createMovementMarker(x, y);
             }
         }
+
         int nextMove = remainingMoves - 1;
-        floodFill(x + 1, y, nextMove, visitedMoves, startX, startY);
-        floodFill(x - 1, y, nextMove, visitedMoves, startX, startY);
-        floodFill(x, y + 1, nextMove, visitedMoves, startX, startY);
-        floodFill(x, y - 1, nextMove, visitedMoves, startX, startY);
-        floodFill(x + 1, y + 1, nextMove, visitedMoves, startX, startY);
-        floodFill(x - 1, y + 1, nextMove, visitedMoves, startX, startY);
-        floodFill(x + 1, y - 1, nextMove, visitedMoves, startX, startY);
-        floodFill(x - 1, y - 1, nextMove, visitedMoves, startX, startY);
+        // Pass moveType recursively
+        floodFill(x + 1, y, nextMove, visitedMoves, startX, startY, moveType);
+        floodFill(x - 1, y, nextMove, visitedMoves, startX, startY, moveType);
+        floodFill(x, y + 1, nextMove, visitedMoves, startX, startY, moveType);
+        floodFill(x, y - 1, nextMove, visitedMoves, startX, startY, moveType);
+
+        // Diagonals (if you allow diagonal movement)
+        floodFill(x + 1, y + 1, nextMove, visitedMoves, startX, startY, moveType);
+        floodFill(x - 1, y + 1, nextMove, visitedMoves, startX, startY, moveType);
+        floodFill(x + 1, y - 1, nextMove, visitedMoves, startX, startY, moveType);
+        floodFill(x - 1, y - 1, nextMove, visitedMoves, startX, startY, moveType);
     }
 
     private void clearMarkers() {
