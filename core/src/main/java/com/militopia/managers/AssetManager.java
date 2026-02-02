@@ -27,14 +27,97 @@ public class AssetManager {
     public static final String OBJ_OIL = "obj_oil.png";
     public static final String OBJ_CACTUS = "obj_cactus.png";
     public static final String OBJ_MOUNTAIN = "obj_mountain.png";
-    public static final String STRUCT_BASE_BLUE = "struct_base_blue.png";
-    public static final String STRUCT_BASE_RED = "struct_base_red.png";
     public static final String STRUCT_TOWN = "struct_town.png";
 
-    // Units
+    // Base 1-10
+    public static final String BASE_LVL1_BLUE = "struct_base_lvl1_blue.png";
+    public static final String BASE_LVL1_RED = "struct_base_lvl1_red.png";
+    public static final String BASE_LVL2_BLUE = "struct_base_lvl2_blue.png";
+    public static final String BASE_LVL2_RED = "struct_base_lvl2_red.png";
+    public static final String BASE_LVL3_BLUE = "struct_base_lvl3_blue.png";
+    public static final String BASE_LVL3_RED = "struct_base_lvl3_red.png";
+    public static final String BASE_LVL4_BLUE = "struct_base_lvl4_blue.png";
+    public static final String BASE_LVL4_RED = "struct_base_lvl4_red.png";
+    public static final String BASE_LVL5_BLUE = "struct_base_lvl5_blue.png";
+    public static final String BASE_LVL5_RED = "struct_base_lvl5_red.png";
+    public static final String BASE_LVL6_BLUE = "struct_base_lvl6_blue.png";
+    public static final String BASE_LVL6_RED = "struct_base_lvl6_red.png";
+    public static final String BASE_LVL7_BLUE = "struct_base_lvl7_blue.png";
+    public static final String BASE_LVL7_RED = "struct_base_lvl7_red.png";
+    public static final String BASE_LVL8_BLUE = "struct_base_lvl8_blue.png";
+    public static final String BASE_LVL8_RED = "struct_base_lvl8_red.png";
+    public static final String BASE_LVL9_BLUE = "struct_base_lvl9_blue.png";
+    public static final String BASE_LVL9_RED = "struct_base_lvl9_red.png";
+    public static final String BASE_LVL10_BLUE = "struct_base_lvl10_blue.png";
+    public static final String BASE_LVL10_RED = "struct_base_lvl10_red.png";
+
+    //Land Units
     public static final String RECRUIT_RIGHT = "recruit_right.png";
     public static final String RECRUIT_LEFT = "recruit_left.png";
     public static final String RECRUIT_DISPLAY = "display_recruit.png";
+
+    public static final String RANGER_RIGHT = "ranger_right.png";
+    public static final String RANGER_LEFT = "ranger_left.png";
+    public static final String RANGER_DISPLAY = "display_ranger.png";
+
+    public static final String SNIPER_RIGHT = "sniper_right.png";
+    public static final String SNIPER_LEFT = "sniper_left.png";
+    public static final String SNIPER_DISPLAY = "display_sniper.png";
+
+    public static final String TANK_RIGHT = "tank_right.png";
+    public static final String TANK_LEFT = "tank_left.png";
+    public static final String TANK_DISPLAY = "display_tank.png";
+
+    //Land Super Unit
+    public static final String JUGGERNAUT_RIGHT = "juggernaut_right.png";
+    public static final String JUGGERNAUT_LEFT = "juggernaut_left.png";
+    public static final String JUGGERNAUT_DISPLAY = "display_juggernaut.png";
+
+    //Air Units
+    public static final String RECON_DRONE_RIGHT = "recon_drone_right.png";
+    public static final String RECON_DRONE_LEFT = "recon_drone_left.png";
+    public static final String RECON_DRONE_DISPLAY = "display_recon_drone.png";
+
+    public static final String SUICIDE_DRONE_RIGHT = "suicide_drone_right.png";
+    public static final String SUICIDE_DRONE_LEFT = "suicide_drone_left.png";
+    public static final String SUICIDE_DRONE_DISPLAY = "display_suicide_drone.png";
+
+    public static final String APACHE_RIGHT = "apache_right.png";
+    public static final String APACHE_LEFT = "apache_left.png";
+    public static final String APACHE_DISPLAY = "display_apache.png";
+
+    //Air Super Unit
+    public static final String B2_RIGHT = "b2_right.png";
+    public static final String B2_LEFT = "b2_left.png";
+    public static final String B2_DISPLAY = "display_b2.png";
+
+    //Water Units
+    public static final String GUNBOAT_RIGHT = "gunboat_right.png";
+    public static final String GUNBOAT_LEFT = "gunboat_left.png";
+    public static final String GUNBOAT_DISPLAY = "display_gunboat.png";
+
+    public static final String DESTROYER_RIGHT = "destroyer_right.png";
+    public static final String DESTROYER_LEFT = "destroyer_left.png";
+    public static final String DESTROYER_DISPLAY = "display_destroyer.png";
+
+    public static final String CARRIER_RIGHT = "carrier_right.png";
+    public static final String CARRIER_LEFT = "carrier_left.png";
+    public static final String CARRIER_DISPLAY = "display_carrier.png";
+
+    //Water Super Unit
+    public static final String SUBMARINE_RIGHT = "submarine_right.png";
+    public static final String SUBMARINE_LEFT = "submarine_left.png";
+    public static final String SUBMARINE_DISPLAY = "display_submarine.png";
+
+    //Structures
+    public static final String MUNITION_FACTORY = "munition_factory.png";
+    public static final String PORT = "port.png";
+    public static final String SOLAR_ARRAY = "solar_array.png";
+    public static final String OIL_DERRICK = "oil_derrick.png";
+    public static final String NUCLEAR_PLANT = "nuclear_plant.png";
+    public static final String FIELD_HOSPITAL = "field_hospital.png";
+    public static final String RADAR_STATION = "radar_station.png";
+    public static final String SIGNAL_JAMMER = "signal_jammer.png";
 
     // Animals
     public static final String DEER_DISPLAY = "display_deer.png";
@@ -54,6 +137,7 @@ public class AssetManager {
     public static final String ICON_END = "icon_end.png";
     public static final String BTN_SLIDEDOWN = "slidedown_btn.png";
     public static final String CIRCLE_UI = "circle_ui.png";
+    public static final String CIRCLE_UI2 = "circle_ui2.png";
     public static final String UISKIN = "uiskin.json";
     public static final String BACKGROUND = "militopia_background.png";
 
@@ -78,13 +162,97 @@ public class AssetManager {
         manager.load(OBJ_OIL, Texture.class);
         manager.load(OBJ_CACTUS, Texture.class);
         manager.load(OBJ_MOUNTAIN, Texture.class);
-        manager.load(STRUCT_BASE_BLUE, Texture.class);
-        manager.load(STRUCT_BASE_RED, Texture.class);
         manager.load(STRUCT_TOWN, Texture.class);
 
+        // Load Base Levels
+        manager.load(BASE_LVL1_BLUE, Texture.class);
+        manager.load(BASE_LVL1_RED, Texture.class);
+        manager.load(BASE_LVL2_BLUE, Texture.class);
+        manager.load(BASE_LVL2_RED, Texture.class);
+        manager.load(BASE_LVL3_BLUE, Texture.class);
+        manager.load(BASE_LVL3_RED, Texture.class);
+        manager.load(BASE_LVL4_BLUE, Texture.class);
+        manager.load(BASE_LVL4_RED, Texture.class);
+        manager.load(BASE_LVL5_BLUE, Texture.class);
+        manager.load(BASE_LVL5_RED, Texture.class);
+        manager.load(BASE_LVL6_BLUE, Texture.class);
+        manager.load(BASE_LVL6_RED, Texture.class);
+        manager.load(BASE_LVL7_BLUE, Texture.class);
+        manager.load(BASE_LVL7_RED, Texture.class);
+        manager.load(BASE_LVL8_BLUE, Texture.class);
+        manager.load(BASE_LVL8_RED, Texture.class);
+        manager.load(BASE_LVL9_BLUE, Texture.class);
+        manager.load(BASE_LVL9_RED, Texture.class);
+        manager.load(BASE_LVL10_BLUE, Texture.class);
+        manager.load(BASE_LVL10_RED, Texture.class);
+
+        // Load Land Units
         manager.load(RECRUIT_RIGHT, Texture.class);
         manager.load(RECRUIT_LEFT, Texture.class);
         manager.load(RECRUIT_DISPLAY, Texture.class);
+
+        manager.load(RANGER_RIGHT, Texture.class);
+        manager.load(RANGER_LEFT, Texture.class);
+        manager.load(RANGER_DISPLAY, Texture.class);
+
+        manager.load(SNIPER_RIGHT, Texture.class);
+        manager.load(SNIPER_LEFT, Texture.class);
+        manager.load(SNIPER_DISPLAY, Texture.class);
+
+        manager.load(TANK_RIGHT, Texture.class);
+        manager.load(TANK_LEFT, Texture.class);
+        manager.load(TANK_DISPLAY, Texture.class);
+
+        //Load Land Super Unit
+        manager.load(JUGGERNAUT_RIGHT, Texture.class);
+        manager.load(JUGGERNAUT_LEFT, Texture.class);
+        manager.load(JUGGERNAUT_DISPLAY, Texture.class);
+
+        // Load Air Units
+        manager.load(RECON_DRONE_RIGHT, Texture.class);
+        manager.load(RECON_DRONE_LEFT, Texture.class);
+        manager.load(RECON_DRONE_DISPLAY, Texture.class);
+
+        manager.load(SUICIDE_DRONE_RIGHT, Texture.class);
+        manager.load(SUICIDE_DRONE_LEFT, Texture.class);
+        manager.load(SUICIDE_DRONE_DISPLAY, Texture.class);
+
+        manager.load(APACHE_RIGHT, Texture.class);
+        manager.load(APACHE_LEFT, Texture.class);
+        manager.load(APACHE_DISPLAY, Texture.class);
+
+        //Load Air Super Unit
+        manager.load(B2_RIGHT, Texture.class);
+        manager.load(B2_LEFT, Texture.class);
+        manager.load(B2_DISPLAY, Texture.class);
+
+        // Load Water Units
+        manager.load(GUNBOAT_RIGHT, Texture.class);
+        manager.load(GUNBOAT_LEFT, Texture.class);
+        manager.load(GUNBOAT_DISPLAY, Texture.class);
+
+        manager.load(DESTROYER_RIGHT, Texture.class);
+        manager.load(DESTROYER_LEFT, Texture.class);
+        manager.load(DESTROYER_DISPLAY, Texture.class);
+
+        manager.load(CARRIER_RIGHT, Texture.class);
+        manager.load(CARRIER_LEFT, Texture.class);
+        manager.load(CARRIER_DISPLAY, Texture.class);
+
+        //Load Water Super Unit
+        manager.load(SUBMARINE_RIGHT, Texture.class);
+        manager.load(SUBMARINE_LEFT, Texture.class);
+        manager.load(SUBMARINE_DISPLAY, Texture.class);
+
+        // Load Structures & UI
+        manager.load(MUNITION_FACTORY, Texture.class);
+        manager.load(PORT, Texture.class);
+        manager.load(SOLAR_ARRAY, Texture.class);
+        manager.load(OIL_DERRICK, Texture.class);
+        manager.load(NUCLEAR_PLANT, Texture.class);
+        manager.load(FIELD_HOSPITAL, Texture.class);
+        manager.load(RADAR_STATION, Texture.class);
+        manager.load(SIGNAL_JAMMER, Texture.class);
 
         manager.load(DEER_DISPLAY, Texture.class);
         manager.load(FISH_DISPLAY, Texture.class);
@@ -102,6 +270,7 @@ public class AssetManager {
         manager.load(ICON_END, Texture.class);
         manager.load(BTN_SLIDEDOWN, Texture.class);
         manager.load(CIRCLE_UI, Texture.class);
+        manager.load(CIRCLE_UI2, Texture.class);
         manager.load(BACKGROUND, Texture.class);
 
         manager.load(UISKIN, Skin.class);

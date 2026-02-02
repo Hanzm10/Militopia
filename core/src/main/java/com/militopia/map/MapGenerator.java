@@ -14,7 +14,17 @@ public class MapGenerator {
 
     public enum ObjectType {
         NONE,
-        BASE_P1, BASE_P2, TOWN,
+        BASE_P1, BASE_P2, 
+        BASE_P1_LVL2, BASE_P2_LVL2,
+        BASE_P1_LVL3, BASE_P2_LVL3,
+        BASE_P1_LVL4, BASE_P2_LVL4,
+        BASE_P1_LVL5, BASE_P2_LVL5,
+        BASE_P1_LVL6, BASE_P2_LVL6,
+        BASE_P1_LVL7, BASE_P2_LVL7,
+        BASE_P1_LVL8, BASE_P2_LVL8,
+        BASE_P1_LVL9, BASE_P2_LVL9,
+        BASE_P1_LVL10, BASE_P2_LVL10,
+        TOWN,
         OIL, RUINS, CACTUS, TREE, MOUNTAIN_OBJ,
         HORSE, FISH, DEER, ZEBRA
     }

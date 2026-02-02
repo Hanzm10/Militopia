@@ -295,7 +295,9 @@ public class GameInputController extends InputAdapter {
             if (owner == screen.getCurrentPlayer()) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
-                    gameHUD.openSummonMenu(owner, screen.getGameState());
+                    // --- Pass current base level to menu ---
+                    int level = foundStructure.getComponent(StatsComponent.class).level;
+                    gameHUD.openSummonMenu(owner, screen.getGameState(), level);
                     return;
                 }
             }
@@ -322,8 +324,68 @@ public class GameInputController extends InputAdapter {
     }
 
     private void handleTerrainSelection(int x, int y) {
-        MapGenerator.TerrainType type = gameMap.terrain[x][y];
-        gameHUD.showTileInfo(unitFactory.getTerrainUi(type).name, unitFactory.getTextureForTerrain(type.ordinal()));
+        MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+
+        if (gameMap.objects[x][y] != MapGenerator.ObjectType.NONE) {
+            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name, unitFactory.getTextureForTerrain(terrain.ordinal()));
+            return;
+        }
+
+        int owner = screen.getCurrentPlayer();
+        int maxLevel = 0;
+        boolean isTerritory = false;
+
+        // --- NEW: Track Parent Base Coordinates ---
+        int parentX = -1;
+        int parentY = -1;
+
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
+
+        for (Entity e : entities) {
+            StatsComponent stats = e.getComponent(StatsComponent.class);
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+
+            // Check if it's a Base owned by current player
+            if (stats.owner == owner && stats.income >= 2 && stats.name.contains("Base")) {
+                int radius = stats.vision;
+                // Check distance
+                if (Math.abs(pos.x - x) <= radius && Math.abs(pos.y - y) <= radius) {
+                    isTerritory = true;
+                    // We use the level of the highest base covering this tile
+                    if (stats.level > maxLevel) {
+                        maxLevel = stats.level;
+                        // Link to this base (highest level one takes priority if overlapping)
+                        parentX = pos.x;
+                        parentY = pos.y;
+                    }
+                }
+            }
+        }
+
+        if (isTerritory) {
+            boolean isWater = (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER);
+            boolean isCoastal = isWater && hasAdjacentLand(x, y);
+
+            // Pass Parent Coords to HUD
+            gameHUD.openBuildMenu(x, y, owner, maxLevel, isWater, isCoastal, screen.getGameState(), parentX, parentY);
+        } else {
+            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name, unitFactory.getTextureForTerrain(terrain.ordinal()));
+        }
+    }
+
+    private boolean hasAdjacentLand(int x, int y) {
+        int[][] dirs = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+        for (int[] d : dirs) {
+            int nx = x + d[0];
+            int ny = y + d[1];
+            if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) {
+                MapGenerator.TerrainType t = gameMap.terrain[nx][ny];
+                if (t != MapGenerator.TerrainType.WATER && t != MapGenerator.TerrainType.DEEP_WATER) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
@@ -400,7 +462,7 @@ public class GameInputController extends InputAdapter {
 
     private void showMovementMarkers(int startX, int startY) {
         StatsComponent stats = selectedUnitEntity.getComponent(StatsComponent.class);
-        int moveRange = (stats != null) ? stats.moveRange : 3;
+        int moveRange = (stats != null) ? stats.attackRange : 3;
         // --- UPDATED: Dynamic dimensions ---
         int[][] visitedMoves = new int[gameMap.width][gameMap.height];
         for (int i = 0; i < gameMap.width; i++) {

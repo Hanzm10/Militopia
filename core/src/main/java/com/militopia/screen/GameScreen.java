@@ -160,7 +160,7 @@ public class GameScreen implements Screen {
         int startIncome = calculateIncome(gameState.currentPlayer);
         gameHUD.updateFunding(gameState.p1Funding, startIncome);
 
-        logBaseXPStatus();
+        logBaseXPStatus(startIncome);
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
@@ -254,6 +254,9 @@ public class GameScreen implements Screen {
         int totalIncome = 0;
         int totalXPGain = 0;
 
+        List<Entity> myBases = new ArrayList<>();
+        List<Entity> xpStructures = new ArrayList<>();
+
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
 
         for (Entity entity : entities) {
@@ -263,19 +266,42 @@ public class GameScreen implements Screen {
             if (stats.owner == playerID) {
                 totalIncome += stats.income;
 
-                if (gameState.turnCount > 1) {
-                    if (type.type == TypeComponent.Type.OBJECT && stats.income > 0) {
-                        int gain = 250;
-                        if (stats.currentBaseXP < stats.maxBaseXP) {
-                            stats.currentBaseXP += gain;
-                            if (stats.currentBaseXP > stats.maxBaseXP) {
-                                stats.currentBaseXP = stats.maxBaseXP;
-                            }
-                        }
-                        totalXPGain += gain;
-                    }
+                // Identify Base
+                if (stats.income >= 2 && stats.name.contains("Base")) {
+                    myBases.add(entity);
+                } // Identify Structure with XP Gain
+                else if (stats.xpGain > 0 && stats.parentBaseX != -1) {
+                    xpStructures.add(entity);
                 }
             }
+        }
+
+        // 1. Process Structure XP -> Linked Base
+        for (Entity struct : xpStructures) {
+            StatsComponent structStats = struct.getComponent(StatsComponent.class);
+
+            // Direct Lookup! No loops!
+            Entity parentBase = findEntityAt(structStats.parentBaseX, structStats.parentBaseY);
+
+            if (parentBase != null) {
+                StatsComponent baseStats = parentBase.getComponent(StatsComponent.class);
+                // Ensure the base is still owned by us (e.g., hasn't been captured)
+                if (baseStats.owner == playerID) {
+                    baseStats.currentBaseXP += structStats.xpGain;
+                    totalXPGain += structStats.xpGain;
+                }
+            }
+        }
+
+        // 2. Process Base Natural Growth & Level Up
+        for (Entity base : myBases) {
+            StatsComponent stats = base.getComponent(StatsComponent.class);
+            int naturalGain = 500;
+
+            stats.currentBaseXP += naturalGain;
+            totalXPGain += naturalGain;
+
+            unitFactory.checkAndApplyLevelUp(base, gameState, gameHUD);
         }
 
         if (gameState.turnCount > 1) {
@@ -315,10 +341,8 @@ public class GameScreen implements Screen {
                         gameState.p2Funding += income;
                         currentTotal = gameState.p2Funding;
                     }
-                    logBaseXPStatus();
-                } else {
-                    Gdx.app.log("Economy", "Turn: " + gameState.turnCount + " | Player: " + gameState.currentPlayer + " | First Round (No Income) | Total Funds: " + currentTotal);
                 }
+                logBaseXPStatus(income);
 
                 resetUnitActions();
                 gameHUD.updateTurn(gameState.turnCount);
@@ -367,11 +391,29 @@ public class GameScreen implements Screen {
         }
     }
 
-    private void logBaseXPStatus() {
+// --- UPDATED METHOD SIGNATURE & CONTENT ---
+    private void logBaseXPStatus(int income) {
         StringBuilder sb = new StringBuilder();
         sb.append("\n========================================\n");
         sb.append("       TURN ").append(gameState.turnCount).append(" STATUS REPORT       \n");
         sb.append("========================================\n");
+
+        // --- NEW: Consolidated Economy Header ---
+        int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
+        String playerLabel = (gameState.currentPlayer == 1) ? "PLAYER 1" : "PLAYER 2";
+
+        sb.append("ACTIVE PLAYER : ").append(playerLabel).append("\n");
+
+        // Handle Turn 1 specific text
+        if (gameState.turnCount == 1) {
+            sb.append("INCOME        : First Round (No Income)\n");
+        } else {
+            sb.append("INCOME        : +").append(income).append("\n");
+        }
+
+        sb.append("TOTAL FUNDS   : ").append(currentFunds).append("\n");
+        sb.append("----------------------------------------\n");
+        // ----------------------------------------
 
         List<String> p1Logs = new ArrayList<>();
         List<String> p2Logs = new ArrayList<>();
@@ -395,7 +437,7 @@ public class GameScreen implements Screen {
         Collections.sort(p1Logs);
         Collections.sort(p2Logs);
 
-        sb.append("PLAYER 1:\n");
+        sb.append("PLAYER 1 BASES:\n");
         if (p1Logs.isEmpty()) {
             sb.append("  (No Bases)\n");
         }
@@ -403,7 +445,7 @@ public class GameScreen implements Screen {
             sb.append(s).append("\n");
         }
 
-        sb.append("\nPLAYER 2:\n");
+        sb.append("\nPLAYER 2 BASES:\n");
         if (p2Logs.isEmpty()) {
             sb.append("  (No Bases)\n");
         }
@@ -412,7 +454,8 @@ public class GameScreen implements Screen {
         }
 
         sb.append("========================================\n");
-        Gdx.app.log("XP Log", sb.toString());
+        // Changing tag to "GameLog" for cleaner filtering if desired
+        Gdx.app.log("GameLog", sb.toString());
     }
 
     private void drawFadeOverlay() {

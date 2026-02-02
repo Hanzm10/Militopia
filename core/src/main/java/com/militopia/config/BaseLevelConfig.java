@@ -53,7 +53,7 @@ public class BaseLevelConfig {
         // Level 5
         levels.put(5, new LevelData(5, 10125, 3, 10, GameConfig.BORDER_RADIUS + 1,
                 new String[]{"SUPER_UNIT"},
-                new String[]{"NUCLEAR", "SAM_SITE", "ARTILLERY"}));
+                new String[]{"NUCLEAR"}));
     }
 
     public static LevelData getLevel(int level) {

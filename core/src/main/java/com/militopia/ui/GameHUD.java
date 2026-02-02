@@ -52,6 +52,12 @@ public class GameHUD {
     private int currentBaseOwner = 1;
     private int currentIncome = 0;
 
+    private int buildX, buildY;
+    private int buildParentX, buildParentY;
+
+    private Table popupTable = new Table(); // For Level Up
+    private int currentBaseLevel = 1; // Track level for menu
+
     private GameInputController inputController;
     private UnitFactory unitFactory;
 
@@ -61,6 +67,9 @@ public class GameHUD {
         stage = new Stage(new ScreenViewport());
         summonMenu = new Table();
         rootTable = new Table();
+
+        stage.addActor(rootTable);
+        stage.addActor(popupTable); // NEW
     }
 
     public void build(final GameScreen screen, final GameInputController inputController,
@@ -180,7 +189,48 @@ public class GameHUD {
         summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
         Table contentTable = new Table();
-        addSummonButton(contentTable, "RECRUIT", inputController, unitFactory, state);
+
+        // --- Filter by Level ---
+        java.util.Set<String> unlocked = new java.util.HashSet<>();
+        for (int i = 1; i <= currentBaseLevel; i++) {
+            com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig.getLevel(i);
+            for (String u : data.unlockedUnits) {
+                unlocked.add(u);
+            }
+        }
+
+        // Only add buttons if unlocked
+        if (unlocked.contains("RECRUIT")) {
+            addSummonButton(contentTable, "RECRUIT", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("RANGER")) {
+            addSummonButton(contentTable, "RANGER", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("SNIPER")) {
+            addSummonButton(contentTable, "SNIPER", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("TANK")) {
+            addSummonButton(contentTable, "TANK", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("RECON_DRONE")) {
+            addSummonButton(contentTable, "RECON_DRONE", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("SUICIDE_DRONE")) {
+            addSummonButton(contentTable, "SUICIDE_DRONE", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("APACHE")) {
+            addSummonButton(contentTable, "APACHE", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("GUNBOAT")) {
+            addSummonButton(contentTable, "GUNBOAT", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("DESTROYER")) {
+            addSummonButton(contentTable, "DESTROYER", inputController, unitFactory, state);
+        }
+        if (unlocked.contains("CARRIER")) {
+            addSummonButton(contentTable, "CARRIER", inputController, unitFactory, state);
+        }
+
         TextButton closeBtn = new TextButton("Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
@@ -245,8 +295,9 @@ public class GameHUD {
         container.add(group).pad(10);
     }
 
-    public void openSummonMenu(int owner, GameState state) {
+    public void openSummonMenu(int owner, GameState state, int level) {
         this.currentBaseOwner = owner;
+        this.currentBaseLevel = level;
         populateSummonMenu(state);
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
@@ -303,7 +354,7 @@ public class GameHUD {
         com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
-        
+
         TextureRegion iconRegion = factory.getHudIcon(animalType);
 
         // The Animal Icon
@@ -339,7 +390,7 @@ public class GameHUD {
         addCaptureButton(contentTable, townEntity, capturingUnit, factory, controller, map, state);
 
         summonMenu.add(contentTable).expandX().center();
-        
+
         animateMenuOpen();
     }
 
@@ -416,6 +467,124 @@ public class GameHUD {
         Label nameLbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         nameLbl.setFontScale(0.7f);
         group.add(nameLbl).padTop(5);
+        container.add(group).pad(10);
+    }
+
+    public void openBuildMenu(int x, int y, int owner, int maxLevel, boolean isWater, boolean isCoastal, GameState state, int parentX, int parentY) {
+        this.buildX = x;
+        this.buildY = y;
+        this.currentBaseOwner = owner;
+        this.buildParentX = parentX;
+        this.buildParentY = parentY;
+
+        populateBuildMenu(state, maxLevel, isWater, isCoastal);
+        // ... (Animations same as before) ...
+        tileInfoTable.clearActions();
+        tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
+        summonMenu.clearActions();
+        summonMenu.setWidth(stage.getWidth());
+        summonMenu.setX(0);
+        summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
+        bottomContainer.clearActions();
+        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+    }
+
+    private void populateBuildMenu(GameState state, int maxLevel, boolean isWater, boolean isCoastal) {
+        summonMenu.clear();
+        summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
+        Table contentTable = new Table();
+
+        java.util.Set<String> unlocked = new java.util.HashSet<>();
+        for (int i = 1; i <= maxLevel; i++) {
+            com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig.getLevel(i);
+            if (data.unlockedStructures != null) {
+                for (String s : data.unlockedStructures) {
+                    unlocked.add(s);
+                }
+            }
+        }
+
+        for (String struct : unlocked) {
+            if (struct.equals("PORT")) {
+                if (isWater && isCoastal) {
+                    addBuildButton(contentTable, struct, inputController, unitFactory, state);
+                }
+            } else if (struct.equals("OIL_DERRICK")) {
+                if (!isWater) {
+                    addBuildButton(contentTable, struct, inputController, unitFactory, state);
+                }
+            } else {
+                if (!isWater) {
+                    addBuildButton(contentTable, struct, inputController, unitFactory, state);
+                }
+            }
+        }
+
+        summonMenu.add(contentTable).expandX().center();
+        summonMenu.row();
+    }
+
+    private void addBuildButton(Table container, final String structType, final GameInputController controller, final UnitFactory factory, final GameState state) {
+        TextureRegion iconRegion = factory.getTextureForPopup(structType);
+        final int cost = factory.getStructureCost(structType);
+
+        // --- FIX: Use 'Drawable' interface instead of 'TextureRegionDrawable' ---
+        // This prevents the ClassCastException if the skin returns a SpriteDrawable
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable circleDrawable;
+        try {
+            Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
+            circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            circleDrawable = new TextureRegionDrawable(new TextureRegion(circleTex));
+        } catch (Exception e) {
+            // No casting needed here anymore
+            circleDrawable = game.skin.newDrawable("white", Color.DARK_GRAY);
+        }
+
+        Stack buttonStack = new Stack();
+        buttonStack.setTransform(true);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        circleBg.setScaling(Scaling.fit);
+        buttonStack.add(circleBg);
+
+        com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(iconRegion);
+        unitIcon.setScaling(Scaling.fit);
+        Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
+        iconContainer.size(50, 50).center();
+        buttonStack.add(iconContainer);
+        buttonStack.setOrigin(40, 40);
+        buttonStack.addListener(new HoverListener());
+
+        buttonStack.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                int currentFunds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                if (currentFunds >= cost) {
+                    if (currentBaseOwner == 1) {
+                        state.p1Funding -= cost;
+                    } else {
+                        state.p2Funding -= cost;
+                    }
+
+                    // Create Structure with Parent Link
+                    factory.createStructure(structType, buildX, buildY, currentBaseOwner, buildParentX, buildParentY);
+
+                    updateFunding((currentBaseOwner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
+                    hideSummonMenu();
+                    controller.resetLastClicked();
+                }
+            }
+        });
+
+        Table group = new Table();
+        group.add(buttonStack).size(80, 80).row();
+
+        // Formatting Name
+        Label nameLbl = new Label(factory.toNiceName(structType) + " (" + cost + ")", game.skin, "default-font", Color.WHITE);
+        nameLbl.setFontScale(0.6f);
+        nameLbl.setWrap(true);
+        nameLbl.setAlignment(com.badlogic.gdx.utils.Align.center);
+
+        group.add(nameLbl).width(90).padTop(5);
         container.add(group).pad(10);
     }
 
@@ -564,6 +733,78 @@ public class GameHUD {
         Label lbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         lbl.setFontScale(0.7f);
         t.add(lbl).padTop(5);
+        return t;
+    }
+
+    public void showLevelUpPopup(int owner, String baseName, int newLevel, int bonusFunds,
+            String[] units, String[] structs, UnitFactory factory) {
+        popupTable.clear();
+        popupTable.setFillParent(true);
+        popupTable.setBackground(game.skin.newDrawable("white", new Color(0, 0, 0, 0.8f)));
+
+        Table modal = new Table();
+        // --- FIX 1: Use "default-font" for HD look ---
+        Label title = new Label(baseName + " Leveled Up!", game.skin, "default-font", Color.YELLOW);
+        title.setFontScale(1.2f); // Match HUD scaling
+        modal.add(title).pad(20).row();
+
+        Label sub = new Label("Reached Level " + newLevel, game.skin, "default-font", Color.WHITE);
+        sub.setFontScale(0.9f);
+        modal.add(sub).padBottom(20).row();
+
+        // Incentives
+        Table incentives = new Table();
+        if (bonusFunds > 0) {
+            incentives.add(createIncentiveBubble("+" + bonusFunds + " Funding", null)).pad(10);
+        }
+        for (String u : units) {
+            incentives.add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(u), factory.getTextureForPopup(u))).pad(10);
+        }
+        for (String s : structs) {
+            incentives.add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(s), factory.getTextureForPopup(s))).pad(10);
+        }
+
+        modal.add(incentives).row();
+
+        TextButton okBtn = new TextButton("Awesome!", game.skin);
+        okBtn.addListener(new ClickListener() {
+            public void clicked(InputEvent event, float x, float y) {
+                // --- FIX 2: Completely remove the table from stage ---
+                popupTable.remove();
+            }
+        });
+        modal.add(okBtn).padTop(30).size(150, 50);
+
+        popupTable.add(modal);
+
+        // Ensure it's on top
+        popupTable.toFront();
+        stage.addActor(popupTable);
+    }
+
+    private Table createIncentiveBubble(String text, TextureRegion icon) {
+        Stack stack = new Stack();
+        TextureRegionDrawable bg;
+        try {
+            bg = new TextureRegionDrawable(new TextureRegion(game.assets.get(AssetManager.CIRCLE_UI2)));
+        } catch (Exception e) {
+            bg = (TextureRegionDrawable) game.skin.newDrawable("white", Color.GRAY);
+        }
+
+        stack.add(new com.badlogic.gdx.scenes.scene2d.ui.Image(bg));
+        if (icon != null) {
+            Container<com.badlogic.gdx.scenes.scene2d.ui.Image> c = new Container<>(new com.badlogic.gdx.scenes.scene2d.ui.Image(icon));
+            c.size(50, 50).center();
+            stack.add(c);
+        }
+        Table t = new Table();
+        t.add(stack).size(80, 80).row();
+        // --- FIX 3: Use "default-font" here too ---
+        Label l = new Label(text, game.skin, "default-font", Color.WHITE);
+        l.setFontScale(0.6f);
+        l.setWrap(true);
+        l.setAlignment(com.badlogic.gdx.utils.Align.center);
+        t.add(l).width(90).padTop(5);
         return t;
     }
 
