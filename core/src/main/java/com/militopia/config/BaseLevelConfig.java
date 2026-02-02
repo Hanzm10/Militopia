@@ -43,12 +43,12 @@ public class BaseLevelConfig {
         // Level 3
         levels.put(3, new LevelData(3, 4500, 3, 10, GameConfig.BORDER_RADIUS,
                 new String[]{"SNIPER", "SUICIDE_DRONE", "DESTROYER"},
-                new String[]{"SOLAR", "RADAR"}));
+                new String[]{"OIL_DERRICK", "RADAR"}));
 
         // Level 4 (Border Growth)
         levels.put(4, new LevelData(4, 6750, 3, 0, GameConfig.BORDER_RADIUS + 1,
                 new String[]{"TANK", "APACHE", "CARRIER"},
-                new String[]{"OIL_DERRICK", "JAMMER"}));
+                new String[]{"SOLAR", "JAMMER"}));
 
         // Level 5
         levels.put(5, new LevelData(5, 10125, 3, 10, GameConfig.BORDER_RADIUS + 1,

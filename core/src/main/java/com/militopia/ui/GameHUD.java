@@ -47,6 +47,7 @@ public class GameHUD {
 
     private Label xpLabel;
     private Label fundsLabel;
+    private Label fundingTitleLabel;
     private Label turnLabel;
 
     private int currentBaseOwner = 1;
@@ -173,7 +174,12 @@ public class GameHUD {
     public void updateFunding(int funding, int income) {
         this.currentIncome = income;
         if (fundsLabel != null) {
-            fundsLabel.setText(funding + " (+" + income + ")");
+            // Only shows the total count now
+            fundsLabel.setText(String.valueOf(funding));
+        }
+        if (fundingTitleLabel != null) {
+            // Shows "Funding (+X)"
+            fundingTitleLabel.setText("Funding (+" + income + ")");
         }
     }
 
@@ -688,21 +694,54 @@ public class GameHUD {
 
     private Table createStatGroup(String title, String placeholderValue) {
         Table t = new Table();
-        Label titleLbl = new Label(title, game.skin, "default-font", Color.WHITE);
-        titleLbl.setFontScale(0.8f);
-        Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
-        valLbl.setFontScale(1.2f);
-        if (title.equals("XP")) {
-            xpLabel = valLbl;
-        }
+
         if (title.equals("Funding")) {
-            fundsLabel = valLbl;
+            // --- NEW DESIGN FOR FUNDING ---
+
+            // Row 1: Label "Funding (+0)"
+            fundingTitleLabel = new Label(title + " (+0)", game.skin, "default-font", Color.WHITE);
+            fundingTitleLabel.setFontScale(0.8f);
+            t.add(fundingTitleLabel).left().row();
+
+            // Row 2: Icon + Value
+            Table valueRow = new Table();
+
+            // Icon
+            try {
+                Texture iconTex = assets.get(AssetManager.FUNDING_ICON);
+                iconTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                com.badlogic.gdx.scenes.scene2d.ui.Image iconParams = new com.badlogic.gdx.scenes.scene2d.ui.Image(new TextureRegion(iconTex));
+                iconParams.setScaling(Scaling.fit);
+                valueRow.add(iconParams).size(40, 40).padRight(0); // Small size
+            } catch (Exception e) {
+                // Fallback if asset missing
+            }
+
+            // Value
+            fundsLabel = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
+            fundsLabel.setFontScale(1.2f);
+            valueRow.add(fundsLabel);
+
+            t.add(valueRow).left();
+
+        } else {
+            // --- STANDARD DESIGN (XP / Turn) ---
+            Label titleLbl = new Label(title, game.skin, "default-font", Color.WHITE);
+            titleLbl.setFontScale(0.8f);
+            Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
+            valLbl.setFontScale(1.2f);
+
+            if (title.equals("XP")) {
+                xpLabel = valLbl;
+            }
+            if (title.equals("Turn")) {
+                turnLabel = valLbl;
+            }
+
+            t.add(titleLbl).row();
+            t.add(valLbl);
         }
-        if (title.equals("Turn")) {
-            turnLabel = valLbl;
-        }
-        t.add(titleLbl).row();
-        t.add(valLbl);
+
         return t;
     }
 
@@ -755,7 +794,14 @@ public class GameHUD {
         // Incentives
         Table incentives = new Table();
         if (bonusFunds > 0) {
-            incentives.add(createIncentiveBubble("+" + bonusFunds + " Funding", null)).pad(10);
+            // --- FIX: Use FUNDING_ICON2 for the popup bubble ---
+            TextureRegion fundingIcon2 = null;
+            try {
+                fundingIcon2 = new TextureRegion(assets.get(AssetManager.FUNDING_ICON2));
+            } catch (Exception e) {
+                /* fallback if missing */ }
+
+            incentives.add(createIncentiveBubble("+" + bonusFunds + " Funding", fundingIcon2)).pad(10);
         }
         for (String u : units) {
             incentives.add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(u), factory.getTextureForPopup(u))).pad(10);

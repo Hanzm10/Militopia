@@ -331,6 +331,12 @@ public class GameInputController extends InputAdapter {
             return;
         }
 
+        if (getEntityAt(x, y, TypeComponent.Type.OBJECT) != null) {
+            // Show terrain info (or structure info) but DO NOT open build menu
+            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name, unitFactory.getTextureForTerrain(terrain.ordinal()));
+            return;
+        }
+        
         int owner = screen.getCurrentPlayer();
         int maxLevel = 0;
         boolean isTerritory = false;

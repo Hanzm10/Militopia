@@ -269,42 +269,50 @@ public class GameScreen implements Screen {
                 // Identify Base
                 if (stats.income >= 2 && stats.name.contains("Base")) {
                     myBases.add(entity);
-                } // Identify Structure with XP Gain
+                } // Identify Structure with XP Gain (factories, ports, etc.)
                 else if (stats.xpGain > 0 && stats.parentBaseX != -1) {
                     xpStructures.add(entity);
                 }
             }
         }
 
-        // 1. Process Structure XP -> Linked Base
-        for (Entity struct : xpStructures) {
-            StatsComponent structStats = struct.getComponent(StatsComponent.class);
+        // --- Only process XP Gain after Turn 1 is complete ---
+        if (gameState.turnCount > 1) {
 
-            // Direct Lookup! No loops!
-            Entity parentBase = findEntityAt(structStats.parentBaseX, structStats.parentBaseY);
+            // 1. Process Structure XP -> Linked Base
+            for (Entity struct : xpStructures) {
+                StatsComponent structStats = struct.getComponent(StatsComponent.class);
 
-            if (parentBase != null) {
-                StatsComponent baseStats = parentBase.getComponent(StatsComponent.class);
-                // Ensure the base is still owned by us (e.g., hasn't been captured)
-                if (baseStats.owner == playerID) {
-                    baseStats.currentBaseXP += structStats.xpGain;
-                    totalXPGain += structStats.xpGain;
+                // Find parent base
+                Entity parentBase = findEntityAt(structStats.parentBaseX, structStats.parentBaseY);
+
+                if (parentBase != null) {
+                    StatsComponent baseStats = parentBase.getComponent(StatsComponent.class);
+                    // Ensure we still own the base
+                    if (baseStats.owner == playerID) {
+                        baseStats.currentBaseXP += structStats.xpGain;
+                        totalXPGain += structStats.xpGain;
+                    }
                 }
             }
-        }
 
-        // 2. Process Base Natural Growth & Level Up
-        for (Entity base : myBases) {
-            StatsComponent stats = base.getComponent(StatsComponent.class);
-            int naturalGain = 500;
+            // 2. Process Base Natural Growth & Level Up
+            for (Entity base : myBases) {
+                StatsComponent stats = base.getComponent(StatsComponent.class);
 
-            stats.currentBaseXP += naturalGain;
-            totalXPGain += naturalGain;
+                // --- NEW LOGIC: Dynamic XP Gain ---
+                // Level 1: 250 + 0  = 250
+                // Level 2: 250 + 10 = 260
+                // Level 3: 250 + 20 = 270
+                int naturalGain = 250 + ((stats.level - 1) * 10);
 
-            unitFactory.checkAndApplyLevelUp(base, gameState, gameHUD);
-        }
+                stats.currentBaseXP += naturalGain;
+                totalXPGain += naturalGain;
 
-        if (gameState.turnCount > 1) {
+                unitFactory.checkAndApplyLevelUp(base, gameState, gameHUD);
+            }
+
+            // 3. Update Global Player XP
             if (playerID == 1) {
                 gameState.p1XP += totalXPGain;
             } else {
@@ -425,11 +433,15 @@ public class GameScreen implements Screen {
             TypeComponent type = e.getComponent(TypeComponent.class);
 
             if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
-                String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP, stats.maxBaseXP);
-                if (stats.owner == 1) {
-                    p1Logs.add(entry);
-                } else {
-                    p2Logs.add(entry);
+
+                // --- FIX: Only list Bases in the log ---
+                if (stats.name.contains("Base")) {
+                    String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP, stats.maxBaseXP);
+                    if (stats.owner == 1) {
+                        p1Logs.add(entry);
+                    } else {
+                        p2Logs.add(entry);
+                    }
                 }
             }
         }

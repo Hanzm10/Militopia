@@ -141,6 +141,9 @@ public class AssetManager {
     public static final String UISKIN = "uiskin.json";
     public static final String BACKGROUND = "militopia_background.png";
 
+    public static final String FUNDING_ICON = "funding_icon.png";
+    public static final String FUNDING_ICON2 = "funding_icon2.png";
+
     // Fonts
     public static final String GAME_FONT = "game_font.ttf";
 
@@ -272,6 +275,9 @@ public class AssetManager {
         manager.load(CIRCLE_UI, Texture.class);
         manager.load(CIRCLE_UI2, Texture.class);
         manager.load(BACKGROUND, Texture.class);
+
+        manager.load(FUNDING_ICON, Texture.class);
+        manager.load(FUNDING_ICON2, Texture.class);
 
         manager.load(UISKIN, Skin.class);
 
