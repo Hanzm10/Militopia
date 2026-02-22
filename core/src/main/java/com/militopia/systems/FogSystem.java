@@ -12,16 +12,16 @@ public class FogSystem extends EntitySystem {
 
     private final MapGenerator.GameMap gameMap;
     private ImmutableArray<Entity> entities;
-    
+
     // Changed from final to allow switching
-    private int playerID; 
+    private int playerID;
 
     public FogSystem(MapGenerator.GameMap map, int initialPlayerID) {
         this.gameMap = map;
         this.playerID = initialPlayerID;
-        this.priority = 0; 
+        this.priority = 0;
     }
-    
+
     // --- NEW: Switch Active Player ---
     public void setPlayer(int id) {
         this.playerID = id;

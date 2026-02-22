@@ -1,5 +1,6 @@
 package com.militopia.factories;
 
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
@@ -11,6 +12,9 @@ import com.militopia.components.*;
 import com.militopia.config.BaseLevelConfig;
 import com.militopia.config.GameConfig;
 import com.militopia.data.GameState;
+import com.militopia.data.StructureSnapshot;
+import com.militopia.data.TurnSnapshot;
+import com.militopia.data.UnitSnapshot;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.ui.GameHUD;
@@ -93,76 +97,76 @@ public class UnitFactory {
         // UNITS
         // --- MANUAL LOADING: Units ---
         // Recruit
-        unitRegions.put("RECRUIT", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.RECRUIT_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.RECRUIT_LEFT)),
-            new TextureRegion(assets.get(AssetManager.RECRUIT_DISPLAY))
+        unitRegions.put("RECRUIT", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.RECRUIT_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.RECRUIT_LEFT)),
+                new TextureRegion(assets.get(AssetManager.RECRUIT_DISPLAY))
         });
 
         // Ranger
-        unitRegions.put("RANGER", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.RANGER_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.RANGER_LEFT)),
-            new TextureRegion(assets.get(AssetManager.RANGER_DISPLAY))
+        unitRegions.put("RANGER", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.RANGER_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.RANGER_LEFT)),
+                new TextureRegion(assets.get(AssetManager.RANGER_DISPLAY))
         });
 
         // Tank
-        unitRegions.put("TANK", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.TANK_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.TANK_LEFT)),
-            new TextureRegion(assets.get(AssetManager.TANK_DISPLAY))
+        unitRegions.put("TANK", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.TANK_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.TANK_LEFT)),
+                new TextureRegion(assets.get(AssetManager.TANK_DISPLAY))
         });
 
         // Sniper
-        unitRegions.put("SNIPER", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.SNIPER_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.SNIPER_LEFT)),
-            new TextureRegion(assets.get(AssetManager.SNIPER_DISPLAY))
+        unitRegions.put("SNIPER", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.SNIPER_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.SNIPER_LEFT)),
+                new TextureRegion(assets.get(AssetManager.SNIPER_DISPLAY))
         });
 
         // Recon Drone
-        unitRegions.put("RECON_DRONE", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.RECON_DRONE_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.RECON_DRONE_LEFT)),
-            new TextureRegion(assets.get(AssetManager.RECON_DRONE_DISPLAY))
+        unitRegions.put("RECON_DRONE", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.RECON_DRONE_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.RECON_DRONE_LEFT)),
+                new TextureRegion(assets.get(AssetManager.RECON_DRONE_DISPLAY))
         });
 
         // Suicide Drone
-        unitRegions.put("SUICIDE_DRONE", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_LEFT)),
-            new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_DISPLAY))
+        unitRegions.put("SUICIDE_DRONE", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_LEFT)),
+                new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_DISPLAY))
         });
 
         // Apache
-        unitRegions.put("APACHE", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.APACHE_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.APACHE_LEFT)),
-            new TextureRegion(assets.get(AssetManager.APACHE_DISPLAY))
+        unitRegions.put("APACHE", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.APACHE_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.APACHE_LEFT)),
+                new TextureRegion(assets.get(AssetManager.APACHE_DISPLAY))
         });
 
         // Gunboat
-        unitRegions.put("GUNBOAT", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.GUNBOAT_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.GUNBOAT_LEFT)),
-            new TextureRegion(assets.get(AssetManager.GUNBOAT_DISPLAY))
+        unitRegions.put("GUNBOAT", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.GUNBOAT_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.GUNBOAT_LEFT)),
+                new TextureRegion(assets.get(AssetManager.GUNBOAT_DISPLAY))
         });
 
         // Destroyer
-        unitRegions.put("DESTROYER", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.DESTROYER_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.DESTROYER_LEFT)),
-            new TextureRegion(assets.get(AssetManager.DESTROYER_DISPLAY))
+        unitRegions.put("DESTROYER", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.DESTROYER_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.DESTROYER_LEFT)),
+                new TextureRegion(assets.get(AssetManager.DESTROYER_DISPLAY))
         });
 
         // Carrier
-        unitRegions.put("CARRIER", new TextureRegion[]{
-            new TextureRegion(assets.get(AssetManager.CARRIER_RIGHT)),
-            new TextureRegion(assets.get(AssetManager.CARRIER_LEFT)),
-            new TextureRegion(assets.get(AssetManager.CARRIER_DISPLAY))
+        unitRegions.put("CARRIER", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.CARRIER_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.CARRIER_LEFT)),
+                new TextureRegion(assets.get(AssetManager.CARRIER_DISPLAY))
         });
 
-        //Structures
+        // Structures
         structRegions.put("MUNITION_FACTORY", new TextureRegion(assets.get(AssetManager.MUNITION_FACTORY)));
         structRegions.put("PORT", new TextureRegion(assets.get(AssetManager.PORT)));
         structRegions.put("SOLAR", new TextureRegion(assets.get(AssetManager.SOLAR_ARRAY)));
@@ -172,14 +176,14 @@ public class UnitFactory {
         structRegions.put("RADAR", new TextureRegion(assets.get(AssetManager.RADAR_STATION)));
         structRegions.put("JAMMER", new TextureRegion(assets.get(AssetManager.SIGNAL_JAMMER)));
 
-        //Tiles
+        // Tiles
         this.grassRegion = new TextureRegion(assets.get(AssetManager.TILE_GRASS));
         this.waterRegion = new TextureRegion(assets.get(AssetManager.TILE_WATER));
         this.deepWaterRegion = new TextureRegion(assets.get(AssetManager.TILE_DEEPWATER));
         this.sandRegion = new TextureRegion(assets.get(AssetManager.TILE_SAND));
         this.mountainRegion = new TextureRegion(assets.get(AssetManager.TILE_MOUNTAIN));
 
-        //Objects
+        // Objects
         this.treeRegion = new TextureRegion(assets.get(AssetManager.OBJ_TREE));
         this.ruinsRegion = new TextureRegion(assets.get(AssetManager.OBJ_RUINS));
         this.townRegion = new TextureRegion(assets.get(AssetManager.STRUCT_TOWN));
@@ -188,7 +192,7 @@ public class UnitFactory {
         this.mountainObjRegion = new TextureRegion(assets.get(AssetManager.OBJ_MOUNTAIN));
         this.fogRegion = new TextureRegion(assets.get(AssetManager.FOG_OF_WAR));
 
-        //Animals
+        // Animals
         this.horseRegion = new TextureRegion(assets.get(AssetManager.HORSE));
         this.fishRegion = new TextureRegion(assets.get(AssetManager.FISH));
         this.deerRegion = new TextureRegion(assets.get(AssetManager.DEER));
@@ -305,7 +309,7 @@ public class UnitFactory {
                 rng = 4;
                 vis = 5;
                 cost = 0;
-                moveType = StatsComponent.MoveType.LAND;
+                moveType = StatsComponent.MoveType.AIR;
                 break;
             case "GUNBOAT":
                 hp = 10;
@@ -345,12 +349,14 @@ public class UnitFactory {
                 rng = 5;
                 vis = 5;
                 cost = 0;
-                moveType = StatsComponent.MoveType.LAND;
+                moveType = StatsComponent.MoveType.SEA;
                 break;
         }
 
         // Use Unit Constructor (No Income Parameter)
-        StatsComponent stats = new StatsComponent(toNiceName(unitType), hp, atk, def, move, rng, vis, cost, moveType, owner);
+        StatsComponent stats = new StatsComponent(toNiceName(unitType), hp, atk, def, move, rng, vis, cost, moveType,
+                owner);
+        stats.unitTypeKey = unitType; // store raw key for snapshot restoration
         stats.hasActed = isSummoned;
         entity.add(stats);
         engine.addEntity(entity);
@@ -392,6 +398,59 @@ public class UnitFactory {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Snapshot / Undo support
+    // -------------------------------------------------------------------------
+
+    /**
+     * Captures a full snapshot of current game state for undo.
+     * Call this at the START of every turn before the player acts.
+     */
+    public TurnSnapshot captureSnapshot(Engine engine, GameState state, MapGenerator.GameMap map) {
+        List<UnitSnapshot> unitSnaps = new ArrayList<>();
+        List<StructureSnapshot> structSnaps = new ArrayList<>();
+
+        ImmutableArray<Entity> all = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
+
+        for (Entity e : all) {
+            TypeComponent type = e.getComponent(TypeComponent.class);
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+
+            if (type.type == TypeComponent.Type.UNIT) {
+                unitSnaps.add(new UnitSnapshot(
+                        s.unitTypeKey, p.x, p.y, s.owner,
+                        s.currentHP, s.hasActed, s.hasMoved, s.moveType));
+
+            } else if (type.type == TypeComponent.Type.OBJECT && s.owner >= 0
+                    && (s.income > 0 || s.maxBaseXP > 0 || !s.name.startsWith("ANIMAL_"))) {
+                // Only snapshot income-generating structures: bases (income >= 2) and towns
+                // (income = 1)
+                // Exclude decorative objects (trees, ruins, oil, etc.) — they don't need
+                // restoration
+                if (s.income > 0) {
+                    structSnaps.add(new StructureSnapshot(
+                            p.x, p.y, s.owner, s.level,
+                            s.currentBaseXP, s.income, s.name, s.baseOrdinal));
+                }
+            }
+        }
+
+        // Clone the map objects array
+        MapGenerator.ObjectType[][] objClone = new MapGenerator.ObjectType[map.width][map.height];
+        for (int x = 0; x < map.width; x++) {
+            System.arraycopy(map.objects[x], 0, objClone[x], 0, map.height);
+        }
+
+        return new TurnSnapshot(
+                state.p1Funding, state.p2Funding,
+                state.p1XP, state.p2XP,
+                state.turnCount, state.currentPlayer,
+                state.p1BaseCount, state.p2BaseCount,
+                unitSnaps, structSnaps, objClone);
+    }
+
     public int getStructureCost(String type) {
         switch (type) {
             case "MUNITION_FACTORY":
@@ -430,16 +489,17 @@ public class UnitFactory {
         String niceName = type.replace("_", " ");
 
         // Create Stats (Default Income = 0, we add it to Base XP instead)
-        StatsComponent stats = new StatsComponent(niceName, 10, 0, 0, 0, 0, 1, getStructureCost(type), StatsComponent.MoveType.LAND, owner, 0);
+        StatsComponent stats = new StatsComponent(niceName, 10, 0, 0, 0, 0, 1, getStructureCost(type),
+                StatsComponent.MoveType.LAND, owner, 0);
 
         // --- NEW: Link to Parent Base ---
         stats.parentBaseX = parentX;
         stats.parentBaseY = parentY;
 
-        // --- NEW: Set XP Gain ---
+        // --- Set XP Gain & Income per structure type ---
         if (type.equals("MUNITION_FACTORY")) {
             stats.xpGain = 50;
-            stats.income = 2; 
+            stats.income = 2;
         }
 
         if (type.equals("PORT")) {
@@ -449,6 +509,31 @@ public class UnitFactory {
 
         if (type.equals("HOSPITAL")) {
             stats.xpGain = 50;
+            stats.income = 0;
+        }
+
+        if (type.equals("SOLAR")) {
+            stats.xpGain = 75;
+            stats.income = 3;
+        }
+
+        if (type.equals("OIL_DERRICK")) {
+            stats.xpGain = 100;
+            stats.income = 6;
+        }
+
+        if (type.equals("NUCLEAR")) {
+            stats.xpGain = 150;
+            stats.income = 15;
+        }
+
+        if (type.equals("RADAR")) {
+            stats.xpGain = 75;
+            stats.income = 0;
+        }
+
+        if (type.equals("JAMMER")) {
+            stats.xpGain = 75;
             stats.income = 0;
         }
 
@@ -462,7 +547,8 @@ public class UnitFactory {
             return;
         }
 
-        boolean isAnimal = (type.name().contains("HORSE") || type.name().contains("FISH") || type.name().contains("DEER") || type.name().contains("ZEBRA"));
+        boolean isAnimal = (type.name().contains("HORSE") || type.name().contains("FISH")
+                || type.name().contains("DEER") || type.name().contains("ZEBRA"));
         int zIndex = isAnimal ? 2 : 1;
 
         Entity entity = engine.createEntity();
@@ -472,7 +558,8 @@ public class UnitFactory {
 
         if (isAnimal) {
             // Animal: Use Unit Constructor (0 Income)
-            StatsComponent animalStats = new StatsComponent(info.name, 1, 0, 0, 0, 0, 0, 0, StatsComponent.MoveType.LAND, 0);
+            StatsComponent animalStats = new StatsComponent(info.name, 1, 0, 0, 0, 0, 0, 0,
+                    StatsComponent.MoveType.LAND, 0);
             animalStats.name = "ANIMAL_" + type.name();
             entity.add(animalStats);
         } else if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
@@ -482,7 +569,8 @@ public class UnitFactory {
             String ordinal = getOrdinal((owner == 1) ? state.p1BaseCount : state.p2BaseCount);
 
             // Base: Use Structure Constructor (With Income = 2)
-            StatsComponent stats = new StatsComponent((owner == 1 ? state.p1Name : state.p2Name) + "'s " + ordinal + " Base",
+            StatsComponent stats = new StatsComponent(
+                    (owner == 1 ? state.p1Name : state.p2Name) + "'s " + ordinal + " Base",
                     100, 0, 0, 0, 0, GameConfig.BORDER_RADIUS, 0, StatsComponent.MoveType.LAND, owner, 2);
 
             stats.baseOrdinal = ordinal;
@@ -491,7 +579,8 @@ public class UnitFactory {
         } else {
             // Town: Use Structure Constructor (With Income = 1)
             int income = (type == MapGenerator.ObjectType.TOWN) ? 1 : 0;
-            StatsComponent stats = new StatsComponent(info.name, 10, 0, 0, 0, 0, 1, 0, StatsComponent.MoveType.LAND, 0, income);
+            StatsComponent stats = new StatsComponent(info.name, 10, 0, 0, 0, 0, 1, 0, StatsComponent.MoveType.LAND, 0,
+                    income);
             entity.add(stats);
         }
         engine.addEntity(entity);
@@ -518,7 +607,8 @@ public class UnitFactory {
             }
             updateBaseTexture(baseEntity, stats);
             if (hud != null) {
-                hud.showLevelUpPopup(stats.owner, stats.name, stats.level, data.fundingBonus, data.unlockedUnits, data.unlockedStructures, this);
+                hud.showLevelUpPopup(stats.owner, stats.name, stats.level, data.fundingBonus, data.unlockedUnits,
+                        data.unlockedStructures, this);
             }
         }
     }
@@ -535,16 +625,24 @@ public class UnitFactory {
         }
     }
 
-    public void updateStructureFromSave(Entity entity, com.militopia.data.StructureData data, MapGenerator.GameMap map) {
+    public void updateStructureFromSave(Entity entity, com.militopia.data.StructureData data,
+            MapGenerator.GameMap map) {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
-        if (stats == null) {
+        if (stats == null)
             return;
-        }
+
+        GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
+
         stats.owner = data.owner;
         stats.currentBaseXP = data.currentBaseXP;
         stats.name = data.baseName;
         stats.baseOrdinal = data.baseOrdinal;
-        updateBaseTexture(entity, stats);
+
+        // Only apply base texture for actual bases — towns keep their own sprite
+        boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
+        if (!isTown) {
+            updateBaseTexture(entity, stats);
+        }
     }
 
     public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map, GameState state) {
@@ -552,30 +650,44 @@ public class UnitFactory {
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
         GridPositionComponent pos = objectEntity.getComponent(GridPositionComponent.class);
 
-        if (newOwner == 1) {
-            tex.region = baseRegions.get("lvl1_blue");
-            map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
-            state.p1BaseCount++;
-            stats.owner = 1;
-            stats.baseOrdinal = getOrdinal(state.p1BaseCount);
-            stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
-            state.p1XP += 250;
-        } else if (newOwner == 2) {
-            tex.region = baseRegions.get("lvl1_red");
-            map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
-            state.p2BaseCount++;
-            stats.owner = 2;
-            stats.baseOrdinal = getOrdinal(state.p2BaseCount);
-            stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
-            state.p2XP += 250;
-        }
+        boolean isTown = (map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
 
-        stats.vision = GameConfig.BORDER_RADIUS;
-        stats.income = 2;
-        stats.maxBaseXP = 2000;
-        stats.currentBaseXP = 0;
-        stats.level = 1;
-        spawnAnimalsAroundBase(pos.x, pos.y, map, state);
+        if (isTown) {
+            // --- Town capture: keep town sprite, just flip ownership ---
+            // The texture stays as townRegion — no sprite swap needed.
+            stats.owner = newOwner;
+            stats.income = 1;
+            // No base-XP, no level-up, no animal spawn needed for towns.
+            if (newOwner == 1)
+                state.p1XP += 50;
+            else
+                state.p2XP += 50;
+        } else {
+            // --- Enemy base capture ---
+            if (newOwner == 1) {
+                tex.region = baseRegions.get("lvl1_blue");
+                map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
+                state.p1BaseCount++;
+                stats.owner = 1;
+                stats.baseOrdinal = getOrdinal(state.p1BaseCount);
+                stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
+                state.p1XP += 250;
+            } else if (newOwner == 2) {
+                tex.region = baseRegions.get("lvl1_red");
+                map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
+                state.p2BaseCount++;
+                stats.owner = 2;
+                stats.baseOrdinal = getOrdinal(state.p2BaseCount);
+                stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
+                state.p2XP += 250;
+            }
+            stats.vision = GameConfig.BORDER_RADIUS;
+            stats.income = 2;
+            stats.maxBaseXP = 2000;
+            stats.currentBaseXP = 0;
+            stats.level = 1;
+            spawnAnimalsAroundBase(pos.x, pos.y, map, state);
+        }
     }
 
     public void spawnAnimalsAroundBase(int baseX, int baseY, MapGenerator.GameMap map, GameState state) {
@@ -658,7 +770,7 @@ public class UnitFactory {
     }
 
     private String getOrdinal(int i) {
-        String[] suffixes = new String[]{"th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"};
+        String[] suffixes = new String[] { "th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th" };
         switch (i % 100) {
             case 11:
             case 12:
@@ -685,7 +797,8 @@ public class UnitFactory {
 
     public UiInfo getUnitUi(String unitType) {
         TextureRegion[] regs = unitRegions.get(unitType);
-        return (regs != null) ? new UiInfo(toNiceName(unitType), regs[2]) : new UiInfo("Unknown", unitRegions.get("RECRUIT")[2]);
+        return (regs != null) ? new UiInfo(toNiceName(unitType), regs[2])
+                : new UiInfo("Unknown", unitRegions.get("RECRUIT")[2]);
     }
 
     public TextureRegion getHudIcon(MapGenerator.ObjectType type) {
@@ -757,7 +870,7 @@ public class UnitFactory {
     }
 
     public UiInfo getObjectUi(MapGenerator.ObjectType type) {
-        //Base Object
+        // Base Object
         if (type == MapGenerator.ObjectType.BASE_P1) {
             return new UiInfo("Blue Base", baseRegions.get("lvl1_blue"));
         }
@@ -828,7 +941,7 @@ public class UnitFactory {
             return new UiInfo("Red Base", baseRegions.get("lvl10_red"));
         }
 
-        //Other Object
+        // Other Object
         if (type == MapGenerator.ObjectType.TOWN) {
             return new UiInfo("Town", townRegion);
         }

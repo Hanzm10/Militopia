@@ -11,10 +11,12 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
 import com.militopia.config.GameConfig;
 import com.militopia.map.MapGenerator;
 import com.militopia.utils.ZComparator;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +28,7 @@ public class UnitRenderSystem extends EntitySystem {
     private BitmapFont font;
 
     private ImmutableArray<Entity> entities;
-    private ZComparator comparator; // Ensure this is initialized
+    private ZComparator comparator;
 
     private final MapGenerator.GameMap gameMap;
     private boolean fogEnabled = true;
@@ -36,11 +38,14 @@ public class UnitRenderSystem extends EntitySystem {
     private int bouncingX = -1, bouncingY = -1;
     private float bounceTimer = 0;
 
+    // Reusable removal list (avoids per-frame allocation accumulation)
+    private final Array<Entity> toRemove = new Array<>();
+
     public UnitRenderSystem(SpriteBatch batch, MapGenerator.GameMap map, BitmapFont font) {
         this.batch = batch;
         this.gameMap = map;
         this.font = font;
-        this.comparator = new ZComparator(); // Initialized
+        this.comparator = new ZComparator();
         this.shapeRenderer = new ShapeRenderer();
         this.priority = 1;
     }
@@ -68,27 +73,204 @@ public class UnitRenderSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
-        // Sort entities by Z and Depth
-        List<Entity> sortedEntities = new ArrayList<>();
-        for (Entity e : entities) {
-            sortedEntities.add(e);
-        }
-        Collections.sort(sortedEntities, comparator); // Use ZComparator
+        // Sorted sprite pass
+        List<Entity> sorted = new ArrayList<>();
+        for (Entity e : entities)
+            sorted.add(e);
+        Collections.sort(sorted, comparator);
 
         batch.begin();
-        for (Entity e : sortedEntities) {
-            drawEntity(e);
+        for (Entity e : sorted) {
+            drawEntity(e, deltaTime);
         }
         batch.end();
 
         drawBaseOverlay();
+        drawFloatingTexts(deltaTime);
+
+        // Remove dead + expired floating-text entities (done after all rendering)
+        for (Entity e : toRemove) {
+            getEngine().removeEntity(e);
+        }
+        toRemove.clear();
     }
 
-    // (Rest of the class methods drawBaseOverlay, drawEntity, etc. remain exactly as they were in your uploaded file)
-    private void drawBaseOverlay() {
-        if (selectedX == -1 || selectedY == -1) {
+    // -------------------------------------------------------------------------
+    // Entity drawing
+    // -------------------------------------------------------------------------
+
+    private void drawEntity(Entity e, float deltaTime) {
+        GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+        TextureComponent tex = e.getComponent(TextureComponent.class);
+        MovementComponent move = e.getComponent(MovementComponent.class);
+        TypeComponent typeC = e.getComponent(TypeComponent.class);
+        StatsComponent stats = e.getComponent(StatsComponent.class);
+        DeathAnimComponent death = e.getComponent(DeathAnimComponent.class);
+
+        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
+        boolean isAttackMarker = (typeC.type == TypeComponent.Type.ATTACK_MARKER);
+
+        // Fog culling (not applied to markers or the active player's own units)
+        if (fogEnabled && !isMarker && !isAttackMarker) {
+            if (!gameMap.visibleTiles[pos.x][pos.y]) {
+                boolean isMyUnit = (stats != null && stats.owner == activePlayer);
+                if (!isMyUnit)
+                    return;
+            }
+        }
+
+        // --- Death animation ---
+        if (death != null) {
+            death.timer += deltaTime;
+            if (death.timer >= DeathAnimComponent.DURATION) {
+                death.done = true;
+                toRemove.add(e);
+                return; // don't draw after fully faded
+            }
+            float progress = death.timer / DeathAnimComponent.DURATION;
+            float alpha = 1f - progress;
+            // Flash red: alternate between red and white every 0.1s
+            boolean flashRed = ((int) (death.timer / 0.1f) % 2 == 0);
+            if (flashRed) {
+                batch.setColor(1f, 0f, 0f, alpha);
+            } else {
+                batch.setColor(1f, 1f, 1f, alpha);
+            }
+            float isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f);
+            float isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
+            float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+            float yOff = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
+            batch.draw(tex.region, isoX - xOff, isoY - yOff + 10f, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+            batch.setColor(Color.WHITE);
             return;
         }
+
+        // --- Iso position (with movement lerp) ---
+        float isoX, isoY;
+        if (move != null) {
+            float alpha = Math.min(move.time / move.duration, 1.0f);
+            float startIsoX = (move.startX - move.startY) * (GameConfig.TILE_WIDTH / 2.0f);
+            float startIsoY = (move.startX + move.startY) * (GameConfig.TILE_HEIGHT / 2.0f);
+            float endIsoX = (move.targetX - move.targetY) * (GameConfig.TILE_WIDTH / 2.0f);
+            float endIsoY = (move.targetX + move.targetY) * (GameConfig.TILE_HEIGHT / 2.0f);
+            isoX = MathUtils.lerp(startIsoX, endIsoX, alpha);
+            isoY = MathUtils.lerp(startIsoY, endIsoY, alpha);
+        } else {
+            isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f);
+            isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
+        }
+
+        // Bounce animation
+        float animY = 0;
+        if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
+            float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
+            animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
+        }
+
+        float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+        float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
+        float verticalOff = isMarker || isAttackMarker ? 5f : 10f;
+
+        // --- Colour tinting ---
+        if (isAttackMarker) {
+            // Red semi-transparent dot
+            batch.setColor(1f, 0.15f, 0.15f, 0.75f);
+        } else if (isMarker) {
+            batch.setColor(Color.WHITE);
+        } else if (typeC.type == TypeComponent.Type.UNIT) {
+            if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
+                if (stats.owner == 1)
+                    batch.setColor(0.3f, 0.3f, 0.6f, 1.0f);
+                else if (stats.owner == 2)
+                    batch.setColor(0.6f, 0.3f, 0.3f, 1.0f);
+                else
+                    batch.setColor(Color.DARK_GRAY);
+            } else if (stats != null && stats.owner == 2) {
+                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
+            } else if (stats != null && stats.owner == 1) {
+                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
+            } else {
+                batch.setColor(Color.WHITE);
+            }
+        } else {
+            batch.setColor(Color.WHITE);
+        }
+
+        batch.draw(tex.region,
+                isoX - xOffset,
+                isoY - yOffset + verticalOff + animY,
+                GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        batch.setColor(Color.WHITE);
+
+        // Selection glow
+        if (!isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {
+            Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
+            batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
+            batch.setColor(0.4f, 0.4f, 0.4f, 1f);
+            batch.draw(tex.region,
+                    isoX - xOffset,
+                    isoY - yOffset + verticalOff + animY,
+                    GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+            batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+            batch.setColor(Color.WHITE);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Floating damage text
+    // -------------------------------------------------------------------------
+
+    private void drawFloatingTexts(float deltaTime) {
+        ImmutableArray<Entity> floaters = getEngine().getEntitiesFor(
+                Family.all(FloatingTextComponent.class).get());
+
+        if (floaters.size() == 0)
+            return;
+
+        batch.begin();
+
+        float originalScaleX = font.getData().scaleX;
+        float originalScaleY = font.getData().scaleY;
+        font.getData().setScale(0.22f);
+
+        for (Entity e : floaters) {
+            FloatingTextComponent ft = e.getComponent(FloatingTextComponent.class);
+            ft.timer += deltaTime;
+
+            if (ft.timer >= FloatingTextComponent.MAX_TIME) {
+                toRemove.add(e);
+                continue;
+            }
+
+            float progress = ft.timer / FloatingTextComponent.MAX_TIME;
+            float alpha = 1f - progress;
+            float driftY = progress * 18f; // drift 18 world units upward over 1s
+
+            // Colour: gold for "BLOCKED", red for damage numbers
+            if ("BLOCKED".equals(ft.text)) {
+                font.setColor(1f, 0.85f, 0f, alpha); // Gold
+            } else {
+                font.setColor(1f, 0.2f, 0.2f, alpha); // Red
+            }
+
+            GlyphLayout layout = new GlyphLayout(font, ft.text);
+            font.draw(batch, ft.text,
+                    ft.worldX - layout.width / 2f,
+                    ft.worldY + driftY);
+        }
+
+        font.getData().setScale(originalScaleX, originalScaleY);
+        font.setColor(Color.WHITE);
+        batch.end();
+    }
+
+    // -------------------------------------------------------------------------
+    // Base overlay (unchanged from original)
+    // -------------------------------------------------------------------------
+
+    private void drawBaseOverlay() {
+        if (selectedX == -1 || selectedY == -1)
+            return;
         Entity selectedEntity = null;
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
@@ -103,15 +285,16 @@ public class UnitRenderSystem extends EntitySystem {
         if (selectedEntity != null) {
             StatsComponent stats = selectedEntity.getComponent(StatsComponent.class);
             TypeComponent type = selectedEntity.getComponent(TypeComponent.class);
-            if (stats != null && type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2) && stats.income > 0) {
+            if (stats != null && type.type == TypeComponent.Type.OBJECT
+                    && (stats.owner == 1 || stats.owner == 2) && stats.income > 0) {
                 float isoX = (selectedX - selectedY) * (GameConfig.TILE_WIDTH / 2.0f);
                 float isoY = (selectedX + selectedY) * (GameConfig.TILE_HEIGHT / 2.0f);
-                float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
-                float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
-                float drawX = isoX - xOffset + GameConfig.DRAW_WIDTH / 2f;
-                float drawY = isoY - yOffset + 15;
-                drawXPBar(drawX, drawY - 8, stats);
-                drawBaseName(drawX, drawY + 20, stats.name);
+                float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+                float yOff = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
+                float dX = isoX - xOff + GameConfig.DRAW_WIDTH / 2f;
+                float dY = isoY - yOff + 15;
+                drawXPBar(dX, dY - 8, stats);
+                drawBaseName(dX, dY + 20, stats.name);
             }
         }
     }
@@ -121,23 +304,14 @@ public class UnitRenderSystem extends EntitySystem {
         Gdx.gl.glBlendFunc(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        float width = 32f;
-        float height = 4f;
-        float radius = 2f;
+        float width = 32f, height = 4f, radius = 2f;
         float progress = MathUtils.clamp(stats.currentBaseXP / stats.maxBaseXP, 0, 1);
         shapeRenderer.setColor(0f, 0f, 0f, 0.5f);
         drawRoundedRect(x - width / 2, y, width, height, radius);
         if (progress > 0) {
-            if (stats.owner == 1) {
-                shapeRenderer.setColor(0.2f, 0.4f, 1.0f, 1f);
-            } else {
-                shapeRenderer.setColor(1.0f, 0.2f, 0.2f, 1f);
-            }
-            float barWidth = Math.max(width * progress, radius * 2);
-            if (width * progress < radius * 2) {
-                barWidth = width * progress;
-            }
-            drawRoundedRect(x - width / 2, y, Math.max(barWidth, 2f), height, radius);
+            shapeRenderer.setColor(stats.owner == 1 ? new Color(0.2f, 0.4f, 1f, 1f) : new Color(1f, 0.2f, 0.2f, 1f));
+            float barWidth = Math.max(width * progress, 2f);
+            drawRoundedRect(x - width / 2, y, barWidth, height, radius);
         }
         shapeRenderer.end();
         Gdx.gl.glDisable(Gdx.gl.GL_BLEND);
@@ -158,84 +332,11 @@ public class UnitRenderSystem extends EntitySystem {
 
     private void drawBaseName(float x, float y, String name) {
         batch.begin();
-        float originalScaleX = font.getData().scaleX;
-        float originalScaleY = font.getData().scaleY;
+        float ox = font.getData().scaleX, oy = font.getData().scaleY;
         font.getData().setScale(0.35f);
         GlyphLayout layout = new GlyphLayout(font, name);
         font.draw(batch, name, x - layout.width / 2, y);
-        font.getData().setScale(originalScaleX, originalScaleY);
+        font.getData().setScale(ox, oy);
         batch.end();
-    }
-
-    private void drawEntity(Entity e) {
-        GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
-        TextureComponent tex = e.getComponent(TextureComponent.class);
-        MovementComponent move = e.getComponent(MovementComponent.class);
-        TypeComponent typeC = e.getComponent(TypeComponent.class);
-        StatsComponent stats = e.getComponent(StatsComponent.class);
-        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
-        if (fogEnabled) {
-            if (!gameMap.visibleTiles[pos.x][pos.y]) {
-                boolean isMyUnit = (stats != null && stats.owner == activePlayer);
-                if (!isMyUnit && !isMarker) {
-                    return;
-                }
-            }
-        }
-        float isoX, isoY;
-        if (move != null) {
-            float alpha = Math.min(move.time / move.duration, 1.0f);
-            float startIsoX = (move.startX - move.startY) * (GameConfig.TILE_WIDTH / 2.0f);
-            float startIsoY = (move.startX + move.startY) * (GameConfig.TILE_HEIGHT / 2.0f);
-            float endIsoX = (move.targetX - move.targetY) * (GameConfig.TILE_WIDTH / 2.0f);
-            float endIsoY = (move.targetX + move.targetY) * (GameConfig.TILE_HEIGHT / 2.0f);
-            isoX = MathUtils.lerp(startIsoX, endIsoX, alpha);
-            isoY = MathUtils.lerp(startIsoY, endIsoY, alpha);
-        } else {
-            isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f);
-            isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
-        }
-        float animY = 0;
-        if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
-            float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
-            animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
-        }
-        float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
-        float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
-        float verticalOffset = isMarker ? 5f : 10f;
-        if (isMarker) {
-            batch.setColor(Color.WHITE);
-        } else if (typeC.type == TypeComponent.Type.UNIT) {
-            // --- UPDATED EXHAUSTED COLOR LOGIC ---
-            if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
-                // Exhausted but tinted
-                if (stats.owner == 1) {
-                    batch.setColor(0.3f, 0.3f, 0.6f, 1.0f); // Dark Blueish
-                } else if (stats.owner == 2) {
-                    batch.setColor(0.6f, 0.3f, 0.3f, 1.0f); // Dark Reddish
-                } else {
-                    batch.setColor(Color.DARK_GRAY);
-                }
-            } // --- Normal Colors ---
-            else if (stats != null && stats.owner == 2) {
-                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f); // Light Red
-            } else if (stats != null && stats.owner == 1) {
-                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f); // Light Blue
-            } else {
-                batch.setColor(Color.WHITE);
-            }
-        } else {
-            batch.setColor(Color.WHITE);
-        }
-        batch.draw(tex.region, isoX - xOffset, isoY - yOffset + verticalOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-        batch.setColor(Color.WHITE);
-        if (!isMarker && pos.x == selectedX && pos.y == selectedY) {
-            Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
-            batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-            batch.setColor(0.4f, 0.4f, 0.4f, 1f);
-            batch.draw(tex.region, isoX - xOffset, isoY - yOffset + verticalOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
-            batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
-            batch.setColor(Color.WHITE);
-        }
     }
 }

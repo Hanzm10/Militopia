@@ -24,8 +24,13 @@ import com.militopia.data.GameState;
 import com.militopia.data.UnitData;
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
+import com.militopia.data.TurnSnapshot;
+import com.militopia.data.UnitSnapshot;
+import com.militopia.data.StructureSnapshot;
 import com.militopia.managers.SaveManager;
+import com.militopia.managers.TurnHistoryManager;
 import com.militopia.map.MapGenerator;
+import com.militopia.systems.CombatSystem;
 import com.militopia.systems.FogSystem;
 import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
@@ -56,10 +61,12 @@ public class GameScreen implements Screen {
     private FogSystem fogSystem;
     private boolean isFogEnabled = true;
     private BitmapFont font;
+    private TurnHistoryManager turnHistory = new TurnHistoryManager();
 
     private enum TurnState {
         PLAYING, FADING_OUT, FADING_IN
     }
+
     private TurnState turnState = TurnState.PLAYING;
     private float fadeTime = 0f;
     private final float FADE_DURATION = 0.3f;
@@ -121,6 +128,9 @@ public class GameScreen implements Screen {
 
         engine.addSystem(new MovementSystem());
 
+        CombatSystem combatSystem = new CombatSystem(gameMap, entityFactory);
+        engine.addSystem(combatSystem);
+
         fogSystem = new FogSystem(gameMap, gameState.currentPlayer);
         engine.addSystem(fogSystem);
 
@@ -128,6 +138,7 @@ public class GameScreen implements Screen {
         engine.addSystem(mapRenderSystem);
 
         unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
+        unitRenderSystem.setPlayer(gameState.currentPlayer);
         engine.addSystem(unitRenderSystem);
 
         if (loadedState.units != null) {
@@ -150,8 +161,7 @@ public class GameScreen implements Screen {
         gameHUD = new GameHUD(game);
 
         inputController = new GameInputController(
-                this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD
-        );
+                this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
 
         gameHUD.build(this, inputController, unitFactory, gameState);
         gameHUD.updateTurn(gameState.turnCount);
@@ -161,6 +171,14 @@ public class GameScreen implements Screen {
         gameHUD.updateFunding(gameState.p1Funding, startIncome);
 
         logBaseXPStatus(startIncome);
+
+        // --- Prime fog visibility AFTER all entities are spawned ---
+        // Without this, the first render frame sees all-false visibleTiles
+        // from a new boolean[][], causing incorrect fog state.
+        fogSystem.update(0);
+
+        // --- Snapshot the initial state so undo can rewind to turn 1 ---
+        turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
@@ -199,7 +217,8 @@ public class GameScreen implements Screen {
     }
 
     private void centerCameraOnBase(int playerID) {
-        MapGenerator.ObjectType targetBase = (playerID == 1) ? MapGenerator.ObjectType.BASE_P1 : MapGenerator.ObjectType.BASE_P2;
+        MapGenerator.ObjectType targetBase = (playerID == 1) ? MapGenerator.ObjectType.BASE_P1
+                : MapGenerator.ObjectType.BASE_P2;
         for (int x = 0; x < gameMap.width; x++) {
             for (int y = 0; y < gameMap.height; y++) {
                 if (gameMap.objects[x][y] == targetBase) {
@@ -235,7 +254,110 @@ public class GameScreen implements Screen {
         for (Entity entity : units) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
             stats.hasActed = false;
+            stats.hasMoved = false;
         }
+    }
+
+    /**
+     * Reverts the game to the start of the most recent turn.
+     * Dead units are resurrected; HP, funding, XP, and map ownership are all
+     * restored.
+     * Does nothing if there is no history.
+     */
+    public void undoTurn() {
+        TurnSnapshot snap = turnHistory.undo();
+        if (snap == null)
+            return;
+
+        // 1. Remove all UNIT entities from the engine
+        List<Entity> toRemove = new ArrayList<>();
+        ImmutableArray<Entity> all = engine.getEntitiesFor(
+                Family.all(TypeComponent.class).get());
+        for (Entity e : all) {
+            TypeComponent t = e.getComponent(TypeComponent.class);
+            if (t.type == TypeComponent.Type.UNIT)
+                toRemove.add(e);
+        }
+        for (Entity e : toRemove)
+            engine.removeEntity(e);
+
+        // 2. Restore GameState scalars
+        gameState.p1Funding = snap.p1Funding;
+        gameState.p2Funding = snap.p2Funding;
+        gameState.p1XP = snap.p1XP;
+        gameState.p2XP = snap.p2XP;
+        gameState.turnCount = snap.turn;
+        gameState.currentPlayer = snap.currentPlayer;
+        gameState.p1BaseCount = snap.p1BaseCount;
+        gameState.p2BaseCount = snap.p2BaseCount;
+
+        // 3. Restore map objects array (captures/uncaptures)
+        for (int x = 0; x < gameMap.width; x++) {
+            System.arraycopy(snap.mapObjects[x], 0, gameMap.objects[x], 0, gameMap.height);
+        }
+
+        // 4. Restore structures in-place (update owner, level, XP, income, name)
+        ImmutableArray<Entity> objects = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class, TypeComponent.class, StatsComponent.class).get());
+        for (StructureSnapshot ss : snap.structures) {
+            for (Entity e : objects) {
+                TypeComponent t = e.getComponent(TypeComponent.class);
+                if (t.type != TypeComponent.Type.OBJECT)
+                    continue;
+                GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+                if (pos.x == ss.x && pos.y == ss.y) {
+                    com.militopia.data.StructureData sd = new com.militopia.data.StructureData();
+                    sd.x = ss.x;
+                    sd.y = ss.y;
+                    sd.owner = ss.owner;
+                    sd.currentBaseXP = ss.currentBaseXP;
+                    sd.baseName = ss.name;
+                    sd.baseOrdinal = ss.baseOrdinal;
+                    unitFactory.updateStructureFromSave(e, sd, gameMap);
+                    StatsComponent s = e.getComponent(StatsComponent.class);
+                    s.level = ss.level;
+                    s.income = ss.income;
+                    break;
+                }
+            }
+        }
+
+        // 5. Recreate unit entities from snapshot
+        for (UnitSnapshot us : snap.units) {
+            unitFactory.createUnit(us.unitTypeKey, us.x, us.y, us.owner, us.hasActed);
+            // Find the newly created entity and restore its HP + hasMoved
+            ImmutableArray<Entity> freshUnits = engine.getEntitiesFor(
+                    Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
+            for (Entity e : freshUnits) {
+                TypeComponent t = e.getComponent(TypeComponent.class);
+                if (t.type != TypeComponent.Type.UNIT)
+                    continue;
+                GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+                StatsComponent s = e.getComponent(StatsComponent.class);
+                if (p.x == us.x && p.y == us.y && s.owner == us.owner) {
+                    s.currentHP = us.currentHP;
+                    s.hasActed = us.hasActed;
+                    s.hasMoved = us.hasMoved;
+                    break;
+                }
+            }
+        }
+
+        // 6. Refresh fog, HUD, camera
+        fogSystem.setPlayer(gameState.currentPlayer);
+        fogSystem.update(0);
+        unitRenderSystem.setPlayer(gameState.currentPlayer);
+        int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
+        int income = calculateIncome(gameState.currentPlayer);
+        gameHUD.updateTurn(gameState.turnCount);
+        gameHUD.updateFunding(currentFunds, income);
+        gameHUD.updateXP((gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP);
+        gameHUD.hideTileInfo();
+        inputController.clearMarkersPublic();
+
+        // Re-push so we can undo again if needed (the restored state is now the
+        // "current" turn start)
+        turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
     }
 
     public int calculateIncome(int playerID) {
@@ -301,7 +423,7 @@ public class GameScreen implements Screen {
                 StatsComponent stats = base.getComponent(StatsComponent.class);
 
                 // --- NEW LOGIC: Dynamic XP Gain ---
-                // Level 1: 250 + 0  = 250
+                // Level 1: 250 + 0 = 250
                 // Level 2: 250 + 10 = 260
                 // Level 3: 250 + 20 = 270
                 int naturalGain = 250 + ((stats.level - 1) * 10);
@@ -372,6 +494,8 @@ public class GameScreen implements Screen {
                 fadeTime = 0;
                 turnState = TurnState.PLAYING;
                 inputController.setInputEnabled(true);
+                // Snapshot the start of this new turn (before player acts)
+                turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
             }
         }
 
@@ -382,14 +506,12 @@ public class GameScreen implements Screen {
         mapRenderSystem.updateState(
                 inputController.getHoveredX(), inputController.getHoveredY(),
                 inputController.getBouncingX(), inputController.getBouncingY(),
-                inputController.getBounceTimer()
-        );
+                inputController.getBounceTimer());
 
         unitRenderSystem.updateState(
                 inputController.getHoveredX(), inputController.getHoveredY(),
                 inputController.getBouncingX(), inputController.getBouncingY(),
-                inputController.getBounceTimer()
-        );
+                inputController.getBounceTimer());
 
         engine.update(delta);
         gameHUD.render(delta);
@@ -399,7 +521,7 @@ public class GameScreen implements Screen {
         }
     }
 
-// --- UPDATED METHOD SIGNATURE & CONTENT ---
+    // --- UPDATED METHOD SIGNATURE & CONTENT ---
     private void logBaseXPStatus(int income) {
         StringBuilder sb = new StringBuilder();
         sb.append("\n========================================\n");
@@ -426,7 +548,8 @@ public class GameScreen implements Screen {
         List<String> p1Logs = new ArrayList<>();
         List<String> p2Logs = new ArrayList<>();
 
-        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class, TypeComponent.class).get());
+        ImmutableArray<Entity> entities = engine
+                .getEntitiesFor(Family.all(StatsComponent.class, TypeComponent.class).get());
 
         for (Entity e : entities) {
             StatsComponent stats = e.getComponent(StatsComponent.class);
@@ -436,7 +559,8 @@ public class GameScreen implements Screen {
 
                 // --- FIX: Only list Bases in the log ---
                 if (stats.name.contains("Base")) {
-                    String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP, stats.maxBaseXP);
+                    String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP,
+                            stats.maxBaseXP);
                     if (stats.owner == 1) {
                         p1Logs.add(entry);
                     } else {

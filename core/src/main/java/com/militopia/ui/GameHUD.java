@@ -43,6 +43,7 @@ public class GameHUD {
     private Table bottomContainer;
     private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
     private Label tileInfoLabel;
+    private Label hpLabel;
     private GameScreen gameScreen;
 
     private Label xpLabel;
@@ -104,7 +105,8 @@ public class GameHUD {
         stage.dispose();
     }
 
-    private void setupHUD(final GameScreen screen, final GameInputController inputController, final UnitFactory unitFactory, final GameState state) {
+    private void setupHUD(final GameScreen screen, final GameInputController inputController,
+            final UnitFactory unitFactory, final GameState state) {
         rootTable.clear();
         rootTable.setFillParent(true);
         TextureRegionDrawable topBg = createGradientDrawable(80, true);
@@ -128,6 +130,19 @@ public class GameHUD {
 
         bottomContent.add(createIconGroup(settingsBtn, "Settings")).expandX();
         bottomContent.add(createIconGroup(statsBtn, "Game Stats")).expandX();
+        if (GameConfig.TESTING_MODE) {
+            TextButton undoBtn = new TextButton("↩ Undo", game.skin);
+            undoBtn.getLabel().setFontScale(0.55f);
+            undoBtn.getLabel().setColor(Color.YELLOW);
+            undoBtn.pad(6, 14, 6, 14);
+            bottomContent.add(undoBtn).expandX();
+            undoBtn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    screen.undoTurn();
+                }
+            });
+        }
         bottomContent.add(createIconGroup(endTurnBtn, "End Turn")).expandX();
 
         bottomContainer = new Table();
@@ -249,7 +264,8 @@ public class GameHUD {
         summonMenu.add(contentTable).expandX().center();
     }
 
-    private void addSummonButton(Table container, final String unitType, final GameInputController controller, final UnitFactory factory, final GameState state) {
+    private void addSummonButton(Table container, final String unitType, final GameInputController controller,
+            final UnitFactory factory, final GameState state) {
         UnitFactory.UiInfo info = factory.getUnitUi(unitType);
         final int cost = factory.getUnitCost(unitType);
         TextureRegionDrawable circleDrawable;
@@ -262,7 +278,8 @@ public class GameHUD {
         }
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(
+                circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
         com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(info.region);
@@ -312,7 +329,8 @@ public class GameHUD {
         summonMenu.setX(0);
         summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.clearActions();
-        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+        bottomContainer.addAction(
+                Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
     public void hideSummonMenu() {
@@ -357,7 +375,8 @@ public class GameHUD {
         }
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(
+                circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
 
@@ -389,7 +408,8 @@ public class GameHUD {
         container.add(group).pad(10);
     }
 
-    public void openCaptureMenu(final Entity townEntity, final Entity capturingUnit, final UnitFactory factory, final GameInputController controller, final MapGenerator.GameMap map, final GameState state) {
+    public void openCaptureMenu(final Entity townEntity, final Entity capturingUnit, final UnitFactory factory,
+            final GameInputController controller, final MapGenerator.GameMap map, final GameState state) {
         summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
         Table contentTable = new Table();
@@ -411,10 +431,13 @@ public class GameHUD {
         summonMenu.setX(0);
         summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.clearActions();
-        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+        bottomContainer.addAction(
+                Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
-    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit, final UnitFactory factory, final GameInputController controller, final MapGenerator.GameMap map, final GameState state) {
+    private void addCaptureButton(Table container, final Entity structureEntity, final Entity capturingUnit,
+            final UnitFactory factory, final GameInputController controller, final MapGenerator.GameMap map,
+            final GameState state) {
         final int newOwner = capturingUnit.getComponent(StatsComponent.class).owner;
         TextureRegion baseRegion;
         if (newOwner == 1) {
@@ -432,7 +455,8 @@ public class GameHUD {
         }
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(
+                circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
         com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(baseRegion);
@@ -476,7 +500,8 @@ public class GameHUD {
         container.add(group).pad(10);
     }
 
-    public void openBuildMenu(int x, int y, int owner, int maxLevel, boolean isWater, boolean isCoastal, GameState state, int parentX, int parentY) {
+    public void openBuildMenu(int x, int y, int owner, int maxLevel, boolean isWater, boolean isCoastal,
+            GameState state, int parentX, int parentY) {
         this.buildX = x;
         this.buildY = y;
         this.currentBaseOwner = owner;
@@ -492,7 +517,8 @@ public class GameHUD {
         summonMenu.setX(0);
         summonMenu.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.clearActions();
-        bottomContainer.addAction(Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+        bottomContainer.addAction(
+                Actions.moveTo(bottomContainer.getX(), -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
     private void populateBuildMenu(GameState state, int maxLevel, boolean isWater, boolean isCoastal) {
@@ -530,7 +556,8 @@ public class GameHUD {
         summonMenu.row();
     }
 
-    private void addBuildButton(Table container, final String structType, final GameInputController controller, final UnitFactory factory, final GameState state) {
+    private void addBuildButton(Table container, final String structType, final GameInputController controller,
+            final UnitFactory factory, final GameState state) {
         TextureRegion iconRegion = factory.getTextureForPopup(structType);
         final int cost = factory.getStructureCost(structType);
 
@@ -548,7 +575,8 @@ public class GameHUD {
 
         Stack buttonStack = new Stack();
         buttonStack.setTransform(true);
-        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(circleDrawable);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(
+                circleDrawable);
         circleBg.setScaling(Scaling.fit);
         buttonStack.add(circleBg);
 
@@ -585,7 +613,8 @@ public class GameHUD {
         group.add(buttonStack).size(80, 80).row();
 
         // Formatting Name
-        Label nameLbl = new Label(factory.toNiceName(structType) + " (" + cost + ")", game.skin, "default-font", Color.WHITE);
+        Label nameLbl = new Label(factory.toNiceName(structType) + " (" + cost + ")", game.skin, "default-font",
+                Color.WHITE);
         nameLbl.setFontScale(0.6f);
         nameLbl.setWrap(true);
         nameLbl.setAlignment(com.badlogic.gdx.utils.Align.center);
@@ -594,16 +623,30 @@ public class GameHUD {
         container.add(group).pad(10);
     }
 
-    // ... (rest of helper methods createTileInfoPanel, createSettingsOverlay, createStatGroup, createCircleButton, createIconGroup, createGradientDrawable unchanged) ...
+    // ... (rest of helper methods createTileInfoPanel, createSettingsOverlay,
+    // createStatGroup, createCircleButton, createIconGroup, createGradientDrawable
+    // unchanged) ...
     private void createTileInfoPanel() {
         tileInfoTable = new Table();
         tileInfoTable.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.9f)));
+
         tileInfoImage = new com.badlogic.gdx.scenes.scene2d.ui.Image();
         tileInfoImage.setScaling(Scaling.fit);
         tileInfoTable.add(tileInfoImage).size(70, 70).padLeft(20);
+
+        // Name + HP stacked vertically
+        Table infoStack = new Table();
         tileInfoLabel = new Label("Terrain Name", game.skin, "default-font", Color.WHITE);
         tileInfoLabel.setFontScale(0.8f);
-        tileInfoTable.add(tileInfoLabel).expandX().left().padLeft(20);
+        infoStack.add(tileInfoLabel).left().row();
+
+        hpLabel = new Label("", game.skin, "default-font", Color.WHITE);
+        hpLabel.setFontScale(0.65f);
+        hpLabel.setVisible(false);
+        infoStack.add(hpLabel).left();
+
+        tileInfoTable.add(infoStack).expandX().left().padLeft(20);
+
         ImageButton.ImageButtonStyle closeStyle = new ImageButton.ImageButtonStyle();
         try {
             Texture closeTex = assets.get(AssetManager.BTN_SLIDEDOWN);
@@ -622,7 +665,8 @@ public class GameHUD {
             }
         });
         tileInfoTable.add(closeBtn).size(40, 40).padRight(20);
-        float panelHeight = 80f;
+
+        float panelHeight = 90f;
         tileInfoTable.setPosition(0, -panelHeight);
         tileInfoTable.setSize(stage.getWidth(), panelHeight);
         stage.addActor(tileInfoTable);
@@ -631,12 +675,46 @@ public class GameHUD {
     public void showTileInfo(String name, TextureRegion region) {
         tileInfoLabel.setText(name);
         tileInfoImage.setDrawable(new TextureRegionDrawable(region));
+        if (hpLabel != null)
+            hpLabel.setVisible(false);
         tileInfoTable.setWidth(stage.getWidth());
         tileInfoTable.setX(0);
         tileInfoTable.clearActions();
         bottomContainer.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+    }
+
+    /**
+     * Shows the tile info panel with unit name AND current HP.
+     * HP label is green when above half, yellow when at or below half.
+     */
+    public void showUnitInfo(String name, TextureRegion region, int currentHP, int maxHP) {
+        tileInfoLabel.setText(name);
+        tileInfoImage.setDrawable(new TextureRegionDrawable(region));
+        if (hpLabel != null) {
+            hpLabel.setText("HP: " + currentHP + " / " + maxHP);
+            hpLabel.setColor(currentHP > maxHP / 2 ? Color.GREEN : Color.YELLOW);
+            hpLabel.setVisible(true);
+        }
+        tileInfoTable.setWidth(stage.getWidth());
+        tileInfoTable.setX(0);
+        tileInfoTable.clearActions();
+        bottomContainer.clearActions();
+        tileInfoTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
+        bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+    }
+
+    /**
+     * Snaps the HP label to the new value immediately (called after combat
+     * resolves).
+     * Only updates if the HP label is currently visible (i.e., a unit is selected).
+     */
+    public void snapHP(int currentHP, int maxHP) {
+        if (hpLabel != null && hpLabel.isVisible()) {
+            hpLabel.setText("HP: " + currentHP + " / " + maxHP);
+            hpLabel.setColor(currentHP > maxHP / 2 ? Color.GREEN : Color.YELLOW);
+        }
     }
 
     public void hideTileInfo() {
@@ -710,7 +788,8 @@ public class GameHUD {
             try {
                 Texture iconTex = assets.get(AssetManager.FUNDING_ICON);
                 iconTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-                com.badlogic.gdx.scenes.scene2d.ui.Image iconParams = new com.badlogic.gdx.scenes.scene2d.ui.Image(new TextureRegion(iconTex));
+                com.badlogic.gdx.scenes.scene2d.ui.Image iconParams = new com.badlogic.gdx.scenes.scene2d.ui.Image(
+                        new TextureRegion(iconTex));
                 iconParams.setScaling(Scaling.fit);
                 valueRow.add(iconParams).size(40, 40).padRight(0); // Small size
             } catch (Exception e) {
@@ -804,10 +883,14 @@ public class GameHUD {
             incentives.add(createIncentiveBubble("+" + bonusFunds + " Funding", fundingIcon2)).pad(10);
         }
         for (String u : units) {
-            incentives.add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(u), factory.getTextureForPopup(u))).pad(10);
+            incentives
+                    .add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(u), factory.getTextureForPopup(u)))
+                    .pad(10);
         }
         for (String s : structs) {
-            incentives.add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(s), factory.getTextureForPopup(s))).pad(10);
+            incentives
+                    .add(createIncentiveBubble("Unlock:\n" + unitFactory.toNiceName(s), factory.getTextureForPopup(s)))
+                    .pad(10);
         }
 
         modal.add(incentives).row();
@@ -839,7 +922,8 @@ public class GameHUD {
 
         stack.add(new com.badlogic.gdx.scenes.scene2d.ui.Image(bg));
         if (icon != null) {
-            Container<com.badlogic.gdx.scenes.scene2d.ui.Image> c = new Container<>(new com.badlogic.gdx.scenes.scene2d.ui.Image(icon));
+            Container<com.badlogic.gdx.scenes.scene2d.ui.Image> c = new Container<>(
+                    new com.badlogic.gdx.scenes.scene2d.ui.Image(icon));
             c.size(50, 50).center();
             stack.add(c);
         }

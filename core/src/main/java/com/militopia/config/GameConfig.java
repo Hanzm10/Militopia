@@ -2,10 +2,10 @@ package com.militopia.config;
 
 public class GameConfig {
     // Grid Settings
-    //width & height of map(by tiles)
-    public static final int MAP_WIDTH = 16;  
-    public static final int MAP_HEIGHT = 16; 
-    //size of tiles
+    // width & height of map(by tiles)
+    public static final int MAP_WIDTH = 16;
+    public static final int MAP_HEIGHT = 16;
+    // size of tiles
     public static final int TILE_WIDTH = 16;
     public static final int TILE_HEIGHT = 10;
 
@@ -26,8 +26,8 @@ public class GameConfig {
 
     // Territory Settings
     public static final int BORDER_RADIUS = 1; // "1 tiles wide"
-    
-    //Wild Animal Count
+
+    // Wild Animal Count
     public static final int WILD_ANIMAL_COUNT_MIN = 1;
     public static final int WILD_ANIMAL_COUNT_MAX = 3;
 
@@ -36,12 +36,12 @@ public class GameConfig {
     public static final float ZOOM_MAX = 2.0f; // Furthest (Zoomed Out)
     public static final float ZOOM_SPEED = 0.1f; // How fast scrolling zooms
     public static final float STARTUP_ZOOM = 0.8f;
-    
+
     // Drag Sensitivity (Lower = Slower/Smoother)
     public static final float DRAG_SPEED = 0.35f;
-    
-    //UI LAYOUT SETTINGS
+
+    // UI LAYOUT SETTINGS
     public static final float UI_WIDTH = 300f;
-    
+
     public static final boolean TESTING_MODE = false;
 }
