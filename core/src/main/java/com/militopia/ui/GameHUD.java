@@ -21,6 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
+import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
@@ -673,10 +674,9 @@ public class GameHUD {
     }
 
     public void showTileInfo(String name, TextureRegion region) {
-        tileInfoLabel.setText(name);
-        tileInfoImage.setDrawable(new TextureRegionDrawable(region));
-        if (hpLabel != null)
-            hpLabel.setVisible(false);
+        tileInfoTable.clear();
+        createTileInfoPanelElements(name, region); // Helper to rebuild base elements
+
         tileInfoTable.setWidth(stage.getWidth());
         tileInfoTable.setX(0);
         tileInfoTable.clearActions();
@@ -689,7 +689,7 @@ public class GameHUD {
      * Shows the tile info panel with unit name AND current HP.
      * HP label is green when above half, yellow when at or below half.
      */
-    public void showUnitInfo(String name, TextureRegion region, int currentHP, int maxHP) {
+    public void showUnitInfo(final Entity unit, String name, TextureRegion region, int currentHP, int maxHP) {
         tileInfoLabel.setText(name);
         tileInfoImage.setDrawable(new TextureRegionDrawable(region));
         if (hpLabel != null) {
@@ -697,12 +697,45 @@ public class GameHUD {
             hpLabel.setColor(currentHP > maxHP / 2 ? Color.GREEN : Color.YELLOW);
             hpLabel.setVisible(true);
         }
+
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
+
+        // Only show ability buttons for the current active player's units
+        if (stats != null && abilities != null && stats.owner == gameScreen.getCurrentPlayer() && !stats.hasActed) {
+            if (stats.unitTypeKey.equals("RECRUIT") && !abilities.isDiggingIn) {
+                addAbilityButton("Dig In", new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        inputController.performAbility(unit, "DIG_IN");
+                    }
+                });
+            } else if (stats.unitTypeKey.equals("SUBMARINE") && abilities.nukeCooldown == 0) {
+                addAbilityButton("Launch Nuke", new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        inputController.performAbility(unit, "LAUNCH_NUKE");
+                    }
+                });
+            }
+        }
+
         tileInfoTable.setWidth(stage.getWidth());
         tileInfoTable.setX(0);
         tileInfoTable.clearActions();
         bottomContainer.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
         bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
+    }
+
+    private void addAbilityButton(String text, ClickListener listener) {
+        TextButton btn = new TextButton(text, game.skin);
+        btn.getLabel().setFontScale(0.6f);
+        btn.addListener(new HoverListener());
+        btn.addListener(listener);
+        // Add to a specialized row in tileInfoTable?
+        // Let's add it to the stack for now or create a new row if it gets crowded.
+        tileInfoTable.add(btn).padRight(20).height(40);
     }
 
     /**
@@ -715,6 +748,22 @@ public class GameHUD {
             hpLabel.setText("HP: " + currentHP + " / " + maxHP);
             hpLabel.setColor(currentHP > maxHP / 2 ? Color.GREEN : Color.YELLOW);
         }
+    }
+
+    private void createTileInfoPanelElements(String name, TextureRegion region) {
+        tileInfoImage.setDrawable(new TextureRegionDrawable(region));
+        tileInfoLabel.setText(name);
+        if (hpLabel != null)
+            hpLabel.setVisible(false);
+
+        tileInfoTable.add(tileInfoImage).size(60).padRight(15);
+
+        Table textTable = new Table();
+        textTable.add(tileInfoLabel).left().row();
+        if (hpLabel != null)
+            textTable.add(hpLabel).left();
+
+        tileInfoTable.add(textTable).expandX().left();
     }
 
     public void hideTileInfo() {

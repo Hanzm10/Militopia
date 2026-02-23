@@ -35,6 +35,7 @@ import com.militopia.systems.FogSystem;
 import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
+import com.militopia.systems.AbilityStatusSystem;
 import com.militopia.ui.GameHUD;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,6 +59,7 @@ public class GameScreen implements Screen {
     private UnitRenderSystem unitRenderSystem;
     private GameInputController inputController;
     public GameHUD gameHUD;
+    private AbilityStatusSystem abilityStatusSystem;
     private FogSystem fogSystem;
     private boolean isFogEnabled = true;
     private BitmapFont font;
@@ -133,6 +135,9 @@ public class GameScreen implements Screen {
 
         fogSystem = new FogSystem(gameMap, gameState.currentPlayer);
         engine.addSystem(fogSystem);
+
+        abilityStatusSystem = new AbilityStatusSystem(gameMap);
+        engine.addSystem(abilityStatusSystem);
 
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
         engine.addSystem(mapRenderSystem);
@@ -362,11 +367,30 @@ public class GameScreen implements Screen {
 
     public int calculateIncome(int playerID) {
         int totalIncome = 0;
-        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
+        ImmutableArray<Entity> entities = engine
+                .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
+
         for (Entity entity : entities) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
             if (stats.owner == playerID) {
                 totalIncome += stats.income;
+
+                // SOLAR ARRAY: Tech Synergy (+1 for each adjacent friendly structure)
+                if (stats.name.contains("Solar Array")) {
+                    GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
+                    for (Entity other : entities) {
+                        if (other == entity)
+                            continue;
+                        StatsComponent oStats = other.getComponent(StatsComponent.class);
+                        GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
+                        // Check if other is a friendly structure (income > 0 or base)
+                        if (oStats.owner == playerID && (oStats.income > 0 || oStats.name.contains("Base"))) {
+                            if (Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
+                                totalIncome += 1;
+                            }
+                        }
+                    }
+                }
             }
         }
         return totalIncome;
@@ -472,6 +496,10 @@ public class GameScreen implements Screen {
                         currentTotal = gameState.p2Funding;
                     }
                 }
+
+                // --- Ability Turn Start Processing ---
+                abilityStatusSystem.onTurnStart(gameState.currentPlayer);
+
                 logBaseXPStatus(income);
 
                 resetUnitActions();

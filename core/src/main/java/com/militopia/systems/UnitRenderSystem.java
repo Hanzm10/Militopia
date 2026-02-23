@@ -110,12 +110,43 @@ public class UnitRenderSystem extends EntitySystem {
         boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
         boolean isAttackMarker = (typeC.type == TypeComponent.Type.ATTACK_MARKER);
 
-        // Fog culling (not applied to markers or the active player's own units)
-        if (fogEnabled && !isMarker && !isAttackMarker) {
-            if (!gameMap.visibleTiles[pos.x][pos.y]) {
-                boolean isMyUnit = (stats != null && stats.owner == activePlayer);
-                if (!isMyUnit)
+        // Fog and Stealth culling
+        if (!isMarker && !isAttackMarker) {
+            boolean isMyUnit = (stats != null && stats.owner == activePlayer);
+
+            if (fogEnabled) {
+                if (!gameMap.visibleTiles[pos.x][pos.y] && !isMyUnit) {
                     return;
+                }
+            }
+
+            // Stealth check (Enemy view only)
+            if (!isMyUnit && stats != null) {
+                AbilitiesComponent abilities = e.getComponent(AbilitiesComponent.class);
+                boolean isStealth = (abilities != null && abilities.isCloaked);
+
+                // Sniper Camouflage: Grass/Forest/Mountain?
+                // The prompt says "forest/mountains". We use Tree objects or Mountain terrain.
+                if (stats.unitTypeKey.equals("SNIPER")) {
+                    MapGenerator.TerrainType terrain = gameMap.terrain[pos.x][pos.y];
+                    MapGenerator.ObjectType obj = gameMap.objects[pos.x][pos.y];
+                    if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                            || obj == MapGenerator.ObjectType.RUINS) {
+                        isStealth = true;
+                    }
+                } else if (stats.unitTypeKey.equals("WRAITH")) {
+                    isStealth = true;
+                }
+
+                // If unit has already acted/attacked, it is revealed
+                if (stats.hasActed) {
+                    isStealth = false;
+                }
+
+                if (isStealth && !gameMap.detectedTiles[pos.x][pos.y]) {
+                    // Hidden!
+                    return;
+                }
             }
         }
 

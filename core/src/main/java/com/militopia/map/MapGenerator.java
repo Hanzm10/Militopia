@@ -14,7 +14,7 @@ public class MapGenerator {
 
     public enum ObjectType {
         NONE,
-        BASE_P1, BASE_P2, 
+        BASE_P1, BASE_P2,
         BASE_P1_LVL2, BASE_P2_LVL2,
         BASE_P1_LVL3, BASE_P2_LVL3,
         BASE_P1_LVL4, BASE_P2_LVL4,
@@ -33,6 +33,7 @@ public class MapGenerator {
         public TerrainType[][] terrain;
         public ObjectType[][] objects;
         public boolean[][] visibleTiles;
+        public boolean[][] detectedTiles; // NEW: For stealth detection
         public int width, height;
 
         public GameMap(int w, int h) {
@@ -41,12 +42,17 @@ public class MapGenerator {
             terrain = new TerrainType[w][h];
             objects = new ObjectType[w][h];
             visibleTiles = new boolean[w][h];
+            detectedTiles = new boolean[w][h];
         }
     }
 
     private static class Point {
         int x, y;
-        Point(int x, int y) { this.x = x; this.y = y; }
+
+        Point(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
     }
 
     // --- CONFIGURATION ---
@@ -74,7 +80,7 @@ public class MapGenerator {
         // 5. RESOURCE PASS (Mandatory Oil near Settlements)
         List<Point> allSettlements = new ArrayList<>(bases);
         allSettlements.addAll(towns);
-        
+
         placeResourcesAround(map, allSettlements);
 
         return map;
@@ -91,17 +97,24 @@ public class MapGenerator {
                 double value = noise.eval(x * scale, y * scale);
                 TerrainType type;
 
-                if (value < -0.4) type = TerrainType.DEEP_WATER;
-                else if (value < -0.15) type = TerrainType.WATER;
-                else if (value < 0.001) type = TerrainType.SAND;
-                else if (value < 0.5) type = TerrainType.GRASS;
-                else type = TerrainType.MOUNTAIN;
+                if (value < -0.4)
+                    type = TerrainType.DEEP_WATER;
+                else if (value < -0.15)
+                    type = TerrainType.WATER;
+                else if (value < 0.001)
+                    type = TerrainType.SAND;
+                else if (value < 0.5)
+                    type = TerrainType.GRASS;
+                else
+                    type = TerrainType.MOUNTAIN;
 
                 map.terrain[x][y] = type;
                 map.objects[x][y] = ObjectType.NONE;
 
-                if (type == TerrainType.GRASS) grassTiles.add(new Point(x, y));
-                if (type == TerrainType.MOUNTAIN) map.objects[x][y] = ObjectType.MOUNTAIN_OBJ;
+                if (type == TerrainType.GRASS)
+                    grassTiles.add(new Point(x, y));
+                if (type == TerrainType.MOUNTAIN)
+                    map.objects[x][y] = ObjectType.MOUNTAIN_OBJ;
             }
         }
     }
@@ -113,7 +126,7 @@ public class MapGenerator {
         // Constraint: Within top-left quadrant, but respecting margins
         int p1x = MathUtils.random(MAP_MARGIN, width / 3);
         int p1y = MathUtils.random(MAP_MARGIN, height - MAP_MARGIN);
-        
+
         Point p1Point = findNearestLand(map, p1x, p1y);
         setBase(map, p1Point.x, p1Point.y, ObjectType.BASE_P1);
         baseLocations.add(p1Point);
@@ -121,24 +134,25 @@ public class MapGenerator {
         // --- 2. Place Player 2 Base ---
         Point p2Point = null;
         int attempts = 0;
-        float minDistance = (width + height) / 2.5f; 
+        float minDistance = (width + height) / 2.5f;
 
         while (p2Point == null && attempts < 20) {
             int rx = MathUtils.random(width / 2, width - MAP_MARGIN);
             int ry = MathUtils.random(MAP_MARGIN, height - MAP_MARGIN);
-            
+
             if (Vector2.dst(p1Point.x, p1Point.y, rx, ry) > minDistance) {
                 p2Point = findNearestLand(map, rx, ry);
             }
             attempts++;
         }
-        
+
         // Fallback (Respecting margins)
-        if (p2Point == null) p2Point = new Point(width - (MAP_MARGIN + 1), height - (MAP_MARGIN + 1));
+        if (p2Point == null)
+            p2Point = new Point(width - (MAP_MARGIN + 1), height - (MAP_MARGIN + 1));
 
         setBase(map, p2Point.x, p2Point.y, ObjectType.BASE_P2);
         baseLocations.add(p2Point);
-        
+
         return baseLocations;
     }
 
@@ -146,27 +160,30 @@ public class MapGenerator {
         Collections.shuffle(grassTiles, new java.util.Random(seed));
         List<Point> towns = new ArrayList<>();
         int targetTowns = 8;
-        
+
         for (Point p : grassTiles) {
-            if (towns.size() >= targetTowns) break;
-            
+            if (towns.size() >= targetTowns)
+                break;
+
             // RULE 4 Check: Margin from edges
-            if (p.x < MAP_MARGIN || p.x >= width - MAP_MARGIN || 
-                p.y < MAP_MARGIN || p.y >= height - MAP_MARGIN) {
+            if (p.x < MAP_MARGIN || p.x >= width - MAP_MARGIN ||
+                    p.y < MAP_MARGIN || p.y >= height - MAP_MARGIN) {
                 continue;
             }
 
-            if (map.objects[p.x][p.y] != ObjectType.NONE && map.objects[p.x][p.y] != ObjectType.TREE) continue;
+            if (map.objects[p.x][p.y] != ObjectType.NONE && map.objects[p.x][p.y] != ObjectType.TREE)
+                continue;
 
             boolean tooClose = false;
             for (Point t : towns) {
-                if (Vector2.dst(p.x, p.y, t.x, t.y) < 2.5f) { 
-                    tooClose = true; 
+                if (Vector2.dst(p.x, p.y, t.x, t.y) < 2.5f) {
+                    tooClose = true;
                     break;
                 }
             }
             if (!tooClose) {
-                if (isNearBase(map, p.x, p.y)) tooClose = true;
+                if (isNearBase(map, p.x, p.y))
+                    tooClose = true;
             }
 
             if (!tooClose) {
@@ -179,7 +196,7 @@ public class MapGenerator {
 
     private void placeResourcesAround(GameMap map, List<Point> centers) {
         for (Point center : centers) {
-            
+
             // --- RULE 2: MANDATORY OIL (1-2 count) ---
             int oilCount = MathUtils.random(1, 2);
             spawnSpecificResource(map, center, oilCount, ObjectType.OIL, 1, 3); // Rule 1: 1-3 tiles
@@ -187,22 +204,23 @@ public class MapGenerator {
             // --- OPTIONAL: RUINS (0-1 count) ---
             // Kept for flavor, but less priority
             int ruinCount = MathUtils.random(0, 1);
-            spawnSpecificResource(map, center, ruinCount, ObjectType.RUINS, 2, 4); 
+            spawnSpecificResource(map, center, ruinCount, ObjectType.RUINS, 2, 4);
         }
     }
 
-    private void spawnSpecificResource(GameMap map, Point center, int count, ObjectType type, int minDist, int maxDist) {
+    private void spawnSpecificResource(GameMap map, Point center, int count, ObjectType type, int minDist,
+            int maxDist) {
         int placed = 0;
         int attempts = 0;
-        
+
         while (placed < count && attempts < 20) {
             attempts++;
-            
+
             int dist = MathUtils.random(minDist, maxDist);
             int angle = MathUtils.random(0, 360);
-            
-            int tx = center.x + (int)(MathUtils.cosDeg(angle) * dist);
-            int ty = center.y + (int)(MathUtils.sinDeg(angle) * dist);
+
+            int tx = center.x + (int) (MathUtils.cosDeg(angle) * dist);
+            int ty = center.y + (int) (MathUtils.sinDeg(angle) * dist);
 
             // Rule 3 Check: Allow generation (even on water) as long as it's empty
             if (isValid(map, tx, ty) && map.objects[tx][ty] == ObjectType.NONE) {
@@ -215,7 +233,8 @@ public class MapGenerator {
     private void placeFlora(GameMap map, int width, int height) {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (map.objects[x][y] != ObjectType.NONE) continue;
+                if (map.objects[x][y] != ObjectType.NONE)
+                    continue;
 
                 TerrainType t = map.terrain[x][y];
                 float chance = MathUtils.random();
@@ -223,7 +242,8 @@ public class MapGenerator {
                 if (t == TerrainType.GRASS && chance < 0.20f) {
                     map.objects[x][y] = ObjectType.TREE;
                 } else if (t == TerrainType.SAND) {
-                    if (chance < 0.05f) map.objects[x][y] = ObjectType.CACTUS;
+                    if (chance < 0.05f)
+                        map.objects[x][y] = ObjectType.CACTUS;
                     // Rule 1 Enforcement: REMOVED random Oil generation here.
                 }
             }
@@ -235,24 +255,30 @@ public class MapGenerator {
     // -------------------------------------------------------------------------
 
     private Point findNearestLand(GameMap map, int startX, int startY) {
-        if (isLand(map, startX, startY)) return new Point(startX, startY);
+        if (isLand(map, startX, startY))
+            return new Point(startX, startY);
 
         int maxRadius = Math.max(map.width, map.height);
         for (int r = 1; r < maxRadius; r++) {
             for (int dx = -r; dx <= r; dx++) {
-                if (checkLand(map, startX + dx, startY - r)) return new Point(startX + dx, startY - r);
-                if (checkLand(map, startX + dx, startY + r)) return new Point(startX + dx, startY + r);
+                if (checkLand(map, startX + dx, startY - r))
+                    return new Point(startX + dx, startY - r);
+                if (checkLand(map, startX + dx, startY + r))
+                    return new Point(startX + dx, startY + r);
             }
             for (int dy = -r + 1; dy < r; dy++) {
-                if (checkLand(map, startX - r, startY + dy)) return new Point(startX - r, startY + dy);
-                if (checkLand(map, startX + r, startY + dy)) return new Point(startX + r, startY + dy);
+                if (checkLand(map, startX - r, startY + dy))
+                    return new Point(startX - r, startY + dy);
+                if (checkLand(map, startX + r, startY + dy))
+                    return new Point(startX + r, startY + dy);
             }
         }
         return new Point(startX, startY);
     }
 
     private boolean checkLand(GameMap map, int x, int y) {
-        if (!isValid(map, x, y)) return false;
+        if (!isValid(map, x, y))
+            return false;
         return isLand(map, x, y);
     }
 
@@ -269,7 +295,8 @@ public class MapGenerator {
         for (int i = 0; i < map.width; i++) {
             for (int j = 0; j < map.height; j++) {
                 if (map.objects[i][j] == ObjectType.BASE_P1 || map.objects[i][j] == ObjectType.BASE_P2) {
-                    if (Vector2.dst(x, y, i, j) < 5) return true;
+                    if (Vector2.dst(x, y, i, j) < 5)
+                        return true;
                 }
             }
         }
@@ -279,11 +306,14 @@ public class MapGenerator {
     private void setBase(GameMap map, int x, int y, ObjectType type) {
         map.terrain[x][y] = TerrainType.GRASS;
         map.objects[x][y] = type;
-        clearObj(map, x + 1, y); clearObj(map, x - 1, y);
-        clearObj(map, x, y + 1); clearObj(map, x, y - 1);
+        clearObj(map, x + 1, y);
+        clearObj(map, x - 1, y);
+        clearObj(map, x, y + 1);
+        clearObj(map, x, y - 1);
     }
 
     private void clearObj(GameMap map, int x, int y) {
-        if (isValid(map, x, y)) map.objects[x][y] = ObjectType.NONE;
+        if (isValid(map, x, y))
+            map.objects[x][y] = ObjectType.NONE;
     }
 }

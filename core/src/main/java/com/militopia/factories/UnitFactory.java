@@ -215,6 +215,7 @@ public class UnitFactory {
         entity.add(new TextureComponent(regions[0]));
         entity.add(new FacingComponent(regions[1], regions[0]));
         entity.add(new TypeComponent(TypeComponent.Type.UNIT));
+        entity.add(new AbilitiesComponent()); // NEW: Add abilities state
 
         // --- MANUAL STATS CONFIGURATION ---
         int hp = 10, atk = 5, def = 0, move = 3, rng = 1, vis = 3, cost = 3;
@@ -358,6 +359,17 @@ public class UnitFactory {
                 owner);
         stats.unitTypeKey = unitType; // store raw key for snapshot restoration
         stats.hasActed = isSummoned;
+
+        // --- Post-processing for specific abilities ---
+        AbilitiesComponent abilities = entity.getComponent(AbilitiesComponent.class);
+        if (unitType.equals("APACHE")) {
+            abilities.fuel = 5;
+            abilities.fuelMax = 5;
+        }
+        if (unitType.equals("WRAITH") || unitType.equals("SUBMARINE")) {
+            abilities.isCloaked = true;
+        }
+
         entity.add(stats);
         engine.addEntity(entity);
     }
@@ -485,8 +497,21 @@ public class UnitFactory {
         entity.add(new GridPositionComponent(x, y, 1)); // Layer 1
         entity.add(new TextureComponent(region));
         entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
+        entity.add(new AbilitiesComponent()); // NEW: Add abilities state
 
         String niceName = type.replace("_", " ");
+        if (type.equals("SOLAR"))
+            niceName = "Solar Array";
+        if (type.equals("RADAR"))
+            niceName = "Radar Station";
+        if (type.equals("JAMMER"))
+            niceName = "Signal Jammer";
+        if (type.equals("NUCLEAR"))
+            niceName = "Nuclear Plant";
+        if (type.equals("OIL_DERRICK"))
+            niceName = "Oil Derrick";
+        if (type.equals("MUNITION_FACTORY"))
+            niceName = "Munition Factory";
 
         // Create Stats (Default Income = 0, we add it to Base XP instead)
         StatsComponent stats = new StatsComponent(niceName, 10, 0, 0, 0, 0, 1, getStructureCost(type),

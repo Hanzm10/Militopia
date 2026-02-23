@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
+import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.MovementComponent;
 import com.militopia.components.StatsComponent;
@@ -47,6 +48,9 @@ public class GameInputController extends InputAdapter {
     private boolean inputEnabled = true;
 
     private int selectionIndex = 0;
+    private boolean isTargetingAbility = false;
+    private String targetingAbilityKey = null;
+    private Entity targetingUnit = null;
 
     public GameInputController(GameScreen screen, OrthographicCamera camera, PooledEngine engine,
             MapGenerator.GameMap gameMap, UnitFactory unitFactory,
@@ -147,6 +151,12 @@ public class GameInputController extends InputAdapter {
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
         if (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height) {
+            // --- ABILITY TARGETING ---
+            if (isTargetingAbility) {
+                executeTargetingAbility(gridX, gridY);
+                return true;
+            }
+
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
             if (screen.isFogEnabled() && !isVisible) {
                 deselect();
@@ -286,7 +296,8 @@ public class GameInputController extends InputAdapter {
 
         if (unitStats.owner != screen.getCurrentPlayer()) {
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
-            gameHUD.showUnitInfo(unitStats.name + " (Enemy)", info.region, unitStats.currentHP, unitStats.maxHP);
+            gameHUD.showUnitInfo(foundUnit, unitStats.name + " (Enemy)", info.region, unitStats.currentHP,
+                    unitStats.maxHP);
             return;
         }
 
@@ -298,7 +309,7 @@ public class GameInputController extends InputAdapter {
         selectedUnitEntity = foundUnit;
         showRangeMarkers(gridX, gridY);
         UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
-        gameHUD.showUnitInfo(info.name, info.region, unitStats.currentHP, unitStats.maxHP);
+        gameHUD.showUnitInfo(foundUnit, info.name, info.region, unitStats.currentHP, unitStats.maxHP);
 
         if (foundAnimal != null) {
             String animName = foundAnimal.getComponent(StatsComponent.class).name;
@@ -374,6 +385,42 @@ public class GameInputController extends InputAdapter {
         int income = screen.calculateIncome(hunterStats.owner);
         gameHUD.updateFunding((hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
         gameHUD.hideSummonMenu();
+        deselect();
+    }
+
+    // -------------------------------------------------------------------------
+    // Abilities
+    // -------------------------------------------------------------------------
+
+    public void performAbility(Entity unit, String abilityKey) {
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
+        if (stats == null || abilities == null)
+            return;
+
+        if (abilityKey.equals("DIG_IN")) {
+            abilities.isDiggingIn = true;
+            stats.hasActed = true;
+            stats.hasMoved = true;
+            // Visual feedback could be added here (e.g., spawn floating text "DUG IN")
+            gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
+            deselect();
+        } else if (abilityKey.equals("LAUNCH_NUKE")) {
+            isTargetingAbility = true;
+            targetingAbilityKey = "LAUNCH_NUKE";
+            targetingUnit = unit;
+            // Highlight area or show range markers if needed
+            gameHUD.hideTileInfo();
+        }
+    }
+
+    private void executeTargetingAbility(int tx, int ty) {
+        if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
+            combatSystem.launchNuke(targetingUnit, tx, ty);
+        }
+        isTargetingAbility = false;
+        targetingAbilityKey = null;
+        targetingUnit = null;
         deselect();
     }
 
@@ -493,13 +540,23 @@ public class GameInputController extends InputAdapter {
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+        if (pos == null)
+            return;
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
         pos.x = targetX;
         pos.y = targetY;
+
+        // RANGER: Overwatch (Check if move triggers an enemy attack)
+        combatSystem.checkOverwatch(unit, targetX, targetY);
         StatsComponent stats = unit.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.hasActed = true;
             stats.hasMoved = true;
+        }
+
+        AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
+        if (abilities != null) {
+            abilities.isDiggingIn = false;
         }
         gameHUD.hideSummonMenu();
         clearMarkers();

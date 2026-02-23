@@ -32,23 +32,68 @@ public class FogSystem extends EntitySystem {
         entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
     }
 
+    private boolean[][] jammerMask;
+
     @Override
     public void update(float deltaTime) {
-        // 1. Reset Visibility
+        // 1. Reset Visibility and Jammer Mask
+        if (jammerMask == null || jammerMask.length != gameMap.width || jammerMask[0].length != gameMap.height) {
+            jammerMask = new boolean[gameMap.width][gameMap.height];
+        }
+
         for (int x = 0; x < gameMap.width; x++) {
             for (int y = 0; y < gameMap.height; y++) {
                 gameMap.visibleTiles[x][y] = false;
+                gameMap.detectedTiles[x][y] = false; // Reset Detection
+                jammerMask[x][y] = false;
             }
         }
 
-        // 2. Clear Fog
+        // 2. Identify Enemy Jammers (Blocking our vision)
+        for (Entity e : entities) {
+            StatsComponent stats = e.getComponent(StatsComponent.class);
+            if (stats.owner != playerID && stats.name.contains("Signal Jammer")) {
+                GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+                markJammingZone(pos.x, pos.y, 4); // Radius 4 for Static
+            }
+        }
+
+        // 3. Clear Fog and Detect Stealth for Current Active Player
         for (Entity e : entities) {
             StatsComponent stats = e.getComponent(StatsComponent.class);
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
 
-            // FIX: Only clear fog for the CURRENT ACTIVE PLAYER
             if (stats.owner == playerID) {
-                clearFog(pos.x, pos.y, stats.vision);
+                int radius = stats.vision;
+                // RADAR STATION: Scanner (+4 Vision)
+                if (stats.name.contains("Radar Station")) {
+                    radius += 4;
+                }
+                clearFog(pos.x, pos.y, radius);
+
+                // --- NEW: Stealth Detection ---
+                // All units can see cloaked enemies in adjacent tiles (radius 1)
+                markDetectionZone(pos.x, pos.y, 1);
+            }
+        }
+    }
+
+    private void markDetectionZone(int centerX, int centerY, int radius) {
+        for (int x = centerX - radius; x <= centerX + radius; x++) {
+            for (int y = centerY - radius; y <= centerY + radius; y++) {
+                if (isValid(x, y)) {
+                    gameMap.detectedTiles[x][y] = true;
+                }
+            }
+        }
+    }
+
+    private void markJammingZone(int centerX, int centerY, int radius) {
+        for (int x = centerX - radius; x <= centerX + radius; x++) {
+            for (int y = centerY - radius; y <= centerY + radius; y++) {
+                if (isValid(x, y)) {
+                    jammerMask[x][y] = true;
+                }
             }
         }
     }
@@ -56,7 +101,7 @@ public class FogSystem extends EntitySystem {
     private void clearFog(int centerX, int centerY, int radius) {
         for (int x = centerX - radius; x <= centerX + radius; x++) {
             for (int y = centerY - radius; y <= centerY + radius; y++) {
-                if (isValid(x, y)) {
+                if (isValid(x, y) && !jammerMask[x][y]) {
                     gameMap.visibleTiles[x][y] = true;
                 }
             }

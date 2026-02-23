@@ -7,6 +7,9 @@ import com.militopia.components.DeathAnimComponent;
 import com.militopia.components.FloatingTextComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
+import com.militopia.components.*;
 import com.militopia.factories.EntityFactory;
 import com.militopia.map.MapGenerator;
 
@@ -37,6 +40,19 @@ public class CombatSystem extends EntitySystem {
     // Public API
     // -------------------------------------------------------------------------
 
+    public void launchNuke(Entity attacker, int tx, int ty) {
+        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);
+        if (aStats == null || aAbilities == null)
+            return;
+
+        triggerExplosion(tx, ty, 1, 15, "NUKE");
+
+        aStats.hasActed = true;
+        aStats.hasMoved = true;
+        aAbilities.nukeCooldown = 3;
+    }
+
     /**
      * Resolves a single attack action.
      *
@@ -58,12 +74,41 @@ public class CombatSystem extends EntitySystem {
         if (aPos == null || dPos == null || aStats == null || dStats == null)
             return;
 
+        // OIL DERRICK & NUCLEAR PLANT: Indestructible
+        if (dStats.name.contains("Oil Derrick") || dStats.name.contains("Nuclear Plant")) {
+            spawnFloatingText(0, dPos.x, dPos.y, false);
+            exhaustAttacker(attacker, aStats, false);
+            return;
+        }
+
+        // JUGGERNAUT: Suppressing Fire (AoE)
+        if (aStats.unitTypeKey.equals("JUGGERNAUT")) {
+            resolveSuppressingFire(attacker, aPos);
+            exhaustAttacker(attacker, aStats, false);
+            return;
+        }
+
+        // RECON DRONE: High Altitude (Immune to Range-1 land attacks)
+        if (dStats.unitTypeKey.equals("RECON_DRONE") && aStats.moveType == StatsComponent.MoveType.LAND
+                && aStats.attackRange <= 1) {
+            spawnFloatingText(0, dPos.x, dPos.y, false);
+            exhaustAttacker(attacker, aStats, false);
+            return;
+        }
+
         // --- 1. Attacker strikes ---
         int dist = chebyshev(aPos.x, aPos.y, dPos.x, dPos.y);
         boolean maxRange = (dist == aStats.attackRange);
         int defTerrainBonus = terrainDefBonus(dPos.x, dPos.y);
 
-        int dmg = Math.max(0, aStats.attack - dStats.defense - defTerrainBonus
+        // DESTROYER: Shore Bombardment (+5 vs Land)
+        int shoreBonus = (aStats.unitTypeKey.equals("DESTROYER") && dStats.moveType == StatsComponent.MoveType.LAND) ? 5
+                : 0;
+
+        AbilitiesComponent dAbilities = defender.getComponent(AbilitiesComponent.class);
+        int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? 3 : 0;
+
+        int dmg = Math.max(0, (aStats.attack + shoreBonus) - (dStats.defense + digInBonus) - defTerrainBonus
                 - (maxRange && aStats.attackRange > 1 ? 1 : 0));
         dStats.currentHP -= dmg;
 
@@ -74,32 +119,70 @@ public class CombatSystem extends EntitySystem {
         if (dStats.currentHP <= 0) {
             dStats.currentHP = 0;
             flagDeath(defender);
+
             // Attacker-first resolution: no counter if defender is dead
-            exhaustAttacker(aStats);
+            exhaustAttacker(attacker, aStats, true);
             return;
         }
 
         // --- 3. Counterattack (range-gated) ---
+        // RECON DRONE: High Altitude (Immune to Range-1 Land attacks)
+        boolean isHighAltitude = aStats.unitTypeKey.equals("RECON_DRONE");
+        boolean isLandAttacker = dStats.moveType == StatsComponent.MoveType.LAND;
+
         int counterDist = chebyshev(dPos.x, dPos.y, aPos.x, aPos.y);
         if (counterDist <= dStats.attackRange) {
-            boolean counterMaxRange = (counterDist == dStats.attackRange);
-            int atkTerrainBonus = terrainDefBonus(aPos.x, aPos.y);
+            if (isHighAltitude && isLandAttacker && dStats.attackRange == 1) {
+                spawnFloatingText(0, aPos.x, aPos.y, true); // Visual feedback for immunity
+            } else {
+                boolean counterMaxRange = (counterDist == dStats.attackRange);
+                int atkTerrainBonus = terrainDefBonus(aPos.x, aPos.y);
 
-            int ctrDmg = Math.max(0, dStats.attack - aStats.defense - atkTerrainBonus
-                    - (counterMaxRange && dStats.attackRange > 1 ? 1 : 0));
-            aStats.currentHP -= ctrDmg;
+                int ctrDmg = Math.max(0, dStats.attack - aStats.defense - atkTerrainBonus
+                        - (counterMaxRange && dStats.attackRange > 1 ? 1 : 0));
+                aStats.currentHP -= ctrDmg;
 
-            // Spawn floating text above the attacker (isCounter = true)
-            spawnFloatingText(ctrDmg, aPos.x, aPos.y, true);
+                // Spawn floating text above the attacker (isCounter = true)
+                spawnFloatingText(ctrDmg, aPos.x, aPos.y, true);
 
-            if (aStats.currentHP <= 0) {
-                aStats.currentHP = 0;
-                flagDeath(attacker);
+                if (aStats.currentHP <= 0) {
+                    aStats.currentHP = 0;
+                    flagDeath(attacker);
+                }
             }
         }
 
         // --- 4. Exhaust attacker ---
-        exhaustAttacker(aStats);
+        exhaustAttacker(attacker, aStats, false);
+    }
+
+    /**
+     * Checks if any enemy "Ranger" with Overwatch active is in range of the moving
+     * unit.
+     */
+    public void checkOverwatch(Entity movingUnit, int targetX, int targetY) {
+        StatsComponent mStats = movingUnit.getComponent(StatsComponent.class);
+        if (mStats == null)
+            return;
+
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class, StatsComponent.class, AbilitiesComponent.class).get());
+
+        for (Entity e : entities) {
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
+            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+
+            if (s.owner != mStats.owner && s.unitTypeKey.equals("RANGER") && a.isOverwatchActive) {
+                int dist = chebyshev(p.x, p.y, targetX, targetY);
+                if (dist <= s.attackRange) {
+                    // Trigger overwatch attack
+                    resolveAttack(e, movingUnit);
+                    a.isOverwatchActive = false; // Limit 1 trigger per turn
+                    break; // Only one overwatch can trigger per "move" for simplicity
+                }
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -133,16 +216,97 @@ public class CombatSystem extends EntitySystem {
     /**
      * Adds a DeathAnimComponent to the entity so UnitRenderSystem can animate it.
      */
-    private void flagDeath(Entity unit) {
-        if (unit.getComponent(DeathAnimComponent.class) == null) {
-            unit.add(new DeathAnimComponent());
+    private void flagDeath(Entity entity) {
+        StatsComponent stats = entity.getComponent(StatsComponent.class);
+        if (stats == null)
+            return;
+
+        GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
+
+        entity.add(new DeathAnimComponent());
+    }
+
+    private void triggerExplosion(int centerX, int centerY, int radius, int damage, String text) {
+        spawnFloatingText(0, centerX, centerY, false); // Just for position
+        ImmutableArray<Entity> victims = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class, StatsComponent.class).get());
+
+        for (Entity v : victims) {
+            GridPositionComponent vPos = v.getComponent(GridPositionComponent.class);
+            StatsComponent vStats = v.getComponent(StatsComponent.class);
+
+            if (vPos == null || vStats == null)
+                continue; // Skip if components are missing
+
+            if (chebyshev(centerX, centerY, vPos.x, vPos.y) <= radius) {
+                // OIL DERRICK & NUCLEAR PLANT: Indestructible
+                if (vStats.name.contains("Oil Derrick") || vStats.name.contains("Nuclear Plant")) {
+                    continue;
+                }
+                vStats.currentHP -= damage;
+                spawnFloatingText(damage, vPos.x, vPos.y, false);
+                if (vStats.currentHP <= 0) {
+                    vStats.currentHP = 0;
+                    // Note: Avoid recursive death flags if possible,
+                    // but here it's okay because DeathAnimComponent prevents double processing.
+                    if (v.getComponent(DeathAnimComponent.class) == null) {
+                        flagDeath(v);
+                    }
+                }
+            }
         }
     }
 
     /** Marks the attacker so they cannot act or move again this turn. */
-    private void exhaustAttacker(StatsComponent aStats) {
+    private void exhaustAttacker(Entity attacker, StatsComponent aStats, boolean targetDied) {
         aStats.hasActed = true;
         aStats.hasMoved = true;
+
+        // TANK: Blitz (Move again if attack kills target)
+        if (targetDied && aStats.unitTypeKey.equals("TANK")) {
+            aStats.hasMoved = false;
+        }
+
+        // GUNBOAT: Skirmish (+1 move point after attacking)
+        if (aStats.unitTypeKey.equals("GUNBOAT")) {
+            aStats.hasMoved = false; // Allow moving 1 more space (effectively)
+        }
+
+        // SUICIDE DRONE: Kamikaze
+        if (aStats.unitTypeKey.equals("SUICIDE_DRONE")) {
+            flagDeath(attacker);
+        }
+    }
+
+    private void resolveSuppressingFire(Entity attacker, GridPositionComponent aPos) {
+        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        ImmutableArray<Entity> entities = engine
+                .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
+
+        for (Entity e : entities) {
+            if (e == attacker)
+                continue;
+            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+            StatsComponent s = e.getComponent(StatsComponent.class);
+
+            if (s.owner != aStats.owner && chebyshev(aPos.x, aPos.y, p.x, p.y) <= 1) {
+                // Skip if indestructible building
+                if (s.name.contains("Oil Derrick") || s.name.contains("Nuclear Plant")) {
+                    continue;
+                }
+                int defBonus = terrainDefBonus(p.x, p.y);
+                AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
+                int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? 3 : 0;
+
+                int dmg = Math.max(0, aStats.attack - (s.defense + digInBonus) - defBonus);
+                s.currentHP -= dmg;
+                spawnFloatingText(dmg, p.x, p.y, false);
+                if (s.currentHP <= 0) {
+                    s.currentHP = 0;
+                    flagDeath(e);
+                }
+            }
+        }
     }
 
     /**
@@ -150,6 +314,8 @@ public class CombatSystem extends EntitySystem {
      * Shows "BLOCKED" when damage is zero, otherwise shows the number.
      */
     private void spawnFloatingText(int dmg, int gx, int gy, boolean isCounter) {
+        if (entityFactory == null)
+            return;
         String label = (dmg == 0) ? "BLOCKED" : String.valueOf(dmg);
         float worldX = EntityFactory.gridToIsoX(gx, gy);
         float worldY = EntityFactory.gridToIsoY(gx, gy);
