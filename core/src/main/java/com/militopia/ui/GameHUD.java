@@ -46,6 +46,12 @@ public class GameHUD {
     private Label tileInfoLabel;
     private Label hpLabel;
     private Table abilityTable;
+    private Table statsTable;
+    private Label atkLabel;
+    private Label defLabel;
+    private Label rngLabel;
+    private Label movLabel;
+    private Label visLabel;
     private GameScreen gameScreen;
 
     private Label xpLabel;
@@ -649,7 +655,29 @@ public class GameHUD {
         hpLabel = new Label("", game.skin, "default-font", Color.WHITE);
         hpLabel.setFontScale(0.65f);
         hpLabel.setVisible(false);
-        infoStack.add(hpLabel).left();
+        infoStack.add(hpLabel).left().row();
+
+        // Stats grid (Atk, Def, Rng, Mov, Vis)
+        statsTable = new Table();
+        atkLabel = new Label("Atk: 0", game.skin, "default-font", Color.WHITE);
+        atkLabel.setFontScale(0.6f);
+        defLabel = new Label("Def: 0", game.skin, "default-font", Color.WHITE);
+        defLabel.setFontScale(0.6f);
+        rngLabel = new Label("Rng: 0", game.skin, "default-font", Color.WHITE);
+        rngLabel.setFontScale(0.6f);
+        movLabel = new Label("Mov: 0", game.skin, "default-font", Color.WHITE);
+        movLabel.setFontScale(0.6f);
+        visLabel = new Label("Vis: 0", game.skin, "default-font", Color.WHITE);
+        visLabel.setFontScale(0.6f);
+
+        statsTable.add(atkLabel).width(50).left();
+        statsTable.add(defLabel).width(50).left().row();
+        statsTable.add(rngLabel).width(50).left();
+        statsTable.add(movLabel).width(50).left().row();
+        statsTable.add(visLabel).width(50).left();
+        statsTable.setVisible(false);
+
+        infoStack.add(statsTable).left().padTop(2);
 
         tileInfoTable.add(infoStack).padLeft(20);
 
@@ -688,6 +716,8 @@ public class GameHUD {
         tileInfoLabel.setText(name);
         if (hpLabel != null)
             hpLabel.setVisible(false);
+        if (statsTable != null)
+            statsTable.setVisible(false);
 
         tileInfoTable.setWidth(stage.getWidth());
         tileInfoTable.setX(0);
@@ -713,6 +743,17 @@ public class GameHUD {
         }
 
         StatsComponent stats = unit.getComponent(StatsComponent.class);
+        if (stats != null && statsTable != null) {
+            atkLabel.setText("Atk: " + stats.attack);
+            defLabel.setText("Def: " + stats.defense);
+            rngLabel.setText("Rng: " + stats.attackRange);
+            movLabel.setText("Mov: " + stats.move);
+            visLabel.setText("Vis: " + stats.vision);
+            statsTable.setVisible(true);
+        } else if (statsTable != null) {
+            statsTable.setVisible(false);
+        }
+
         AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
 
         // Only show ability buttons for the current active player's units

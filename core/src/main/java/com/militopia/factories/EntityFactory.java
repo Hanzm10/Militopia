@@ -10,10 +10,12 @@ import com.militopia.managers.AssetManager;
 public class EntityFactory {
     private PooledEngine engine;
     private TextureRegion markerRegion;
+    private TextureRegion enemyMarkerRegion;
 
     public EntityFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
         this.markerRegion = new TextureRegion(assets.get(AssetManager.MARKER_DOT));
+        this.enemyMarkerRegion = new TextureRegion(assets.get(AssetManager.ENEMY_MARKER));
     }
 
     /** Blue movement-range marker. */
@@ -26,13 +28,13 @@ public class EntityFactory {
     }
 
     /**
-     * Red attack-range marker. Rendered by UnitRenderSystem with a red tint.
-     * Uses the same dot texture; colour is applied at draw time.
+     * Red attack-range marker. Rendered by UnitRenderSystem.
+     * Uses the new enemy_marker texture.
      */
     public void createAttackMarker(int x, int y) {
         Entity entity = engine.createEntity();
         entity.add(new GridPositionComponent(x, y, 3));
-        entity.add(new TextureComponent(markerRegion));
+        entity.add(new TextureComponent(enemyMarkerRegion));
         entity.add(new TypeComponent(TypeComponent.Type.ATTACK_MARKER));
         engine.addEntity(entity);
     }

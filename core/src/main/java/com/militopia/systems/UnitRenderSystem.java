@@ -204,8 +204,8 @@ public class UnitRenderSystem extends EntitySystem {
 
         // --- Colour tinting ---
         if (isAttackMarker) {
-            // Red semi-transparent dot
-            batch.setColor(1f, 0.15f, 0.15f, 0.75f);
+            // New enemy marker (draw with original colours)
+            batch.setColor(Color.WHITE);
         } else if (isMarker) {
             batch.setColor(Color.WHITE);
         } else if (typeC.type == TypeComponent.Type.UNIT) {
