@@ -45,6 +45,7 @@ public class GameHUD {
     private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
     private Label tileInfoLabel;
     private Label hpLabel;
+    private Table abilityTable;
     private GameScreen gameScreen;
 
     private Label xpLabel;
@@ -531,14 +532,22 @@ public class GameHUD {
 
         for (String struct : unlocked) {
             if (struct.equals("PORT")) {
+                // Port: coastline water tile only
+                if (isWater && isCoastal) {
+                    addBuildButton(contentTable, struct, inputController, unitFactory, state);
+                }
+            } else if (struct.equals("NUCLEAR")) {
+                // Nuclear Plant: coastline water tile only (SPEC §9 "Coastline Only")
                 if (isWater && isCoastal) {
                     addBuildButton(contentTable, struct, inputController, unitFactory, state);
                 }
             } else if (struct.equals("OIL_DERRICK")) {
+                // Oil Derrick: land only
                 if (!isWater) {
                     addBuildButton(contentTable, struct, inputController, unitFactory, state);
                 }
             } else {
+                // All other structures: land only
                 if (!isWater) {
                     addBuildButton(contentTable, struct, inputController, unitFactory, state);
                 }
@@ -586,6 +595,10 @@ public class GameHUD {
             public void clicked(InputEvent event, float x, float y) {
                 int currentFunds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                 if (currentFunds >= cost) {
+                    // Occupancy check: block if a structure already exists on this tile (z-layer 1)
+                    if (factory.hasEntityAt(buildX, buildY, 1)) {
+                        return;
+                    }
                     if (currentBaseOwner == 1) {
                         state.p1Funding -= cost;
                     } else {
@@ -638,7 +651,10 @@ public class GameHUD {
         hpLabel.setVisible(false);
         infoStack.add(hpLabel).left();
 
-        tileInfoTable.add(infoStack).expandX().left().padLeft(20);
+        tileInfoTable.add(infoStack).padLeft(20);
+
+        abilityTable = new Table();
+        tileInfoTable.add(abilityTable).expandX().center();
 
         ImageButton.ImageButtonStyle closeStyle = new ImageButton.ImageButtonStyle();
         try {
@@ -659,15 +675,19 @@ public class GameHUD {
         });
         tileInfoTable.add(closeBtn).size(40, 40).padRight(20);
 
-        float panelHeight = 90f;
+        float panelHeight = 120f;
         tileInfoTable.setPosition(0, -panelHeight);
         tileInfoTable.setSize(stage.getWidth(), panelHeight);
         stage.addActor(tileInfoTable);
     }
 
     public void showTileInfo(String name, TextureRegion region) {
-        tileInfoTable.clear();
-        createTileInfoPanelElements(name, region); // Helper to rebuild base elements
+        if (abilityTable != null)
+            abilityTable.clear();
+        tileInfoImage.setDrawable(new TextureRegionDrawable(region));
+        tileInfoLabel.setText(name);
+        if (hpLabel != null)
+            hpLabel.setVisible(false);
 
         tileInfoTable.setWidth(stage.getWidth());
         tileInfoTable.setX(0);
@@ -682,6 +702,8 @@ public class GameHUD {
      * HP label is green when above half, yellow when at or below half.
      */
     public void showUnitInfo(final Entity unit, String name, TextureRegion region, int currentHP, int maxHP) {
+        if (abilityTable != null)
+            abilityTable.clear();
         tileInfoLabel.setText(name);
         tileInfoImage.setDrawable(new TextureRegionDrawable(region));
         if (hpLabel != null) {
@@ -695,20 +717,21 @@ public class GameHUD {
 
         // Only show ability buttons for the current active player's units
         if (stats != null && abilities != null && stats.owner == gameScreen.getCurrentPlayer() && !stats.hasActed) {
-            if (stats.unitTypeKey.equals("RECRUIT") && !abilities.isDiggingIn) {
-                addAbilityButton("Dig In", new ClickListener() {
+            if (stats.unitTypeKey.equals("RECRUIT") && !abilities.hasUsedDigIn && !abilities.isDiggingIn) {
+                addAbilityIconButton("Dig In", unitFactory.getTextureForPopup("RECRUIT"), new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
                         inputController.performAbility(unit, "DIG_IN");
                     }
                 });
             } else if (stats.unitTypeKey.equals("SUBMARINE") && abilities.nukeCooldown == 0) {
-                addAbilityButton("Launch Nuke", new ClickListener() {
-                    @Override
-                    public void clicked(InputEvent event, float x, float y) {
-                        inputController.performAbility(unit, "LAUNCH_NUKE");
-                    }
-                });
+                addAbilityIconButton("Launch Nuke", unitFactory.getHudIcon(MapGenerator.ObjectType.BASE_P1),
+                        new ClickListener() {
+                            @Override
+                            public void clicked(InputEvent event, float x, float y) {
+                                inputController.performAbility(unit, "LAUNCH_NUKE");
+                            }
+                        });
             }
         }
 
@@ -720,14 +743,42 @@ public class GameHUD {
         bottomContainer.addAction(Actions.moveBy(0, -bottomContainer.getHeight(), 0.3f, Interpolation.pow2Out));
     }
 
-    private void addAbilityButton(String text, ClickListener listener) {
-        TextButton btn = new TextButton(text, game.skin);
-        btn.getLabel().setFontScale(0.6f);
-        btn.addListener(new HoverListener());
-        btn.addListener(listener);
-        // Add to a specialized row in tileInfoTable?
-        // Let's add it to the stack for now or create a new row if it gets crowded.
-        tileInfoTable.add(btn).padRight(20).height(40);
+    private void addAbilityIconButton(String text, TextureRegion iconRegion, ClickListener listener) {
+        com.badlogic.gdx.scenes.scene2d.utils.Drawable circleDrawable;
+        try {
+            Texture circleTex = assets.get(AssetManager.CIRCLE_UI);
+            circleTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            circleDrawable = new TextureRegionDrawable(new TextureRegion(circleTex));
+        } catch (Exception e) {
+            circleDrawable = game.skin.newDrawable("white", Color.DARK_GRAY);
+        }
+
+        Stack buttonStack = new Stack();
+        buttonStack.setTransform(true);
+        com.badlogic.gdx.scenes.scene2d.ui.Image circleBg = new com.badlogic.gdx.scenes.scene2d.ui.Image(
+                circleDrawable);
+        circleBg.setScaling(Scaling.fit);
+        buttonStack.add(circleBg);
+
+        com.badlogic.gdx.scenes.scene2d.ui.Image unitIcon = new com.badlogic.gdx.scenes.scene2d.ui.Image(iconRegion);
+        unitIcon.setScaling(Scaling.fit);
+        Container<com.badlogic.gdx.scenes.scene2d.ui.Image> iconContainer = new Container<>(unitIcon);
+        iconContainer.size(50, 50).center();
+        buttonStack.add(iconContainer);
+
+        buttonStack.setOrigin(40, 40);
+        buttonStack.addListener(new HoverListener());
+        buttonStack.addListener(listener);
+
+        Table group = new Table();
+        group.add(buttonStack).size(80, 80).row();
+        Label nameLbl = new Label(text, game.skin, "default-font", Color.WHITE);
+        nameLbl.setFontScale(0.7f);
+        nameLbl.setAlignment(com.badlogic.gdx.utils.Align.center);
+        group.add(nameLbl).padTop(5);
+        if (abilityTable != null) {
+            abilityTable.add(group).padRight(20);
+        }
     }
 
     /**
@@ -740,22 +791,6 @@ public class GameHUD {
             hpLabel.setText("HP: " + currentHP + " / " + maxHP);
             hpLabel.setColor(currentHP > maxHP / 2 ? Color.GREEN : Color.YELLOW);
         }
-    }
-
-    private void createTileInfoPanelElements(String name, TextureRegion region) {
-        tileInfoImage.setDrawable(new TextureRegionDrawable(region));
-        tileInfoLabel.setText(name);
-        if (hpLabel != null)
-            hpLabel.setVisible(false);
-
-        tileInfoTable.add(tileInfoImage).size(60).padRight(15);
-
-        Table textTable = new Table();
-        textTable.add(tileInfoLabel).left().row();
-        if (hpLabel != null)
-            textTable.add(hpLabel).left();
-
-        tileInfoTable.add(textTable).expandX().left();
     }
 
     public void hideTileInfo() {

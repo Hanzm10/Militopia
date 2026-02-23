@@ -1,0 +1,59 @@
+﻿.\gradlew.bat : C:\Users\Hanz Mapua\
+Workspace\Militopia\core\src\main\ja
+va\com\militopia\controller\GameInpu
+tController.java:424: error: cannot 
+find symbol
+At line:1 char:1
++ .\gradlew.bat :core:test > 
+errors.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo          : NotSp 
+   ecified: (C:\Users\Hanz M...not  
+   find symbol:String) [], Remote   
+ Exception
+    + FullyQualifiedErrorId : Nativ 
+   eCommandError
+ 
+            abilities.hasUsedDigIn 
+= true;
+                     ^
+  symbol:   variable hasUsedDigIn
+  location: variable abilities of 
+type AbilitiesComponent
+C:\Users\Hanz Mapua\Workspace\Milito
+pia\core\src\main\java\com\militopia
+\ui\GameHUD.java:710: error: cannot 
+find symbol
+            if (stats.unitTypeKey.eq
+uals("RECRUIT") && 
+!abilities.hasUsedDigIn && 
+!abilities.isDiggingIn) {
+                                    
+                             ^
+  symbol:   variable hasUsedDigIn
+  location: variable abilities of 
+type AbilitiesComponent
+2 errors
+
+FAILURE: Build failed with an 
+exception.
+
+* What went wrong:
+Execution failed for task 
+':core:compileJava'.
+> Compilation failed; see the 
+compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to 
+get the stack trace.
+> Run with --info or --debug option 
+to get more log output.
+> Run with --scan to get full 
+insights.
+
+* Get more help at 
+https://help.gradle.org
+
+BUILD FAILED in 11s

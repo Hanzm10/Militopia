@@ -10,6 +10,7 @@ import com.militopia.components.StatsComponent;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.militopia.components.*;
+import com.militopia.components.AbilitiesComponent;
 import com.militopia.factories.EntityFactory;
 import com.militopia.map.MapGenerator;
 

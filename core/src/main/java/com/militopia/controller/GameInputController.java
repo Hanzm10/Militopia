@@ -374,10 +374,11 @@ public class GameInputController extends InputAdapter {
             if (structStats.name.equalsIgnoreCase("Port")) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
-                    // Ports use parent base level for unlocks (or their own level if we decide later)
+                    // Ports use parent base level for unlocks (or their own level if we decide
+                    // later)
                     // For now, let's use a default high level or track unlocks globally.
                     // Actually, let's use the player's highest base level in that territory.
-                    int level = structStats.level; 
+                    int level = structStats.level;
                     gameHUD.openSummonMenu(structStats.owner, screen.getGameState(), level, "PORT");
                     return;
                 }
@@ -420,6 +421,7 @@ public class GameInputController extends InputAdapter {
 
         if (abilityKey.equals("DIG_IN")) {
             abilities.isDiggingIn = true;
+            abilities.hasUsedDigIn = true;
             stats.hasActed = true;
             stats.hasMoved = true;
             // Visual feedback could be added here (e.g., spawn floating text "DUG IN")
@@ -563,6 +565,8 @@ public class GameInputController extends InputAdapter {
         if (pos == null)
             return;
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
+        int oldX = pos.x;
+        int oldY = pos.y;
         pos.x = targetX;
         pos.y = targetY;
 

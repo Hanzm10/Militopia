@@ -414,7 +414,10 @@ public class GameScreen implements Screen {
                     myBases.add(entity);
                 } // Identify Structure with XP Gain (factories, ports, etc.)
                 else if (stats.xpGain > 0 && stats.parentBaseX != -1) {
-                    xpStructures.add(entity);
+                    // Only add entities that also have GridPositionComponent (structures do)
+                    if (entity.getComponent(GridPositionComponent.class) != null) {
+                        xpStructures.add(entity);
+                    }
                 }
             }
         }
@@ -435,6 +438,27 @@ public class GameScreen implements Screen {
                     if (baseStats.owner == playerID) {
                         baseStats.currentBaseXP += structStats.xpGain;
                         totalXPGain += structStats.xpGain;
+                    }
+                }
+            }
+
+            // 1b. Hospital: heal adjacent friendly units by +3 HP at turn start
+            ImmutableArray<Entity> allUnits = engine.getEntitiesFor(
+                    Family.all(StatsComponent.class, GridPositionComponent.class, TypeComponent.class).get());
+            for (Entity struct : xpStructures) {
+                StatsComponent sStats = struct.getComponent(StatsComponent.class);
+                GridPositionComponent sPos = struct.getComponent(GridPositionComponent.class);
+                if (!sStats.name.equals("Field Hospital"))
+                    continue;
+                for (Entity unit : allUnits) {
+                    TypeComponent tc = unit.getComponent(TypeComponent.class);
+                    if (tc.type != TypeComponent.Type.UNIT)
+                        continue;
+                    StatsComponent uStats = unit.getComponent(StatsComponent.class);
+                    GridPositionComponent uPos = unit.getComponent(GridPositionComponent.class);
+                    if (uStats.owner == playerID
+                            && Math.max(Math.abs(sPos.x - uPos.x), Math.abs(sPos.y - uPos.y)) <= 1) {
+                        uStats.currentHP = Math.min(uStats.currentHP + 3, uStats.maxHP);
                     }
                 }
             }

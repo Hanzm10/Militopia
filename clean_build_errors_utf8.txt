@@ -1,0 +1,44 @@
+﻿.\gradlew.bat : C:\Users\Hanz Mapua\
+Workspace\Militopia\core\src\main\ja
+va\com\militopia\ui\GameHUD.java:598
+: error: hasEntityAt(int,int,int) 
+has private access in UnitFactory
+At line:1 char:1
++ .\gradlew.bat :core:compileJava > 
+clean_build_errors.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSp 
+   ecified: (C:\Users\Hanz M... in  
+   UnitFactory:String) [], Remote   
+ Exception
+    + FullyQualifiedErrorId : Nativ 
+   eCommandError
+ 
+                    if 
+(factory.hasEntityAt(buildX, 
+buildY, 1)) {
+                               ^
+1 error
+
+FAILURE: Build failed with an 
+exception.
+
+* What went wrong:
+Execution failed for task 
+':core:compileJava'.
+> Compilation failed; see the 
+compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to 
+get the stack trace.
+> Run with --info or --debug option 
+to get more log output.
+> Run with --scan to get full 
+insights.
+
+* Get more help at 
+https://help.gradle.org
+
+BUILD FAILED in 9s

@@ -317,7 +317,7 @@ public class UnitRenderSystem extends EntitySystem {
             StatsComponent stats = selectedEntity.getComponent(StatsComponent.class);
             TypeComponent type = selectedEntity.getComponent(TypeComponent.class);
             if (stats != null && type.type == TypeComponent.Type.OBJECT
-                    && (stats.owner == 1 || stats.owner == 2) && stats.income > 0) {
+                    && (stats.owner == 1 || stats.owner == 2) && stats.name.contains("Base")) {
                 float isoX = (selectedX - selectedY) * (GameConfig.TILE_WIDTH / 2.0f);
                 float isoY = (selectedX + selectedY) * (GameConfig.TILE_HEIGHT / 2.0f);
                 float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
@@ -364,7 +364,7 @@ public class UnitRenderSystem extends EntitySystem {
     private void drawBaseName(float x, float y, String name) {
         batch.begin();
         float ox = font.getData().scaleX, oy = font.getData().scaleY;
-        font.getData().setScale(0.35f);
+        font.getData().setScale(0.25f);
         GlyphLayout layout = new GlyphLayout(font, name);
         font.draw(batch, name, x - layout.width / 2, y);
         font.getData().setScale(ox, oy);

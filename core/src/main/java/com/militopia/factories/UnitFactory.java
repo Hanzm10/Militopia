@@ -705,40 +705,34 @@ public class UnitFactory {
 
         boolean isTown = (map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
 
-        if (isTown) {
-            // --- Town capture: keep town sprite, just flip ownership ---
-            // The texture stays as townRegion — no sprite swap needed.
-            stats.owner = newOwner;
-            stats.income = 1;
-            // No base-XP, no level-up, no animal spawn needed for towns.
-            if (newOwner == 1)
-                state.p1XP += 50;
-            else
-                state.p2XP += 50;
-        } else {
-            // --- Enemy base capture ---
-            if (newOwner == 1) {
-                tex.region = baseRegions.get("lvl1_blue");
-                map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
-                state.p1BaseCount++;
-                stats.owner = 1;
-                stats.baseOrdinal = getOrdinal(state.p1BaseCount);
-                stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
-                state.p1XP += 250;
-            } else if (newOwner == 2) {
-                tex.region = baseRegions.get("lvl1_red");
-                map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
-                state.p2BaseCount++;
-                stats.owner = 2;
-                stats.baseOrdinal = getOrdinal(state.p2BaseCount);
-                stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
-                state.p2XP += 250;
-            }
-            stats.vision = GameConfig.BORDER_RADIUS;
-            stats.income = 2;
-            stats.maxBaseXP = 2000;
-            stats.currentBaseXP = 0;
-            stats.level = 1;
+        // Transform into a Level 1 Base for the new owner, whether it was a Town or an
+        // Enemy Base.
+        if (newOwner == 1) {
+            tex.region = baseRegions.get("lvl1_blue");
+            map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
+            state.p1BaseCount++;
+            stats.owner = 1;
+            stats.baseOrdinal = getOrdinal(state.p1BaseCount);
+            stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
+            state.p1XP += isTown ? 50 : 250;
+        } else if (newOwner == 2) {
+            tex.region = baseRegions.get("lvl1_red");
+            map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
+            state.p2BaseCount++;
+            stats.owner = 2;
+            stats.baseOrdinal = getOrdinal(state.p2BaseCount);
+            stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
+            state.p2XP += isTown ? 50 : 250;
+        }
+        stats.vision = GameConfig.BORDER_RADIUS;
+        stats.income = 2;
+        stats.maxBaseXP = 2000;
+        stats.currentBaseXP = 0;
+        stats.level = 1;
+
+        // Spawn animals upon capture only if it was an enemy base (optional, but
+        // requested implicitly by keeping structure)
+        if (!isTown) {
             spawnAnimalsAroundBase(pos.x, pos.y, map, state);
         }
     }
@@ -801,7 +795,7 @@ public class UnitFactory {
     }
 
     // --- HELPER: Checks for entity at coordinates and layer ---
-    private boolean hasEntityAt(int x, int y, int zLayer) {
+    public boolean hasEntityAt(int x, int y, int zLayer) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
