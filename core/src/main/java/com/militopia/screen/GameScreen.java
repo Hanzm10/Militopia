@@ -397,7 +397,7 @@ public class GameScreen implements Screen {
     }
 
     private int processTurnEconomy(int playerID) {
-        int totalIncome = 0;
+        int totalIncome = calculateIncome(playerID);
         int totalXPGain = 0;
 
         List<Entity> myBases = new ArrayList<>();
@@ -407,11 +407,8 @@ public class GameScreen implements Screen {
 
         for (Entity entity : entities) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
-            TypeComponent type = entity.getComponent(TypeComponent.class);
 
             if (stats.owner == playerID) {
-                totalIncome += stats.income;
-
                 // Identify Base
                 if (stats.income >= 2 && stats.name.contains("Base")) {
                     myBases.add(entity);

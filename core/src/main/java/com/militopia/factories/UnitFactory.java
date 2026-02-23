@@ -410,6 +410,32 @@ public class UnitFactory {
         }
     }
 
+    public StatsComponent.MoveType getUnitMoveType(String unitType) {
+        switch (unitType) {
+            case "RECRUIT":
+            case "RANGER":
+            case "SNIPER":
+            case "TANK":
+            case "JUGGERNAUT":
+                return StatsComponent.MoveType.LAND;
+
+            case "RECON_DRONE":
+            case "SUICIDE_DRONE":
+            case "APACHE":
+            case "B2":
+                return StatsComponent.MoveType.AIR;
+
+            case "GUNBOAT":
+            case "DESTROYER":
+            case "CARRIER":
+            case "SUBMARINE":
+                return StatsComponent.MoveType.SEA;
+
+            default:
+                return StatsComponent.MoveType.LAND;
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Snapshot / Undo support
     // -------------------------------------------------------------------------
@@ -555,11 +581,13 @@ public class UnitFactory {
         if (type.equals("RADAR")) {
             stats.xpGain = 75;
             stats.income = 0;
+            stats.vision = 6;
         }
 
         if (type.equals("JAMMER")) {
             stats.xpGain = 75;
             stats.income = 0;
+            stats.vision = 2;
         }
 
         entity.add(stats);

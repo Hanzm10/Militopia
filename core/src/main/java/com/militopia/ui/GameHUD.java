@@ -200,14 +200,14 @@ public class GameHUD {
     }
 
     private void configureSummonMenu(GameState state) {
-        populateSummonMenu(state);
+        populateSummonMenu(state, "BASE");
         float panelHeight = 140f;
         summonMenu.setSize(stage.getWidth(), panelHeight);
         summonMenu.setPosition(0, -panelHeight);
         stage.addActor(summonMenu);
     }
 
-    private void populateSummonMenu(GameState state) {
+    private void populateSummonMenu(GameState state, String producerType) {
         summonMenu.clear();
         summonMenu.setBackground(game.skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 0.95f)));
         Table contentTable = new Table();
@@ -221,36 +221,28 @@ public class GameHUD {
             }
         }
 
-        // Only add buttons if unlocked
-        if (unlocked.contains("RECRUIT")) {
-            addSummonButton(contentTable, "RECRUIT", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("RANGER")) {
-            addSummonButton(contentTable, "RANGER", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("SNIPER")) {
-            addSummonButton(contentTable, "SNIPER", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("TANK")) {
-            addSummonButton(contentTable, "TANK", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("RECON_DRONE")) {
-            addSummonButton(contentTable, "RECON_DRONE", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("SUICIDE_DRONE")) {
-            addSummonButton(contentTable, "SUICIDE_DRONE", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("APACHE")) {
-            addSummonButton(contentTable, "APACHE", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("GUNBOAT")) {
-            addSummonButton(contentTable, "GUNBOAT", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("DESTROYER")) {
-            addSummonButton(contentTable, "DESTROYER", inputController, unitFactory, state);
-        }
-        if (unlocked.contains("CARRIER")) {
-            addSummonButton(contentTable, "CARRIER", inputController, unitFactory, state);
+        // List of all summonable units
+        String[] allUnits = {
+                "RECRUIT", "RANGER", "SNIPER", "TANK", "RECON_DRONE",
+                "SUICIDE_DRONE", "APACHE", "GUNBOAT", "DESTROYER", "CARRIER"
+        };
+
+        for (String unit : allUnits) {
+            if (unlocked.contains(unit)) {
+                StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(unit);
+                boolean shouldShow = false;
+
+                if (producerType.equals("PORT")) {
+                    shouldShow = (moveType == StatsComponent.MoveType.SEA);
+                } else {
+                    // BASE: Show Land and Air
+                    shouldShow = (moveType == StatsComponent.MoveType.LAND || moveType == StatsComponent.MoveType.AIR);
+                }
+
+                if (shouldShow) {
+                    addSummonButton(contentTable, unit, inputController, unitFactory, state);
+                }
+            }
         }
 
         TextButton closeBtn = new TextButton("Cancel", game.skin);
@@ -319,10 +311,10 @@ public class GameHUD {
         container.add(group).pad(10);
     }
 
-    public void openSummonMenu(int owner, GameState state, int level) {
+    public void openSummonMenu(int owner, GameState state, int level, String producerType) {
         this.currentBaseOwner = owner;
         this.currentBaseLevel = level;
-        populateSummonMenu(state);
+        populateSummonMenu(state, producerType);
         tileInfoTable.clearActions();
         tileInfoTable.addAction(Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
         summonMenu.clearActions();

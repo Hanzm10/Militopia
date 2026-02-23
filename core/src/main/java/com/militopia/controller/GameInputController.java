@@ -353,17 +353,37 @@ public class GameInputController extends InputAdapter {
 
     private void handleStructureTarget(Entity foundStructure, int gridX, int gridY) {
         MapGenerator.ObjectType objType = gameMap.objects[gridX][gridY];
+        StatsComponent structStats = foundStructure.getComponent(StatsComponent.class);
+
+        // --- Handle Bases ---
         if (objType == MapGenerator.ObjectType.BASE_P1 || objType == MapGenerator.ObjectType.BASE_P2) {
             int owner = (objType == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
             if (owner == screen.getCurrentPlayer()) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
-                    int level = foundStructure.getComponent(StatsComponent.class).level;
-                    gameHUD.openSummonMenu(owner, screen.getGameState(), level);
+                    int level = structStats.level;
+                    gameHUD.openSummonMenu(owner, screen.getGameState(), level, "BASE");
                     return;
                 }
             }
         }
+
+        // --- Handle Specialized Structures (like PORTS) ---
+        if (structStats != null && structStats.owner == screen.getCurrentPlayer()) {
+            // Check for Port specifically
+            if (structStats.name.equalsIgnoreCase("Port")) {
+                Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                if (unitOnTop == null) {
+                    // Ports use parent base level for unlocks (or their own level if we decide later)
+                    // For now, let's use a default high level or track unlocks globally.
+                    // Actually, let's use the player's highest base level in that territory.
+                    int level = structStats.level; 
+                    gameHUD.openSummonMenu(structStats.owner, screen.getGameState(), level, "PORT");
+                    return;
+                }
+            }
+        }
+
         UnitFactory.UiInfo info = unitFactory.getObjectUi(objType);
         gameHUD.showTileInfo(info.name, info.region);
     }
