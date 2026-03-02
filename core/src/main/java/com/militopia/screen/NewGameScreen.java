@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
 import com.militopia.managers.AssetManager;
+import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
 import com.militopia.utils.RenderUtils;
 
@@ -113,8 +114,12 @@ public class NewGameScreen implements Screen {
                         seed = seedField.getText().hashCode();
                     }
 
+                    String mode = (selectedWidth == 16) ? "Blitz(16x16)" : "Marathon(32x32)";
+                    GameLogger.logScreen("Game started | name=" + nameField.getText()
+                            + " seed=" + seed + " mode=" + mode);
                     // Create GameState with selected Dimensions
-                    GameState newState = new GameState(seed, nameField.getText() + '_' + seed, selectedWidth, selectedHeight);
+                    GameState newState = new GameState(seed, nameField.getText() + '_' + seed, selectedWidth,
+                            selectedHeight);
                     game.setScreen(new GameScreen(game, newState));
                 }
             }
@@ -123,6 +128,7 @@ public class NewGameScreen implements Screen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                GameLogger.logScreen("Navigating → Main Menu");
                 game.setScreen(new MenuScreen(game));
             }
         });
@@ -153,6 +159,7 @@ public class NewGameScreen implements Screen {
 
     @Override
     public void show() {
+        GameLogger.logScreen("New Game Screen opened");
     }
 
     @Override

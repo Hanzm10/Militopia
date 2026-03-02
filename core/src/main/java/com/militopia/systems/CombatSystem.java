@@ -13,6 +13,7 @@ import com.militopia.components.*;
 import com.militopia.components.AbilitiesComponent;
 import com.militopia.factories.EntityFactory;
 import com.militopia.map.MapGenerator;
+import com.militopia.utils.GameLogger;
 
 /**
  * Handles all combat resolution: damage, counterattack, death flagging, and
@@ -25,11 +26,14 @@ public class CombatSystem extends EntitySystem {
 
     private final MapGenerator.GameMap gameMap;
     private final EntityFactory entityFactory;
+    private final com.militopia.data.GameState gameState;
     private Engine engine;
 
-    public CombatSystem(MapGenerator.GameMap gameMap, EntityFactory entityFactory) {
+    public CombatSystem(MapGenerator.GameMap gameMap, EntityFactory entityFactory,
+            com.militopia.data.GameState gameState) {
         this.gameMap = gameMap;
         this.entityFactory = entityFactory;
+        this.gameState = gameState;
     }
 
     @Override
@@ -47,6 +51,8 @@ public class CombatSystem extends EntitySystem {
         if (aStats == null || aAbilities == null)
             return;
 
+        GameLogger.log(GameLogger.ABILITY, aStats.owner,
+                "Nuke detonates at " + GameLogger.pos(tx, ty) + " | radius=1 | dmg=15");
         triggerExplosion(tx, ty, 1, 15, "NUKE");
 
         aStats.hasActed = true;
@@ -77,6 +83,9 @@ public class CombatSystem extends EntitySystem {
 
         // OIL DERRICK & NUCLEAR PLANT: Indestructible
         if (dStats.name.contains("Oil Derrick") || dStats.name.contains("Nuclear Plant")) {
+            GameLogger.log(GameLogger.ATTACK, aStats.owner,
+                    aStats.name + " attacks indestructible " + dStats.name + " at "
+                            + GameLogger.pos(dPos.x, dPos.y) + " | BLOCKED");
             spawnFloatingText(0, dPos.x, dPos.y, false);
             exhaustAttacker(attacker, aStats, false);
             return;
@@ -84,6 +93,8 @@ public class CombatSystem extends EntitySystem {
 
         // JUGGERNAUT: Suppressing Fire (AoE)
         if (aStats.unitTypeKey.equals("JUGGERNAUT")) {
+            GameLogger.log(GameLogger.ABILITY, aStats.owner,
+                    "Suppressing Fire by " + aStats.name + " at " + GameLogger.pos(aPos.x, aPos.y));
             resolveSuppressingFire(attacker, aPos);
             exhaustAttacker(attacker, aStats, false);
             return;
@@ -92,6 +103,8 @@ public class CombatSystem extends EntitySystem {
         // RECON DRONE: High Altitude (Immune to Range-1 land attacks)
         if (dStats.unitTypeKey.equals("RECON_DRONE") && aStats.moveType == StatsComponent.MoveType.LAND
                 && aStats.attackRange <= 1) {
+            GameLogger.log(GameLogger.ATTACK, aStats.owner,
+                    aStats.name + " attacks " + dStats.name + " | BLOCKED (High Altitude immunity)");
             spawnFloatingText(0, dPos.x, dPos.y, false);
             exhaustAttacker(attacker, aStats, false);
             return;
@@ -113,12 +126,21 @@ public class CombatSystem extends EntitySystem {
                 - (maxRange && aStats.attackRange > 1 ? 1 : 0));
         dStats.currentHP -= dmg;
 
+        // LOG: attack result
+        GameLogger.log(GameLogger.ATTACK, aStats.owner,
+                aStats.name + GameLogger.pos(aPos.x, aPos.y)
+                        + " attacks " + dStats.name + GameLogger.pos(dPos.x, dPos.y)
+                        + " | dmg=" + dmg
+                        + " | defHP=" + dStats.currentHP + "/" + dStats.maxHP);
+
         // Spawn floating text above the defender
         spawnFloatingText(dmg, dPos.x, dPos.y, false);
 
         // --- 2. Defender death? ---
         if (dStats.currentHP <= 0) {
             dStats.currentHP = 0;
+            GameLogger.log(GameLogger.ATTACK, aStats.owner,
+                    dStats.name + " at " + GameLogger.pos(dPos.x, dPos.y) + " DESTROYED");
             flagDeath(defender);
 
             // Attacker-first resolution: no counter if defender is dead
@@ -143,11 +165,20 @@ public class CombatSystem extends EntitySystem {
                         - (counterMaxRange && dStats.attackRange > 1 ? 1 : 0));
                 aStats.currentHP -= ctrDmg;
 
+                // LOG: counterattack result
+                GameLogger.log(GameLogger.ATTACK, dStats.owner,
+                        "Counter: " + dStats.name + GameLogger.pos(dPos.x, dPos.y)
+                                + " hits " + aStats.name + GameLogger.pos(aPos.x, aPos.y)
+                                + " | ctrDmg=" + ctrDmg
+                                + " | atkHP=" + aStats.currentHP + "/" + aStats.maxHP);
+
                 // Spawn floating text above the attacker (isCounter = true)
                 spawnFloatingText(ctrDmg, aPos.x, aPos.y, true);
 
                 if (aStats.currentHP <= 0) {
                     aStats.currentHP = 0;
+                    GameLogger.log(GameLogger.ATTACK, dStats.owner,
+                            aStats.name + " at " + GameLogger.pos(aPos.x, aPos.y) + " DESTROYED by counter");
                     flagDeath(attacker);
                 }
             }
@@ -177,6 +208,9 @@ public class CombatSystem extends EntitySystem {
             if (s.owner != mStats.owner && s.unitTypeKey.equals("RANGER") && a.isOverwatchActive) {
                 int dist = chebyshev(p.x, p.y, targetX, targetY);
                 if (dist <= s.attackRange) {
+                    GameLogger.log(GameLogger.ABILITY, s.owner,
+                            "Overwatch triggered: " + s.name + GameLogger.pos(p.x, p.y)
+                                    + " fires at moving " + mStats.name + GameLogger.pos(targetX, targetY));
                     // Trigger overwatch attack
                     resolveAttack(e, movingUnit);
                     a.isOverwatchActive = false; // Limit 1 trigger per turn
@@ -222,7 +256,20 @@ public class CombatSystem extends EntitySystem {
         if (stats == null)
             return;
 
-        GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
+        // --- NEW: Track Base Destruction ---
+        if (stats.name.contains("Base")) {
+            if (stats.owner == 1) {
+                gameState.p1BaseCount = Math.max(0, gameState.p1BaseCount - 1);
+            } else if (stats.owner == 2) {
+                gameState.p2BaseCount = Math.max(0, gameState.p2BaseCount - 1);
+            }
+            GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
+            String posStr = (pos != null) ? GameLogger.pos(pos.x, pos.y) : "(?,?)";
+            GameLogger.log(GameLogger.GAME_OVER, stats.owner,
+                    "Base DESTROYED: " + stats.name + " at " + posStr
+                            + " | P1 bases=" + gameState.p1BaseCount
+                            + " P2 bases=" + gameState.p2BaseCount);
+        }
 
         entity.add(new DeathAnimComponent());
     }

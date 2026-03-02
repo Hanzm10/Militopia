@@ -1,0 +1,54 @@
+﻿.\gradlew.bat : C:\Users\Hanz Mapua\
+Workspace\Militopia\core\src\main\ja
+va\com\militopia\controller\GameInpu
+tController.java:634: error: 
+variable stats is already defined 
+in method moveUnit(Entity,int,int)
+At line:1 char:1
++ .\gradlew.bat :core:compileJava 
+2>&1 | Out-File -Encoding utf8 
+build_ ...
++ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : 
+NotSpe    cified: (C:\Users\Hanz 
+M...Entit    y,int,int):String) [], 
+RemoteExc    eption
+    + FullyQualifiedErrorId : 
+Native    CommandError
+ 
+        StatsComponent stats = unit.
+getComponent(StatsComponent.class);
+                       ^
+C:\Users\Hanz Mapua\Workspace\Milito
+pia\core\src\main\java\com\militopia
+\screen\GameScreen.java:549: error: 
+variable currentXP is already 
+defined in method render(float)
+                int currentXP = 
+(gameState.currentPlayer == 1) ? 
+gameState.p1XP : gameState.p2XP;
+                    ^
+2 errors
+
+FAILURE: Build failed with an 
+exception.
+
+* What went wrong:
+Execution failed for task 
+':core:compileJava'.
+> Compilation failed; see the 
+compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to 
+get the stack trace.
+> Run with --info or --debug option 
+to get more log output.
+> Run with --scan to get full 
+insights.
+
+* Get more help at 
+https://help.gradle.org
+
+BUILD FAILED in 7s

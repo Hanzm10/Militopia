@@ -1,0 +1,229 @@
+package com.militopia.ui;
+
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.militopia.MilitopiaGame;
+import com.militopia.config.GameConfig;
+import com.militopia.controller.GameInputController;
+import com.militopia.managers.AssetManager;
+import com.militopia.screen.GameScreen;
+import com.militopia.utils.HoverListener;
+
+/**
+ * Bottom gradient bar: Settings, Game Stats, (Undo in testing), End Turn
+ * buttons.
+ * Also owns the Settings overlay (pause menu).
+ */
+public class HudBottomBar {
+
+    private final MilitopiaGame game;
+    private final AssetManager assets;
+    private final GameInputController inputController;
+
+    private Table bottomContainer;
+    private Table settingsOverlay;
+
+    public HudBottomBar(MilitopiaGame game, AssetManager assets,
+            final GameScreen screen, Stage stage, GameInputController inputController) {
+        this.game = game;
+        this.assets = assets;
+        this.inputController = inputController;
+
+        buildBottomBar(screen, stage);
+        buildSettingsOverlay(screen, stage);
+    }
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
+
+    /** Returns the bottom container Table for adding to rootTable. */
+    public Table getActor() {
+        return bottomContainer;
+    }
+
+    /**
+     * Returns the container directly (needed by SlideMenu / InfoPanel for
+     * animations).
+     */
+    public Table getBottomContainer() {
+        return bottomContainer;
+    }
+
+    /**
+     * Enables or disables all touch events on the bottom bar.
+     * Call with {@code true} while the Level-Up popup is visible so that
+     * End Turn / Settings / Undo cannot be triggered.
+     */
+    public void setBlocked(boolean blocked) {
+        bottomContainer.setTouchable(blocked ? Touchable.disabled : Touchable.childrenOnly);
+    }
+
+    // -------------------------------------------------------------------------
+    // Private builders
+    // -------------------------------------------------------------------------
+
+    private void buildBottomBar(final GameScreen screen, Stage stage) {
+        TextureRegionDrawable bottomBg = createGradientDrawable(80, false);
+
+        Table bottomContent = new Table();
+        ImageButton settingsBtn = createCircleButton("icon_settings");
+        ImageButton statsBtn = createCircleButton("icon_stats");
+        ImageButton endTurnBtn = createCircleButton("icon_end");
+
+        bottomContent.add(createIconGroup(settingsBtn, "Settings")).expandX();
+        bottomContent.add(createIconGroup(statsBtn, "Game Stats")).expandX();
+
+        if (GameConfig.TESTING_MODE) {
+            TextButton undoBtn = new TextButton("↩ Undo", game.skin);
+            undoBtn.getLabel().setFontScale(0.55f);
+            undoBtn.getLabel().setColor(Color.YELLOW);
+            undoBtn.pad(6, 14, 6, 14);
+            bottomContent.add(undoBtn).expandX();
+            undoBtn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    screen.undoTurn();
+                }
+            });
+        }
+        bottomContent.add(createIconGroup(endTurnBtn, "End Turn")).expandX();
+
+        bottomContainer = new Table();
+        bottomContainer.setBackground(bottomBg);
+        bottomContainer.add(bottomContent).width(GameConfig.UI_WIDTH).padBottom(10).padTop(20);
+
+        // Wire button listeners
+        settingsBtn.addListener(new HoverListener());
+        statsBtn.addListener(new HoverListener());
+        endTurnBtn.addListener(new HoverListener());
+
+        settingsBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                if (settingsOverlay != null) {
+                    settingsOverlay.setVisible(true);
+                    // Freeze map while settings overlay is open.
+                    inputController.setInputEnabled(false);
+                }
+            }
+        });
+        endTurnBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                screen.endTurnAction();
+            }
+        });
+    }
+
+    private void buildSettingsOverlay(final GameScreen screen, Stage stage) {
+        settingsOverlay = new Table();
+        settingsOverlay.setFillParent(true);
+        settingsOverlay.setVisible(false);
+
+        Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        p.setColor(0, 0, 0, 0.85f);
+        p.fill();
+        settingsOverlay.setBackground(new TextureRegionDrawable(new TextureRegion(new Texture(p))));
+        p.dispose();
+
+        Table menuBox = new Table();
+        menuBox.setBackground(game.skin.newDrawable("white", Color.DARK_GRAY));
+
+        Label title = new Label("PAUSED", game.skin);
+        title.setFontScale(1.5f);
+
+        final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin);
+        fogBtn.addListener(new HoverListener());
+        fogBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                boolean newState = screen.toggleFog();
+                fogBtn.setText("Toggle Fog: " + (newState ? "ON" : "OFF"));
+            }
+        });
+
+        TextButton saveExitBtn = new TextButton("Save & Exit", game.skin);
+        saveExitBtn.addListener(new HoverListener());
+        saveExitBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                screen.saveAndExit();
+            }
+        });
+
+        TextButton resumeBtn = new TextButton("Resume", game.skin);
+        resumeBtn.addListener(new HoverListener());
+        resumeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                settingsOverlay.setVisible(false);
+                // Restore map input when returning to game.
+                inputController.setInputEnabled(true);
+            }
+        });
+
+        menuBox.add(title).pad(20).row();
+        menuBox.add(fogBtn).size(200, 50).pad(10).row();
+        menuBox.add(saveExitBtn).size(200, 50).pad(10).row();
+        menuBox.add(resumeBtn).size(200, 50).pad(10);
+        settingsOverlay.add(menuBox).size(300, 300);
+        stage.addActor(settingsOverlay);
+    }
+
+    // -------------------------------------------------------------------------
+    // Widget helpers
+    // -------------------------------------------------------------------------
+
+    private ImageButton createCircleButton(String iconName) {
+        ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
+        try {
+            Texture texture = assets.get(iconName + ".png");
+            if (texture == null)
+                texture = new Texture(iconName + ".png");
+            texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(texture));
+            style.imageUp = drawable;
+            style.imageDown = drawable.tint(Color.GRAY);
+        } catch (Exception e) {
+            style.imageUp = game.skin.newDrawable("white", Color.GRAY);
+        }
+        ImageButton btn = new ImageButton(style);
+        btn.setTransform(true);
+        btn.setSize(60, 60);
+        btn.setOrigin(30, 30);
+        return btn;
+    }
+
+    private Table createIconGroup(ImageButton btn, String labelText) {
+        Table t = new Table();
+        t.add(btn).size(60, 60).row();
+        Label lbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
+        lbl.setFontScale(0.7f);
+        t.add(lbl).padTop(5);
+        return t;
+    }
+
+    private TextureRegionDrawable createGradientDrawable(int height, boolean isTopDown) {
+        Pixmap pixmap = new Pixmap(1, height, Pixmap.Format.RGBA8888);
+        for (int y = 0; y < height; y++) {
+            float alpha = isTopDown ? 1.0f - ((float) y / height) : ((float) y / height);
+            pixmap.setColor(0f, 0f, 0f, alpha);
+            pixmap.drawPixel(0, y);
+        }
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return new TextureRegionDrawable(new TextureRegion(texture));
+    }
+}

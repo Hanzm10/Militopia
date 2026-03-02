@@ -703,7 +703,10 @@ public class UnitFactory {
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
         GridPositionComponent pos = objectEntity.getComponent(GridPositionComponent.class);
 
-        boolean isTown = (map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
+        MapGenerator.ObjectType oldType = map.objects[pos.x][pos.y];
+        boolean wasBase = (oldType == MapGenerator.ObjectType.BASE_P1 || oldType == MapGenerator.ObjectType.BASE_P2);
+        boolean isTown = (oldType == MapGenerator.ObjectType.TOWN);
+        int oldOwner = stats.owner;
 
         // Transform into a Level 1 Base for the new owner, whether it was a Town or an
         // Enemy Base.
@@ -712,6 +715,12 @@ public class UnitFactory {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
             state.p1BaseCount++;
             stats.owner = 1;
+
+            // Update Old Owner
+            if (wasBase && oldOwner == 2) {
+                state.p2BaseCount = Math.max(0, state.p2BaseCount - 1);
+            }
+
             stats.baseOrdinal = getOrdinal(state.p1BaseCount);
             stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
             state.p1XP += isTown ? 50 : 250;
@@ -720,6 +729,12 @@ public class UnitFactory {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             state.p2BaseCount++;
             stats.owner = 2;
+
+            // Update Old Owner
+            if (wasBase && oldOwner == 1) {
+                state.p1BaseCount = Math.max(0, state.p1BaseCount - 1);
+            }
+
             stats.baseOrdinal = getOrdinal(state.p2BaseCount);
             stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
             state.p2XP += isTown ? 50 : 250;
@@ -806,6 +821,52 @@ public class UnitFactory {
         return false;
     }
 
+    /**
+     * Finds a valid spawn point adjacent to the producer (x, y) that matches the
+     * unit's moveType.
+     * Scans the 8 adjacent tiles for an unoccupied tile (no unit at zIndex 3).
+     */
+    public int[] findValidSpawnPoint(int startX, int startY, StatsComponent.MoveType moveType,
+            MapGenerator.GameMap map) {
+
+        // Priority 1: Check the producer tile itself
+        if (isValidSpawn(startX, startY, moveType, map)) {
+            return new int[] { startX, startY };
+        }
+
+        int[][] dirs = {
+                { -1, -1 }, { 0, -1 }, { 1, -1 },
+                { -1, 0 }, { 1, 0 },
+                { -1, 1 }, { 0, 1 }, { 1, 1 }
+        };
+
+        for (int[] d : dirs) {
+            int tx = startX + d[0];
+            int ty = startY + d[1];
+
+            if (tx >= 0 && tx < map.width && ty >= 0 && ty < map.height) {
+                if (isValidSpawn(tx, ty, moveType, map)) {
+                    return new int[] { tx, ty };
+                }
+            }
+        }
+        return null; // No valid spot found
+    }
+
+    private boolean isValidSpawn(int x, int y, StatsComponent.MoveType moveType, MapGenerator.GameMap map) {
+        if (hasEntityAt(x, y, 3))
+            return false;
+
+        MapGenerator.TerrainType terrain = map.terrain[x][y];
+        boolean isWater = (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER);
+
+        if (moveType == StatsComponent.MoveType.SEA)
+            return isWater;
+        if (moveType == StatsComponent.MoveType.LAND)
+            return !isWater;
+        return true; // Air or other
+    }
+
     private static class GridPoint {
 
         int x, y;
@@ -814,6 +875,7 @@ public class UnitFactory {
             this.x = x;
             this.y = y;
         }
+
     }
 
     private String getOrdinal(int i) {

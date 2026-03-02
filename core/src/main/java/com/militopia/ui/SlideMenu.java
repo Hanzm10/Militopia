@@ -1,0 +1,425 @@
+package com.militopia.ui;
+
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.militopia.MilitopiaGame;
+import com.militopia.components.GridPositionComponent;
+import com.militopia.components.StatsComponent;
+import com.militopia.config.BaseLevelConfig;
+import com.militopia.controller.GameInputController;
+import com.militopia.data.GameState;
+import com.militopia.factories.UnitFactory;
+import com.militopia.managers.AssetManager;
+import com.militopia.map.MapGenerator;
+import com.militopia.screen.GameScreen;
+import com.militopia.utils.GameLogger;
+import com.militopia.utils.HoverListener;
+
+/**
+ * The sliding bottom menu panel — used for summon, hunt, capture, and build
+ * menus.
+ * Animates up from below the screen; the tile-info panel and bottom bar slide
+ * away.
+ */
+public class SlideMenu {
+
+    private final MilitopiaGame game;
+    private final AssetManager assets;
+    private final Stage stage;
+    private final HudBottomBar bottomBar;
+    private final InfoPanel infoPanel;
+    private final GameScreen gameScreen;
+
+    /** The actual menu Table added to stage. Also exposed for GameHUD compat. */
+    public final Table menuTable;
+
+    // State
+    private int currentBaseOwner = 1;
+    private int currentBaseLevel = 1;
+    private int currentIncome = 0;
+    private int buildX, buildY, buildParentX, buildParentY;
+
+    // References kept alive for button callbacks
+    private GameInputController inputController;
+    private UnitFactory unitFactory;
+    private GameState lastState;
+
+    private static final float PANEL_HEIGHT = 140f;
+    private static final Color BG_COLOR = new Color(0.1f, 0.1f, 0.1f, 0.95f);
+
+    public SlideMenu(MilitopiaGame game, AssetManager assets, Stage stage,
+            HudBottomBar bottomBar, InfoPanel infoPanel,
+            GameScreen gameScreen, GameInputController inputController,
+            UnitFactory unitFactory) {
+        this.game = game;
+        this.assets = assets;
+        this.stage = stage;
+        this.bottomBar = bottomBar;
+        this.infoPanel = infoPanel;
+        this.gameScreen = gameScreen;
+        this.inputController = inputController;
+        this.unitFactory = unitFactory;
+
+        menuTable = new Table();
+        menuTable.setSize(stage.getWidth(), PANEL_HEIGHT);
+        menuTable.setPosition(0, -PANEL_HEIGHT);
+        stage.addActor(menuTable);
+    }
+
+    // -------------------------------------------------------------------------
+    // Public open-menu API
+    // -------------------------------------------------------------------------
+
+    public void openSummonMenu(int owner, GameState state, int level, String producerType) {
+        this.currentBaseOwner = owner;
+        this.currentBaseLevel = level;
+        this.lastState = state;
+        populateSummonMenu(state, producerType);
+        slideIn(true);
+    }
+
+    public void openHuntMenu(final Entity animalEntity, final Entity hunterUnit,
+            final MapGenerator.ObjectType animalType,
+            final UnitFactory factory,
+            final GameInputController controller) {
+        menuTable.clear();
+        menuTable.setBackground(game.skin.newDrawable("white", BG_COLOR));
+        Table content = new Table();
+
+        UnitFactory.UiInfo info = factory.getObjectUi(animalType);
+        TextureRegion iconRegion = factory.getHudIcon(animalType);
+        SummonButton.addTo(content, iconRegion, "Hunt " + info.name, game, assets,
+                new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        controller.performHunt(animalEntity, hunterUnit);
+                    }
+                });
+
+        menuTable.add(content).expandX().center();
+        slideIn(true);
+    }
+
+    public void openCaptureMenu(final Entity structureEntity, final Entity capturingUnit,
+            final UnitFactory factory,
+            final GameInputController controller,
+            final MapGenerator.GameMap map,
+            final GameState state) {
+        menuTable.clear();
+        menuTable.setBackground(game.skin.newDrawable("white", BG_COLOR));
+        Table content = new Table();
+
+        final int newOwner = capturingUnit.getComponent(StatsComponent.class).owner;
+        TextureRegion baseRegion = (newOwner == 1)
+                ? factory.getHudIcon(MapGenerator.ObjectType.BASE_P1)
+                : factory.getHudIcon(MapGenerator.ObjectType.BASE_P2);
+
+        // Determine label
+        StatsComponent sStats = structureEntity.getComponent(StatsComponent.class);
+        String label = "Capture Structure";
+        if (sStats != null) {
+            if (sStats.name.contains("Town"))
+                label = "Capture Town";
+            else
+                label = "Capture Enemy Base";
+        }
+
+        SummonButton.addTo(content, baseRegion, label, game, assets,
+                new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        factory.captureStructure(structureEntity, newOwner, map, state);
+                        // Logging
+                        StatsComponent struct = structureEntity.getComponent(StatsComponent.class);
+                        GridPositionComponent sPos = structureEntity.getComponent(GridPositionComponent.class);
+                        String sName = (struct != null) ? struct.name : "Structure";
+                        String spr = (sPos != null) ? GameLogger.pos(sPos.x, sPos.y) : "(?,?)";
+                        GameLogger.log(GameLogger.CAPTURE, newOwner, "Captured " + sName + " at " + spr);
+
+                        StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
+                        if (unitStats != null)
+                            unitStats.hasActed = true;
+
+                        int newXP = (newOwner == 1) ? state.p1XP : state.p2XP;
+                        int newIncome = gameScreen.calculateIncome(newOwner);
+                        int curFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
+                        gameScreen.gameHUD.updateXP(newXP);
+                        gameScreen.gameHUD.updateFunding(curFunds, newIncome);
+                        hide();
+                        controller.deselect();
+                    }
+                });
+
+        menuTable.add(content).expandX().center();
+        slideIn(true);
+    }
+
+    public void openBuildMenu(int x, int y, int owner, int maxLevel,
+            boolean isWater, boolean isCoastalWater, boolean isCoastalLand,
+            GameState state, int parentX, int parentY,
+            MapGenerator.TerrainType terrain, UnitFactory unitFactory) {
+        this.buildX = x;
+        this.buildY = y;
+        this.currentBaseOwner = owner;
+        this.buildParentX = parentX;
+        this.buildParentY = parentY;
+        this.lastState = state;
+        boolean hasItems = populateBuildMenu(state, maxLevel, isWater, isCoastalWater, isCoastalLand);
+        if (hasItems) {
+            slideIn(true);
+        } else {
+            // No buildable structures for this tile — show terrain info in the Info Panel
+            // instead.
+            infoPanel.showTileInfo(unitFactory.getTerrainUi(terrain).name,
+                    unitFactory.getTextureForTerrain(terrain.ordinal()));
+        }
+    }
+
+    /** Slides the menu back down (hides). */
+    public void hide() {
+        menuTable.clearActions();
+        menuTable.addAction(Actions.moveTo(0, -menuTable.getHeight(), 0.3f, Interpolation.pow2In));
+        bottomBar.getBottomContainer().clearActions();
+        bottomBar.getBottomContainer()
+                .addAction(Actions.moveTo(bottomBar.getBottomContainer().getX(), 0,
+                        0.3f, Interpolation.pow2In));
+    }
+
+    public void resize(int width, int height) {
+        menuTable.setWidth(width);
+        menuTable.setX(0);
+    }
+
+    // -------------------------------------------------------------------------
+    // Private menu builders
+    // -------------------------------------------------------------------------
+
+    private void populateSummonMenu(GameState state, String producerType) {
+        menuTable.clear();
+        menuTable.setBackground(game.skin.newDrawable("white", BG_COLOR));
+        Table content = new Table();
+
+        java.util.Set<String> unlocked = unlockedForLevel(currentBaseLevel, false);
+        String[] allUnits = {
+                "RECRUIT", "RANGER", "SNIPER", "TANK", "RECON_DRONE",
+                "SUICIDE_DRONE", "APACHE", "GUNBOAT", "DESTROYER", "CARRIER"
+        };
+
+        for (final String unit : allUnits) {
+            if (!unlocked.contains(unit))
+                continue;
+            StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(unit);
+            boolean show = producerType.equals("PORT")
+                    ? moveType == StatsComponent.MoveType.SEA
+                    : moveType == StatsComponent.MoveType.LAND || moveType == StatsComponent.MoveType.AIR;
+            if (!show)
+                continue;
+
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(unit);
+            final int cost = unitFactory.getUnitCost(unit);
+
+            SummonButton.addTo(content, info.region, info.name + " (" + cost + ")", game, assets,
+                    new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            if (funds < cost) {
+                                GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
+                                        "Attempted " + unit + " — insufficient funds ("
+                                                + funds + "<" + cost + ")");
+                                return;
+                            }
+                            int tx = inputController.getLastClickedX();
+                            int ty = inputController.getLastClickedY();
+                            if (tx == -1 || ty == -1)
+                                return;
+
+                            int[] spawn = unitFactory.findValidSpawnPoint(
+                                    tx, ty, unitFactory.getUnitMoveType(unit), gameScreen.getGameMap());
+                            if (spawn == null) {
+                                GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
+                                        "Attempted " + unit + " — no valid spawn point found");
+                                return;
+                            }
+                            if (currentBaseOwner == 1)
+                                state.p1Funding -= cost;
+                            else
+                                state.p2Funding -= cost;
+
+                            unitFactory.createUnit(unit, spawn[0], spawn[1], currentBaseOwner, true);
+                            int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
+                                    "Summoned " + unit + " at " + GameLogger.pos(spawn[0], spawn[1])
+                                            + " | cost=" + cost + " | funds remaining=" + remaining);
+                            gameScreen.gameHUD.updateFunding(remaining, currentIncome);
+                            hide();
+                            inputController.resetLastClicked();
+                        }
+                    });
+        }
+
+        // Cancel button
+        TextButton closeBtn = new TextButton("Cancel", game.skin);
+        closeBtn.addListener(new HoverListener());
+        closeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                hide();
+                inputController.resetLastClicked();
+            }
+        });
+        menuTable.add(content).expandX().center();
+    }
+
+    /**
+     * Populates the build-menu content table. Returns {@code true} if at least
+     * one build button was added, or {@code false} if nothing is buildable on
+     * this tile (so the caller can fall back to showTileInfo).
+     */
+    private boolean populateBuildMenu(GameState state, int maxLevel,
+            boolean isWater, boolean isCoastalWater, boolean isCoastalLand) {
+        menuTable.clear();
+        menuTable.setBackground(game.skin.newDrawable("white", BG_COLOR));
+        Table content = new Table();
+
+        java.util.Set<String> unlocked = unlockedForLevel(maxLevel, true);
+        int addedCount = 0;
+
+        for (final String struct : unlocked) {
+            boolean show;
+            if (struct.equals("PORT"))
+                show = isWater && isCoastalWater;
+            else if (struct.equals("NUCLEAR"))
+                show = !isWater && isCoastalLand;
+            else if (struct.equals("OIL_DERRICK"))
+                show = !isWater;
+            else
+                show = !isWater;
+            if (!show)
+                continue;
+
+            addedCount++;
+            TextureRegion icon = unitFactory.getTextureForPopup(struct);
+            final int cost = unitFactory.getStructureCost(struct);
+            String niceName = unitFactory.toNiceName(struct) + " (" + cost + ")";
+
+            SummonButton.addToWrapped(content, icon, niceName, game, assets,
+                    new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            if (funds < cost) {
+                                GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                        "Attempted " + struct + " — insufficient funds ("
+                                                + funds + "<" + cost + ")");
+                                return;
+                            }
+                            if (unitFactory.hasEntityAt(buildX, buildY, 1)) {
+                                GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                        "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
+                                                + " — BLOCKED (tile occupied)");
+                                return;
+                            }
+                            if (gameScreen.getGameMap().objects[buildX][buildY] != MapGenerator.ObjectType.NONE) {
+                                GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                        "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
+                                                + " — BLOCKED (map object present)");
+                                return;
+                            }
+                            if (currentBaseOwner == 1)
+                                state.p1Funding -= cost;
+                            else
+                                state.p2Funding -= cost;
+
+                            unitFactory.createStructure(struct, buildX, buildY,
+                                    currentBaseOwner, buildParentX, buildParentY);
+                            int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                    "Built " + struct + " at " + GameLogger.pos(buildX, buildY)
+                                            + " | cost=" + cost + " | funds remaining=" + remaining);
+                            gameScreen.gameHUD.updateFunding(remaining, currentIncome);
+                            hide();
+                            inputController.resetLastClicked();
+                        }
+                    });
+        }
+        if (addedCount > 0) {
+            menuTable.add(content).expandX().center();
+            menuTable.row();
+        }
+        return addedCount > 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // Animation helpers
+    // -------------------------------------------------------------------------
+
+    private void slideIn(boolean hideInfoPanel) {
+        menuTable.setSize(stage.getWidth(), PANEL_HEIGHT);
+        menuTable.setX(0);
+        stage.addActor(menuTable);
+
+        if (hideInfoPanel) {
+            infoPanel.getTileInfoTable().clearActions();
+            infoPanel.getTileInfoTable().addAction(
+                    Actions.moveTo(0, -infoPanel.getTileInfoTable().getHeight(),
+                            0.3f, Interpolation.pow2In));
+        }
+        menuTable.clearActions();
+        menuTable.addAction(Actions.moveTo(0, 0, 0.3f, Interpolation.pow2Out));
+
+        bottomBar.getBottomContainer().clearActions();
+        bottomBar.getBottomContainer().addAction(
+                Actions.moveTo(bottomBar.getBottomContainer().getX(),
+                        -bottomBar.getBottomContainer().getHeight(),
+                        0.3f, Interpolation.pow2Out));
+    }
+
+    // -------------------------------------------------------------------------
+    // Utility
+    // -------------------------------------------------------------------------
+
+    /** Collect unlocked unit OR structure keys for levels 1..maxLevel. */
+    private java.util.Set<String> unlockedForLevel(int maxLevel, boolean structs) {
+        java.util.Set<String> set = new java.util.HashSet<>();
+        for (int i = 1; i <= maxLevel; i++) {
+            BaseLevelConfig.LevelData data = BaseLevelConfig.getLevel(i);
+            String[] keys = structs ? data.unlockedStructures : data.unlockedUnits;
+            if (keys != null) {
+                for (String k : keys)
+                    set.add(k);
+            }
+        }
+        return set;
+    }
+
+    /**
+     * Package-visible accessors used by {@link GameHUD} to forward to InfoPanel.
+     */
+    GameInputController getInputController() {
+        return inputController;
+    }
+
+    UnitFactory getUnitFactory() {
+        return unitFactory;
+    }
+
+    GameScreen getGameScreen() {
+        return gameScreen;
+    }
+
+    /**
+     * Called by GameHUD.updateFunding() so menu buttons know the current income.
+     */
+    public void setCurrentIncome(int income) {
+        this.currentIncome = income;
+    }
+}

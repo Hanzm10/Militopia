@@ -25,6 +25,7 @@ import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.systems.CombatSystem;
 import com.militopia.ui.GameHUD;
+import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -213,6 +214,11 @@ public class GameInputController extends InputAdapter {
             lastClickedX = gridX;
             lastClickedY = gridY;
 
+            // LOG: raw tile click
+            MapGenerator.TerrainType clickedTerrain = gameMap.terrain[gridX][gridY];
+            GameLogger.log(GameLogger.INPUT, "Click " + GameLogger.pos(gridX, gridY)
+                    + " | terrain=" + clickedTerrain.name());
+
             Entity foundUnit = null;
             Entity foundAnimal = null;
             Entity foundStructure = null;
@@ -296,17 +302,25 @@ public class GameInputController extends InputAdapter {
 
         if (unitStats.owner != screen.getCurrentPlayer()) {
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
+            GameLogger.log(GameLogger.INPUT, unitStats.owner,
+                    "Enemy unit inspected: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY)
+                            + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
             gameHUD.showUnitInfo(foundUnit, unitStats.name + " (Enemy)", info.region, unitStats.currentHP,
                     unitStats.maxHP);
             return;
         }
 
         if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
+            GameLogger.log(GameLogger.INPUT,
+                    "Unit exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
             gameHUD.showTileInfo("Unit Exhausted", unitFactory.getUnitUi("RECRUIT").region);
             return;
         }
 
         selectedUnitEntity = foundUnit;
+        GameLogger.log(GameLogger.INPUT, "Unit selected: " + unitStats.name
+                + " at " + GameLogger.pos(gridX, gridY)
+                + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
         showRangeMarkers(gridX, gridY);
         UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
         gameHUD.showUnitInfo(foundUnit, info.name, info.region, unitStats.currentHP, unitStats.maxHP);
@@ -338,6 +352,7 @@ public class GameInputController extends InputAdapter {
     private void handleAnimalTarget(Entity foundAnimal) {
         StatsComponent stats = foundAnimal.getComponent(StatsComponent.class);
         String rawName = (stats != null) ? stats.name : "";
+        GameLogger.log(GameLogger.INPUT, "Animal inspected: " + rawName);
         MapGenerator.ObjectType type = MapGenerator.ObjectType.HORSE;
         if (rawName.contains("DEER"))
             type = MapGenerator.ObjectType.DEER;
@@ -354,6 +369,11 @@ public class GameInputController extends InputAdapter {
     private void handleStructureTarget(Entity foundStructure, int gridX, int gridY) {
         MapGenerator.ObjectType objType = gameMap.objects[gridX][gridY];
         StatsComponent structStats = foundStructure.getComponent(StatsComponent.class);
+        int sOwner = (structStats != null) ? structStats.owner : 0;
+        String sOwnerStr = (sOwner == 0) ? "neutral" : "P" + sOwner;
+        GameLogger.log(GameLogger.INPUT,
+                "Structure selected: " + (structStats != null ? structStats.name : objType.name())
+                        + " at " + GameLogger.pos(gridX, gridY) + " | owner=" + sOwnerStr);
 
         // --- Handle Bases ---
         if (objType == MapGenerator.ObjectType.BASE_P1 || objType == MapGenerator.ObjectType.BASE_P2) {
@@ -374,12 +394,22 @@ public class GameInputController extends InputAdapter {
             if (structStats.name.equalsIgnoreCase("Port")) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
-                    // Ports use parent base level for unlocks (or their own level if we decide
-                    // later)
-                    // For now, let's use a default high level or track unlocks globally.
-                    // Actually, let's use the player's highest base level in that territory.
-                    int level = structStats.level;
-                    gameHUD.openSummonMenu(structStats.owner, screen.getGameState(), level, "PORT");
+                    // Use the highest friendly base level whose territory contains this Port.
+                    int portLevel = 1;
+                    ImmutableArray<Entity> allEnts = engine.getEntitiesFor(
+                            Family.all(StatsComponent.class, GridPositionComponent.class).get());
+                    for (Entity e : allEnts) {
+                        StatsComponent bs = e.getComponent(StatsComponent.class);
+                        GridPositionComponent bp = e.getComponent(GridPositionComponent.class);
+                        if (bs.owner == structStats.owner && bs.income >= 2 && bs.name.contains("Base")) {
+                            int radius = bs.vision;
+                            if (Math.abs(bp.x - gridX) <= radius && Math.abs(bp.y - gridY) <= radius) {
+                                if (bs.level > portLevel)
+                                    portLevel = bs.level;
+                            }
+                        }
+                    }
+                    gameHUD.openSummonMenu(structStats.owner, screen.getGameState(), portLevel, "PORT");
                     return;
                 }
             }
@@ -396,6 +426,15 @@ public class GameInputController extends InputAdapter {
     public void performHunt(Entity animal, Entity hunter) {
         StatsComponent hunterStats = hunter.getComponent(StatsComponent.class);
         GameState state = screen.getGameState();
+        GameLogger.log(GameLogger.CAPTURE, hunterStats.owner,
+                "Hunt: " + hunterStats.name + " hunted animal at " + GameLogger.pos(
+                        animal.getComponent(GridPositionComponent.class) != null
+                                ? animal.getComponent(GridPositionComponent.class).x
+                                : -1,
+                        animal.getComponent(GridPositionComponent.class) != null
+                                ? animal.getComponent(GridPositionComponent.class).y
+                                : -1)
+                        + " | +1 funding");
         if (hunterStats.owner == 1)
             state.p1Funding += 1;
         else
@@ -419,7 +458,12 @@ public class GameInputController extends InputAdapter {
         if (stats == null || abilities == null)
             return;
 
+        GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+        String posStr = (pos != null) ? GameLogger.pos(pos.x, pos.y) : "(?,?)";
+
         if (abilityKey.equals("DIG_IN")) {
+            GameLogger.log(GameLogger.ABILITY, stats.owner,
+                    "DIG IN: " + stats.name + " digs in at " + posStr);
             abilities.isDiggingIn = true;
             abilities.hasUsedDigIn = true;
             stats.hasActed = true;
@@ -428,6 +472,8 @@ public class GameInputController extends InputAdapter {
             gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
             deselect();
         } else if (abilityKey.equals("LAUNCH_NUKE")) {
+            GameLogger.log(GameLogger.ABILITY, stats.owner,
+                    "LAUNCH NUKE: " + stats.name + " at " + posStr + " — awaiting target tile");
             isTargetingAbility = true;
             targetingAbilityKey = "LAUNCH_NUKE";
             targetingUnit = unit;
@@ -438,6 +484,11 @@ public class GameInputController extends InputAdapter {
 
     private void executeTargetingAbility(int tx, int ty) {
         if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
+            StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
+            String name = tStats != null ? tStats.name : "?";
+            int owner = tStats != null ? tStats.owner : 0;
+            GameLogger.log(GameLogger.ABILITY, owner,
+                    "NUKE launched by " + name + " → target " + GameLogger.pos(tx, ty));
             combatSystem.launchNuke(targetingUnit, tx, ty);
         }
         isTargetingAbility = false;
@@ -490,8 +541,18 @@ public class GameInputController extends InputAdapter {
         if (isTerritory) {
             boolean isWater = (terrain == MapGenerator.TerrainType.WATER
                     || terrain == MapGenerator.TerrainType.DEEP_WATER);
-            boolean isCoastal = isWater && hasAdjacentLand(x, y);
-            gameHUD.openBuildMenu(x, y, owner, maxLevel, isWater, isCoastal, screen.getGameState(), parentX, parentY);
+            boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
+            boolean isCoastalLand = !isWater && hasAdjacentWater(x, y);
+            // Only open the build menu if there is at least one build category to show.
+            // Non-coastal (open/deep) water has nothing to build — show tile info instead.
+            boolean hasBuildOptions = !isWater || isCoastalWater;
+            if (hasBuildOptions) {
+                gameHUD.openBuildMenu(x, y, owner, maxLevel, isWater, isCoastalWater, isCoastalLand,
+                        screen.getGameState(), parentX, parentY, terrain, unitFactory);
+            } else {
+                gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
+                        unitFactory.getTextureForTerrain(terrain.ordinal()));
+            }
         } else {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
@@ -505,6 +566,19 @@ public class GameInputController extends InputAdapter {
             if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) {
                 MapGenerator.TerrainType t = gameMap.terrain[nx][ny];
                 if (t != MapGenerator.TerrainType.WATER && t != MapGenerator.TerrainType.DEEP_WATER)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAdjacentWater(int x, int y) {
+        int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 } };
+        for (int[] d : dirs) {
+            int nx = x + d[0], ny = y + d[1];
+            if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) {
+                MapGenerator.TerrainType t = gameMap.terrain[nx][ny];
+                if (t == MapGenerator.TerrainType.WATER || t == MapGenerator.TerrainType.DEEP_WATER)
                     return true;
             }
         }
@@ -564,15 +638,18 @@ public class GameInputController extends InputAdapter {
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         if (pos == null)
             return;
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        String unitName = (stats != null) ? stats.name : "?";
+        int owner = (stats != null) ? stats.owner : 0;
+        int oldX = pos.x, oldY = pos.y;
+        GameLogger.log(GameLogger.MOVE, owner,
+                unitName + " moves " + GameLogger.move(oldX, oldY, targetX, targetY));
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
-        int oldX = pos.x;
-        int oldY = pos.y;
         pos.x = targetX;
         pos.y = targetY;
 
         // RANGER: Overwatch (Check if move triggers an enemy attack)
         combatSystem.checkOverwatch(unit, targetX, targetY);
-        StatsComponent stats = unit.getComponent(StatsComponent.class);
         if (stats != null) {
             stats.hasActed = true;
             stats.hasMoved = true;

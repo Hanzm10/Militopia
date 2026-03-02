@@ -37,6 +37,7 @@ import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.systems.AbilityStatusSystem;
 import com.militopia.ui.GameHUD;
+import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -130,7 +131,7 @@ public class GameScreen implements Screen {
 
         engine.addSystem(new MovementSystem());
 
-        CombatSystem combatSystem = new CombatSystem(gameMap, entityFactory);
+        CombatSystem combatSystem = new CombatSystem(gameMap, entityFactory, gameState);
         engine.addSystem(combatSystem);
 
         fogSystem = new FogSystem(gameMap, gameState.currentPlayer);
@@ -209,12 +210,18 @@ public class GameScreen implements Screen {
         return gameState;
     }
 
+    public MapGenerator.GameMap getGameMap() {
+        return gameMap;
+    }
+
     public int getCurrentPlayer() {
         return gameState.currentPlayer;
     }
 
     public void endTurnAction() {
         if (turnState == TurnState.PLAYING) {
+            GameLogger.log(GameLogger.ECONOMY,
+                    "P" + gameState.currentPlayer + " ends turn " + gameState.turnCount);
             turnState = TurnState.FADING_OUT;
             fadeTime = 0f;
             inputController.setInputEnabled(false);
@@ -273,6 +280,9 @@ public class GameScreen implements Screen {
         TurnSnapshot snap = turnHistory.undo();
         if (snap == null)
             return;
+
+        GameLogger.log(GameLogger.INPUT,
+                "Undo triggered — reverting to turn " + snap.turn + " | player=" + snap.currentPlayer);
 
         // 1. Remove all UNIT entities from the engine
         List<Entity> toRemove = new ArrayList<>();
@@ -518,6 +528,16 @@ public class GameScreen implements Screen {
                     }
                 }
 
+                // Update GameLogger context for the new active player/turn
+                GameLogger.setContext(gameState.turnCount, gameState.currentPlayer);
+                int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
+                GameLogger.log(GameLogger.ECONOMY,
+                        "Turn " + gameState.turnCount
+                                + " | P" + gameState.currentPlayer + " starts"
+                                + " | income=+" + income
+                                + " | funds=" + currentTotal
+                                + " | XP=" + currentXP);
+
                 // --- Ability Turn Start Processing ---
                 abilityStatusSystem.onTurnStart(gameState.currentPlayer);
 
@@ -526,7 +546,6 @@ public class GameScreen implements Screen {
                 resetUnitActions();
                 gameHUD.updateTurn(gameState.turnCount);
 
-                int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
                 gameHUD.updateXP(currentXP);
 
                 gameHUD.updateFunding(currentTotal, income);
@@ -542,7 +561,13 @@ public class GameScreen implements Screen {
             if (fadeTime <= 0) {
                 fadeTime = 0;
                 turnState = TurnState.PLAYING;
-                inputController.setInputEnabled(true);
+                // Only re-enable map input if the level-up popup isn't still on screen.
+                // (processTurnEconomy may have shown a popup and already set
+                // inputEnabled=false;
+                // re-enabling here would silently override that lock.)
+                if (!gameHUD.isLevelUpPopupVisible()) {
+                    inputController.setInputEnabled(true);
+                }
                 // Snapshot the start of this new turn (before player acts)
                 turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
             }
@@ -563,6 +588,20 @@ public class GameScreen implements Screen {
                 inputController.getBounceTimer());
 
         engine.update(delta);
+
+        // --- NEW: Win Condition Check ---
+        if (turnState == TurnState.PLAYING) {
+            if (gameState.p1BaseCount == 0) {
+                GameLogger.log(GameLogger.GAME_OVER,
+                        "=== P2 WINS on Turn " + gameState.turnCount + " (P1 lost all bases) ===");
+                game.setScreen(new GameOverScreen(game, 2)); // P2 wins
+            } else if (gameState.p2BaseCount == 0) {
+                GameLogger.log(GameLogger.GAME_OVER,
+                        "=== P1 WINS on Turn " + gameState.turnCount + " (P2 lost all bases) ===");
+                game.setScreen(new GameOverScreen(game, 1)); // P1 wins
+            }
+        }
+
         gameHUD.render(delta);
 
         if (turnState != TurnState.PLAYING) {
