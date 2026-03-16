@@ -3,7 +3,9 @@ package com.militopia.systems;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import com.militopia.components.*;
+import com.militopia.data.GameState;
 import com.militopia.map.MapGenerator;
+import com.militopia.systems.CombatSystem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +15,7 @@ public class AbilityTest {
     private PooledEngine engine;
     private CombatSystem combatSystem;
     private MapGenerator.GameMap gameMap;
+    private GameState gameState;
 
     @BeforeEach
     public void setup() {
@@ -25,7 +28,8 @@ public class AbilityTest {
                 gameMap.objects[x][y] = MapGenerator.ObjectType.NONE;
             }
         }
-        combatSystem = new CombatSystem(gameMap, null);
+        gameState = new GameState(12345L, "TestSave", 10, 10);
+        combatSystem = new CombatSystem(gameMap, null, gameState);
         engine.addSystem(combatSystem);
     }
 
@@ -79,6 +83,21 @@ public class AbilityTest {
 
         assertEquals(initialHP, dStats.currentHP,
                 "Defender should take 0 damage due to Dig In bonus (Atk 3 vs Def 1+3)");
+    }
+
+    @Test
+    public void testRecruitDigInExpiration() {
+        Entity defender = createUnit("RECRUIT", 1, 1, 2);
+        AbilitiesComponent dAbil = defender.getComponent(AbilitiesComponent.class);
+        dAbil.isDiggingIn = true;
+
+        AbilityStatusSystem statusSystem = new AbilityStatusSystem(gameMap);
+        engine.addSystem(statusSystem);
+
+        // Turn start for Player 2 (the defender)
+        statusSystem.onTurnStart(2);
+
+        assertFalse(dAbil.isDiggingIn, "Dig In should expire at the start of the owner's turn");
     }
 
     @Test

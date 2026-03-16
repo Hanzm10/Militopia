@@ -57,7 +57,11 @@ public class GameLogger {
     public static void log(String category, String message) {
         String entry = String.format("[T%d|P%d] [%s] %s",
                 currentTurn, currentPlayer, category, message);
-        Gdx.app.log(TAG, entry);
+        if (Gdx.app != null) {
+            Gdx.app.log(TAG, entry);
+        } else {
+            System.out.println(TAG + ": " + entry);
+        }
     }
 
     /**
@@ -67,7 +71,11 @@ public class GameLogger {
     public static void log(String category, int player, String message) {
         String entry = String.format("[T%d|P%d] [%s] %s",
                 currentTurn, player, category, message);
-        Gdx.app.log(TAG, entry);
+        if (Gdx.app != null) {
+            Gdx.app.log(TAG, entry);
+        } else {
+            System.out.println(TAG + ": " + entry);
+        }
     }
 
     /**
@@ -75,7 +83,11 @@ public class GameLogger {
      * Used for menu navigation before a game is running.
      */
     public static void logScreen(String message) {
-        Gdx.app.log(TAG, "[SCREEN] " + message);
+        if (Gdx.app != null) {
+            Gdx.app.log(TAG, "[SCREEN] " + message);
+        } else {
+            System.out.println(TAG + ": [SCREEN] " + message);
+        }
     }
 
     // -----------------------------------------------------------------------

@@ -55,6 +55,11 @@ public class AbilityStatusSystem extends EntitySystem {
                     abilities.nukeCooldown--;
                 }
 
+                // RECRUIT: Dig In reset (expires after 1 enemy turn cycle)
+                if (stats.unitTypeKey.equals("RECRUIT")) {
+                    abilities.isDiggingIn = false;
+                }
+
                 // APACHE: Fuel Gauge
                 if (stats.unitTypeKey.equals("APACHE")) {
                     if (abilities.fuel > 0) {
