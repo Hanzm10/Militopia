@@ -12,8 +12,9 @@ docs/
 skills-lock.json
 
 ## GSD State:
-.gsd/STATE.md
-.gsd/ROADMAP.md
+# .gsd/STATE.md
+# .gsd/ROADMAP.md
+# .gsd/JOURNAL.md
 
 ## OS:
 Thumbs.db
