@@ -10,7 +10,7 @@ See: .gsd/PROJECT.md (updated 2026-03-16)
 ## Current Position
 - **Phase**: 7: Polish & UX
 - **Task**: Inception / Planning
-- **Status**: Paused at 2026-03-16 15:25
+- **Status**: Active (resumed 2026-03-16 15:25)
 
 ## Last Session Summary
 - Migrated GSD infrastructure from `.planning/` to canonical `.gsd/`.

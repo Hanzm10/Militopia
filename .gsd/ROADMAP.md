@@ -1,0 +1,118 @@
+# Roadmap: Militopia
+
+## Overview
+
+Militopia is a 2-player turn-based strategy game. This roadmap tracks the development from foundation to release.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions
+
+- [x] **Phase 0: Foundation** - Project scaffolded and core rendering
+- [x] **Phase 1: Turn Engine & Economy** - Turn system and funding logic
+- [x] **Phase 2: Base Progression** - Base XP and level-up system
+- [x] **Phase 3: Capture & Territory** - Structure capturing and Fog of War
+- [x] **Phase 4: Unit Roster & Combat** - Core combat loop and unit stats
+- [x] **Phase 4.1: Unit & Building Abilities** - Unique skills for units and structures
+- [x] **Phase 5: Specialized Structures** - Construction system and building logic
+- [x] **Phase 6: Win / Loss Conditions** - Win conditions and game over state
+- [/] **Phase 7: Polish & UX** - Visuals, SFX, and UI improvements
+
+## Phase Details
+
+### Phase 0: Foundation
+**Goal**: libGDX Ashley ECS setup with isometric tile renderer and camera.
+**Depends on**: Nothing
+**Success Criteria** (what must be TRUE):
+  1. Isometric tiles render correctly with Z-order.
+  2. Procedural map generation works with seed.
+  3. ECS engine runs with basic systems.
+**Plans**: Complete
+
+### Phase 1: Turn Engine & Economy
+**Goal**: Multi-player turn management and per-turn income distribution.
+**Depends on**: Phase 0
+**Success Criteria** (what must be TRUE):
+  1. Players can end turns and active player flips.
+  2. Income is calculated and distributed at turn start.
+  3. Testing mode disables unit action enforcement.
+**Plans**: Complete
+
+### Phase 2: Base Progression
+**Goal**: Base leveling system with XP growth and stat scaling.
+**Depends on**: Phase 1
+**Success Criteria** (what must be TRUE):
+  1. Bases gain XP every turn.
+  2. Level-up triggers income and vision increases.
+  3. UI popups show unlocked units/structures.
+**Plans**: Complete
+
+### Phase 3: Capture & Territory
+**Goal**: Capture towns and bases to expand territory and visibility.
+**Depends on**: Phase 2
+**Success Criteria** (what must be TRUE):
+  1. Units can capture unowned or enemy structures.
+  2. Captured structures contribute to the owner's income and XP.
+  3. Fog of War correctly hides tiles outside vision range.
+**Plans**: Complete
+
+### Phase 4: Unit Roster & Combat
+**Goal**: Full unit roster with Land/Sea/Air domains and combat resolution.
+**Depends on**: Phase 3
+**Success Criteria** (what must be TRUE):
+  1. 10 units are summonable with correct costs and stats.
+  2. Combat uses ATK-DEF formula with terrain/range modifiers.
+  3. Death animations play before entity removal.
+**Plans**: Complete
+
+### Phase 4.1: Unit & Building Abilities
+**Goal**: Unique tactical abilities for every unit and building.
+**Depends on**: Phase 4
+**Success Criteria** (what must be TRUE):
+  1. Dig In, Overwatch, and Blitz abilities function correctly.
+  2. Stealth mechanics (Cloak/Camouflage) hide units from enemies.
+  3. AOE attacks (Suppressing Fire, Nuke) hit multiple tiles.
+**Plans**: Complete
+
+### Phase 5: Specialized Structures
+**Goal**: Implement the building construction system and finalize specialized building interactions.
+**Depends on**: Phase 4.1
+**Success Criteria** (what must be TRUE):
+  1. Build menu allows placing structures within base territory.
+  2. Ports enable Sea unit summoning on Water tiles.
+  3. Hospitals and Solar Arrays provide per-turn bonuses.
+**Plans**: 
+  - 05-01: Parent-Base Linking & Placement
+  - 05-02: Port Interaction & Naval Spawning
+  - 05-03: Per-Turn Economy Bonuses
+  - 05-04: Strict Coastal Placement & Adjacent Spawning
+
+### Phase 6: Win / Loss Conditions
+**Goal**: Define win condition and handle game termination.
+**Depends on**: Phase 5
+**Success Criteria** (what must be TRUE):
+  1. Destroying all enemy bases triggers victory.
+  2. Game over screen displays winner and returns to menu.
+**Plans**: TBD
+
+### Phase 7: Polish & UX
+**Goal**: Animations, sound effects, and UI polish.
+**Depends on**: Phase 6
+**Success Criteria** (what must be TRUE):
+  1. Animated turn transitions and sound effects are active.
+  2. Action undo allows canceling moves before committing.
+**Plans**: TBD
+
+---
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 0. Foundation | 1/1 | Complete | 2025-12-22 |
+| 1. Turn Engine | 1/1 | Complete | 2026-01-10 |
+| 2. Base Progression | 1/1 | Complete | 2026-01-25 |
+| 3. Capture & Territory | 1/1 | Complete | 2026-02-05 |
+| 4. Unit Roster | 1/1 | Complete | 2026-02-15 |
+| 4.1 Unit Abilities | 1/1 | Complete | 2026-02-22 |
+| 6. Win / Loss | 1/1 | Complete | 2026-03-02 |
+| 7. Polish & UX | 0/1 | In progress | - |
