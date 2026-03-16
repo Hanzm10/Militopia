@@ -5,6 +5,7 @@ build/
 **/build/
 
 ## Tools:
+logs/
 .gemini/
 .planning/
 docs/
