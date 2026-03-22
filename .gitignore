@@ -6,8 +6,7 @@ build/
 
 ## Tools:
 logs/
-.gemini/
-.planning/
+.agent/
 docs/
 skills-lock.json
 
