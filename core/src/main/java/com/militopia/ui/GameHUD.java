@@ -44,6 +44,7 @@ public class GameHUD {
     private InfoPanel infoPanel;
     private SlideMenu slideMenu;
     private LevelUpPopup levelUpPopup;
+    private GameOverPopup gameOverPopup;
 
     private AssetManager assets;
     private MilitopiaGame game;
@@ -70,6 +71,7 @@ public class GameHUD {
         slideMenu = new SlideMenu(game, assets, stage, bottomBar, infoPanel,
                 screen, inputController, unitFactory);
         levelUpPopup = new LevelUpPopup(game, assets, stage, inputController, bottomBar);
+        gameOverPopup = new GameOverPopup(game, stage, inputController, bottomBar);
 
         // Expose summonMenu for callers that still reference gameHUD.summonMenu
         summonMenu = slideMenu.menuTable;
@@ -206,5 +208,13 @@ public class GameHUD {
     /** Returns true if the level-up popup is currently on screen. */
     public boolean isLevelUpPopupVisible() {
         return levelUpPopup.isVisible();
+    }
+
+    // -------------------------------------------------------------------------
+    // Game-over popup delegation
+    // -------------------------------------------------------------------------
+
+    public void showGameOverPopup(int winnerID) {
+        gameOverPopup.show(winnerID);
     }
 }

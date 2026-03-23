@@ -1,21 +1,33 @@
 ---
+status: complete
 phase: 06-win-loss-conditions
-status: COMPLETE
+source: [06-01-SUMMARY.md]
+started: 2026-03-23T15:35:00Z
+updated: 2026-03-23T15:40:00Z
 ---
 
-# Phase 6 UAT: Win / Loss Conditions
+## Current Test
 
-### 1. Victory Detection (Base Count zero)
-expected: When a player's base count reached zero, the game ends.
-result: PASS
-reason: Verified via `WinConditionTest.java` and code audit of `GameScreen.java`.
+[testing complete]
 
-### 2. Game Over Screen Navigation
-expected: Game over screen displays the winner and allows returning to the main menu.
-result: PASS
-reason: `GameOverScreen.java` is implemented and correctly transitions back to `MenuScreen`.
+## Tests
 
-### 3. Verification Test
-expected: Automated test suite passes for win/loss logic.
-result: PASS
-reason: `WinConditionTest.java` passed 4/4 cases on 2026-03-23.
+### 1. Victory Detection & Modal Popup
+expected: When a player's last base is destroyed, the game should NOT transition to a new screen. Instead, a semi-transparent dark modal overlay (GameOverPopup) should appear instantly over the current map, displaying "GAME OVER" and the winner's identity.
+result: pass
+
+### 2. Return to Main Menu
+expected: Clicking the "Return to Main Menu" button on the GameOverPopup should return the player to the main MenuScreen.
+result: pass
+
+## Summary
+
+total: 2
+passed: 2
+issues: 0
+pending: 0
+skipped: 0
+
+## Gaps
+
+[none yet]

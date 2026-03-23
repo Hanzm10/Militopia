@@ -15,9 +15,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.militopia.MilitopiaGame;
 import com.militopia.managers.AssetManager;
-import com.militopia.screen.GameOverScreen;
+import com.militopia.MilitopiaGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,25 +67,6 @@ public class UITest {
         Gdx.gl = null;
         Gdx.gl20 = null;
         Gdx.input = null;
-    }
-
-    @Test
-    public void testGameOverScreenConstruction() {
-        try (MockedConstruction<Stage> mStage = mockConstruction(Stage.class);
-                MockedConstruction<Table> mTable = mockConstruction(Table.class, (mock, context) -> {
-                    setupTableMock(mock);
-                });
-                MockedConstruction<Label> mLabel = mockConstruction(Label.class);
-                MockedConstruction<TextButton> mButton = mockConstruction(TextButton.class);
-                MockedConstruction<SpriteBatch> mBatch = mockConstruction(SpriteBatch.class)) {
-
-            GameOverScreen screen = new GameOverScreen(mockGame, 1);
-
-            assertEquals(1, mStage.constructed().size());
-            Stage stage = mStage.constructed().get(0);
-            verify(stage).addActor(any(Actor.class));
-            assertTrue(mLabel.constructed().size() >= 2);
-        }
     }
 
     @Test

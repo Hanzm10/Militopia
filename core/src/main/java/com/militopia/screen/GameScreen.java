@@ -37,6 +37,7 @@ import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.systems.AbilityStatusSystem;
 import com.militopia.systems.StructureEconomySystem;
+import com.militopia.systems.WinConditionSystem;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
@@ -63,6 +64,7 @@ public class GameScreen implements Screen {
     public GameHUD gameHUD;
     private AbilityStatusSystem abilityStatusSystem;
     private StructureEconomySystem structureEconomySystem;
+    private WinConditionSystem winConditionSystem;
     private FogSystem fogSystem;
     private boolean isFogEnabled = true;
     private BitmapFont font;
@@ -142,8 +144,13 @@ public class GameScreen implements Screen {
         abilityStatusSystem = new AbilityStatusSystem(gameMap);
         engine.addSystem(abilityStatusSystem);
 
+        gameHUD = new GameHUD(game);
+
         structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, null);
         engine.addSystem(structureEconomySystem);
+
+        winConditionSystem = new WinConditionSystem(loadedState, winnerID -> gameHUD.showGameOverPopup(winnerID));
+        engine.addSystem(winConditionSystem);
 
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
         engine.addSystem(mapRenderSystem);
@@ -169,7 +176,6 @@ public class GameScreen implements Screen {
             }
         }
 
-        gameHUD = new GameHUD(game);
         structureEconomySystem.setGameHUD(gameHUD);
 
         inputController = new GameInputController(
@@ -231,6 +237,7 @@ public class GameScreen implements Screen {
             turnState = TurnState.FADING_OUT;
             fadeTime = 0f;
             inputController.setInputEnabled(false);
+            winConditionSystem.setPlaying(false);
         }
     }
 
@@ -488,6 +495,7 @@ public class GameScreen implements Screen {
                 if (!gameHUD.isLevelUpPopupVisible()) {
                     inputController.setInputEnabled(true);
                 }
+                winConditionSystem.setPlaying(true);
                 // Snapshot the start of this new turn (before player acts)
                 turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
             }
@@ -508,19 +516,6 @@ public class GameScreen implements Screen {
                 inputController.getBounceTimer());
 
         engine.update(delta);
-
-        // --- NEW: Win Condition Check ---
-        if (turnState == TurnState.PLAYING) {
-            if (gameState.p1BaseCount == 0) {
-                GameLogger.log(GameLogger.GAME_OVER,
-                        "=== P2 WINS on Turn " + gameState.turnCount + " (P1 lost all bases) ===");
-                game.setScreen(new GameOverScreen(game, 2)); // P2 wins
-            } else if (gameState.p2BaseCount == 0) {
-                GameLogger.log(GameLogger.GAME_OVER,
-                        "=== P1 WINS on Turn " + gameState.turnCount + " (P2 lost all bases) ===");
-                game.setScreen(new GameOverScreen(game, 1)); // P1 wins
-            }
-        }
 
         gameHUD.render(delta);
 

@@ -10,6 +10,9 @@ import com.militopia.data.GameState;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
+import com.militopia.MilitopiaGame;
+import com.badlogic.gdx.Application;
+import com.badlogic.gdx.Gdx;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -17,6 +20,9 @@ import com.badlogic.gdx.graphics.Texture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class WinConditionTest {
@@ -110,5 +116,24 @@ public class WinConditionTest {
 
         assertEquals(1, gameState.p1BaseCount);
         assertEquals(1, stats.owner);
+    }
+
+    @Test
+    public void testWinConditionSystemTriggersGameOver() {
+        WinConditionSystem.GameOverTrigger mockTrigger = Mockito.mock(WinConditionSystem.GameOverTrigger.class);
+
+        // Mock Gdx.app to avoid NPE in GameLogger
+        Gdx.app = Mockito.mock(Application.class);
+
+        WinConditionSystem winSystem = new WinConditionSystem(gameState, mockTrigger);
+        engine.addSystem(winSystem);
+
+        // Case: P1 loses (P2 wins)
+        gameState.p1BaseCount = 0;
+        gameState.p2BaseCount = 1;
+
+        winSystem.update(0.1f);
+
+        verify(mockTrigger).trigger(2);
     }
 }
