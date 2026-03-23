@@ -660,6 +660,7 @@ public class GameInputController extends InputAdapter {
             abilities.isDiggingIn = false;
         }
         gameHUD.hideSummonMenu();
+        gameHUD.hideTileInfo();
         clearMarkers();
         selectedUnitEntity = null;
     }

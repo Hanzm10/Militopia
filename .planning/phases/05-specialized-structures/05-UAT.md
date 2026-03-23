@@ -6,32 +6,32 @@ verified: 2026-03-23
 
 # Phase 5 UAT: Specialized Structures
 
-## UAT 5.1 — Structure Placement Validation
-**Given** a player is in territory at a coastal water tile  
-**When** they open the Build Menu  
-**Then** only PORT is shown (not Oil Derrick, etc.)  
-**Result:** ✅ VERIFIED — `SlideMenu.populateBuildMenu` enforces `isCoastalWater` for PORT.
+### 1. Structure Placement Validation
+expected: In coastal water territory, only PORT is shown in the Build Menu (no Oil Derrick, etc.).
+result: verified
+reported: `SlideMenu.populateBuildMenu` enforces `isCoastalWater` for PORT.
 
-## UAT 5.2 — Port Sea-Unit Filter
-**Given** a player owns a Port and clicks it  
-**When** the summon menu opens  
-**Then** only Sea units (Gunboat, Destroyer, Carrier) are shown  
-**Result:** ✅ VERIFIED — `populateSummonMenu` filters by `StatsComponent.MoveType.SEA` when `producerType == "PORT"`.
+### 2. Port Sea-Unit Filter
+expected: When opening the summon menu for a Port, only Sea units (Gunboat, Destroyer, Carrier) are shown.
+result: verified
+reported: `populateSummonMenu` filters by `StatsComponent.MoveType.SEA` when `producerType == "PORT"`.
 
-## UAT 5.3 — Base No-Sea Filter
-**Given** a player owns a Base and clicks it  
-**When** the summon menu opens  
-**Then** Sea units (Gunboat, Destroyer, Carrier) are NOT shown  
-**Result:** ✅ VERIFIED — `populateSummonMenu` excludes `MoveType.SEA` units for `producerType == "BASE"`.
+### 3. Base No-Sea Filter
+expected: When opening the summon menu for a Base, Sea units are NOT shown.
+result: verified
+reported: `populateSummonMenu` excludes `MoveType.SEA` units for `producerType == "BASE"`.
 
-## UAT 5.4 — Structure Economy Per Turn
-**Given** a player owns an Oil Derrick (+6 income) linked to a Base  
-**When** they end their turn  
-**Then** their funding increases by +6 more than a turn without the structure  
-**Result:** ✅ VERIFIED — `StructureEconomySystem.processTurn()` distributes `stats.income` via `calculateIncome()` and XP via structure loop.
+### 4. Structure Economy Per Turn
+expected: Oil Derrick linked to a Base increases funding by +6 more than a turn without the structure.
+result: verified
+reported: `StructureEconomySystem.processTurn()` distributes `stats.income` via `calculateIncome()`.
 
-## UAT 5.5 — Hospital Heals Adjacent Units
-**Given** a Hospital is at (3,3) and a friendly damaged unit is at (3,4)  
-**When** the player's turn begins  
-**Then** the unit gains +3 HP (capped at maxHP)  
-**Result:** ✅ VERIFIED — `StructureEconomySystem` heals via chebyshev distance ≤ 1 check. Verified by `PortSummonTest.testHospitalHealsAdjacentFriendlyUnit`.
+### 5. Hospital Heals Adjacent Units
+expected: Friendly damaged unit adjacent to a Hospital at turn start gains +3 HP (capped at maxHP).
+result: verified
+reported: `StructureEconomySystem` heals via chebyshev distance ≤ 1 check.
+
+### 6. Solar Array Stats
+expected: Solar Array provides +75 XP and +3 Income per turn.
+result: verified
+reported: `UnitFactory.createStructure` sets stats, `StructureEconomySystem` processes XP, `GameScreen.calculateIncome` handles funding.

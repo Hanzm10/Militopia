@@ -238,7 +238,7 @@ public class UnitFactory {
                 def = 1;
                 move = 1;
                 rng = 2;
-                vis = 3;
+                vis = 2;
                 cost = 5;
                 moveType = StatsComponent.MoveType.LAND;
                 break;
@@ -247,8 +247,8 @@ public class UnitFactory {
                 atk = 15;
                 def = 0;
                 move = 1;
-                rng = 4;
-                vis = 5;
+                rng = 3;
+                vis = 3;
                 cost = 8;
                 moveType = StatsComponent.MoveType.LAND;
                 break;
@@ -266,9 +266,9 @@ public class UnitFactory {
                 hp = 50;
                 atk = 12;
                 def = 6;
-                move = 5;
+                move = 3;
                 rng = 1;
-                vis = 5;
+                vis = 3;
                 cost = 0;
                 moveType = StatsComponent.MoveType.LAND;
                 break;
@@ -276,9 +276,9 @@ public class UnitFactory {
                 hp = 5;
                 atk = 0;
                 def = 0;
-                move = 6;
+                move = 3;
                 rng = 0;
-                vis = 6;
+                vis = 3;
                 cost = 4;
                 moveType = StatsComponent.MoveType.AIR;
                 break;
@@ -286,9 +286,9 @@ public class UnitFactory {
                 hp = 5;
                 atk = 20;
                 def = 0;
-                move = 5;
+                move = 2;
                 rng = 1;
-                vis = 5;
+                vis = 2;
                 cost = 7;
                 moveType = StatsComponent.MoveType.AIR;
                 break;
@@ -296,9 +296,9 @@ public class UnitFactory {
                 hp = 20;
                 atk = 15;
                 def = 2;
-                move = 4;
+                move = 3;
                 rng = 2;
-                vis = 4;
+                vis = 3;
                 cost = 18;
                 moveType = StatsComponent.MoveType.AIR;
                 break;
@@ -306,9 +306,9 @@ public class UnitFactory {
                 hp = 45;
                 atk = 18;
                 def = 3;
-                move = 5;
-                rng = 4;
-                vis = 5;
+                move = 3;
+                rng = 3;
+                vis = 3;
                 cost = 0;
                 moveType = StatsComponent.MoveType.AIR;
                 break;
@@ -316,9 +316,9 @@ public class UnitFactory {
                 hp = 10;
                 atk = 5;
                 def = 2;
-                move = 3;
+                move = 2;
                 rng = 2;
-                vis = 3;
+                vis = 2;
                 cost = 6;
                 moveType = StatsComponent.MoveType.SEA;
                 break;
@@ -326,9 +326,9 @@ public class UnitFactory {
                 hp = 30;
                 atk = 15;
                 def = 3;
-                move = 4;
-                rng = 4;
-                vis = 4;
+                move = 3;
+                rng = 3;
+                vis = 3;
                 cost = 13;
                 moveType = StatsComponent.MoveType.SEA;
                 break;
@@ -336,9 +336,9 @@ public class UnitFactory {
                 hp = 45;
                 atk = 5;
                 def = 4;
-                move = 4;
+                move = 3;
                 rng = 3;
-                vis = 6;
+                vis = 3;
                 cost = 25;
                 moveType = StatsComponent.MoveType.SEA;
                 break;
@@ -346,9 +346,9 @@ public class UnitFactory {
                 hp = 40;
                 atk = 25;
                 def = 3;
-                move = 5;
-                rng = 5;
-                vis = 5;
+                move = 4;
+                rng = 4;
+                vis = 3;
                 cost = 0;
                 moveType = StatsComponent.MoveType.SEA;
                 break;
@@ -581,7 +581,7 @@ public class UnitFactory {
         if (type.equals("RADAR")) {
             stats.xpGain = 75;
             stats.income = 0;
-            stats.vision = 6;
+            stats.vision = 4;
         }
 
         if (type.equals("JAMMER")) {

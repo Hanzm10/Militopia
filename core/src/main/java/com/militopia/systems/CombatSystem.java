@@ -251,7 +251,7 @@ public class CombatSystem extends EntitySystem {
     /**
      * Adds a DeathAnimComponent to the entity so UnitRenderSystem can animate it.
      */
-    private void flagDeath(Entity entity) {
+    public void flagDeath(Entity entity) {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
         if (stats == null)
             return;
