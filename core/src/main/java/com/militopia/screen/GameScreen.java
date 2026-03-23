@@ -36,6 +36,7 @@ import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.systems.AbilityStatusSystem;
+import com.militopia.systems.StructureEconomySystem;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ public class GameScreen implements Screen {
     private GameInputController inputController;
     public GameHUD gameHUD;
     private AbilityStatusSystem abilityStatusSystem;
+    private StructureEconomySystem structureEconomySystem;
     private FogSystem fogSystem;
     private boolean isFogEnabled = true;
     private BitmapFont font;
@@ -140,6 +142,9 @@ public class GameScreen implements Screen {
         abilityStatusSystem = new AbilityStatusSystem(gameMap);
         engine.addSystem(abilityStatusSystem);
 
+        structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, null);
+        engine.addSystem(structureEconomySystem);
+
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
         engine.addSystem(mapRenderSystem);
 
@@ -165,6 +170,7 @@ public class GameScreen implements Screen {
         }
 
         gameHUD = new GameHUD(game);
+        structureEconomySystem.setGameHUD(gameHUD);
 
         inputController = new GameInputController(
                 this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
@@ -408,95 +414,9 @@ public class GameScreen implements Screen {
 
     private int processTurnEconomy(int playerID) {
         int totalIncome = calculateIncome(playerID);
-        int totalXPGain = 0;
-
-        List<Entity> myBases = new ArrayList<>();
-        List<Entity> xpStructures = new ArrayList<>();
-
-        ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
-
-        for (Entity entity : entities) {
-            StatsComponent stats = entity.getComponent(StatsComponent.class);
-
-            if (stats.owner == playerID) {
-                // Identify Base
-                if (stats.income >= 2 && stats.name.contains("Base")) {
-                    myBases.add(entity);
-                } // Identify Structure with XP Gain (factories, ports, etc.)
-                else if (stats.xpGain > 0 && stats.parentBaseX != -1) {
-                    // Only add entities that also have GridPositionComponent (structures do)
-                    if (entity.getComponent(GridPositionComponent.class) != null) {
-                        xpStructures.add(entity);
-                    }
-                }
-            }
-        }
-
-        // --- Only process XP Gain after Turn 1 is complete ---
-        if (gameState.turnCount > 1) {
-
-            // 1. Process Structure XP -> Linked Base
-            for (Entity struct : xpStructures) {
-                StatsComponent structStats = struct.getComponent(StatsComponent.class);
-
-                // Find parent base
-                Entity parentBase = findEntityAt(structStats.parentBaseX, structStats.parentBaseY);
-
-                if (parentBase != null) {
-                    StatsComponent baseStats = parentBase.getComponent(StatsComponent.class);
-                    // Ensure we still own the base
-                    if (baseStats.owner == playerID) {
-                        baseStats.currentBaseXP += structStats.xpGain;
-                        totalXPGain += structStats.xpGain;
-                    }
-                }
-            }
-
-            // 1b. Hospital: heal adjacent friendly units by +3 HP at turn start
-            ImmutableArray<Entity> allUnits = engine.getEntitiesFor(
-                    Family.all(StatsComponent.class, GridPositionComponent.class, TypeComponent.class).get());
-            for (Entity struct : xpStructures) {
-                StatsComponent sStats = struct.getComponent(StatsComponent.class);
-                GridPositionComponent sPos = struct.getComponent(GridPositionComponent.class);
-                if (!sStats.name.equals("Field Hospital"))
-                    continue;
-                for (Entity unit : allUnits) {
-                    TypeComponent tc = unit.getComponent(TypeComponent.class);
-                    if (tc.type != TypeComponent.Type.UNIT)
-                        continue;
-                    StatsComponent uStats = unit.getComponent(StatsComponent.class);
-                    GridPositionComponent uPos = unit.getComponent(GridPositionComponent.class);
-                    if (uStats.owner == playerID
-                            && Math.max(Math.abs(sPos.x - uPos.x), Math.abs(sPos.y - uPos.y)) <= 1) {
-                        uStats.currentHP = Math.min(uStats.currentHP + 3, uStats.maxHP);
-                    }
-                }
-            }
-
-            // 2. Process Base Natural Growth & Level Up
-            for (Entity base : myBases) {
-                StatsComponent stats = base.getComponent(StatsComponent.class);
-
-                // --- NEW LOGIC: Dynamic XP Gain ---
-                // Level 1: 250 + 0 = 250
-                // Level 2: 250 + 10 = 260
-                // Level 3: 250 + 20 = 270
-                int naturalGain = 250 + ((stats.level - 1) * 10);
-
-                stats.currentBaseXP += naturalGain;
-                totalXPGain += naturalGain;
-
-                unitFactory.checkAndApplyLevelUp(base, gameState, gameHUD);
-            }
-
-            // 3. Update Global Player XP
-            if (playerID == 1) {
-                gameState.p1XP += totalXPGain;
-            } else {
-                gameState.p2XP += totalXPGain;
-            }
-        }
-
+        // XP distribution, Hospital healing, and base leveling are handled
+        // by StructureEconomySystem to keep this screen thin.
+        structureEconomySystem.processTurn(playerID);
         return totalIncome;
     }
 

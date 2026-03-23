@@ -5,24 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** A tactically deep, heterogeneous unit combat system on a procedurally generated isometric map.
-**Current focus:** Phase 7: Polish & UX (Resolving Phase 5/6 Debt)
+**Current focus:** Phase 7: Polish & UX
 
 ## Current Position
-- **Last Position**: Phase 7, Task: Inception/Planning, Status: Ready (Debugging Complete)
+- **Last Position**: Phase 5 Refactor, Status: COMPLETE (2026-03-23)
 - **Current Milestone**: [Milestone 3]
-- **Current Phase**: Phase 7 (Polish & UX) - In Progress
-- **Status**: Active (resumed 2026-03-22 17:20)
+- **Current Phase**: Phase 5 (Specialized Structures) — REFACTORED; Phase 7 next
+- **Status**: Active (session 2026-03-23)
 
 ## Last Session Summary
-- Migrated GSD infrastructure from `.planning/` to canonical `.planning/`.
-- Resolved tracking issue for 391 pending changes by fixing build ignores in `.gitignore`.
-- Executed codebase mapping, generating `ARCHITECTURE.md` and `STACK.md`.
-- Organized workspace by moving root-level logs to `logs/`.
+- Refactored Phase 5 economy logic from `GameScreen.processTurnEconomy()` into `StructureEconomySystem.java` (new Ashley ECS system).
+- Confirmed all Phase 5 features were already implemented (PORT filtering, adjacent spawning, coastal placement, Hospital healing).
+- Closed all Phase 5 tracking debt: 4x SUMMARY.md files written, `05-UAT.md` marked COMPLETE.
+- Added `PortSummonTest.java` with 4 unit tests covering PORT/BASE filtering and Hospital healing regression.
 
 ## In-Progress Work
-- None (Structural work and mapping complete).
-- Files modified: `.gitignore`, `.planning/*`, `core/src/...` (via mapping exploration).
-- Tests status: All core systems documented as functional in previous phases.
+- None — Phase 5 refactor complete.
 
 ## Blockers
 - None.
@@ -46,9 +44,9 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 - `STACK.md`: Full technology audit.
 
 ## Next Steps
-1. Run `/plan 7` to decompose Polish & UX requirements.
-2. Execute generated plans for UI improvements and SFX.
-3. Verify Phase 7 against success criteria in `ROADMAP.md`.
+1. Run `/gsd-plan-phase 6` to plan Phase 6 (Win/Loss Conditions) refactor — same pattern as Phase 5.
+2. Run `/gsd-plan-phase 7` to decompose Polish & UX requirements into executable plans.
+3. Run `./gradlew test` to verify `PortSummonTest` and all existing tests pass.
 
 ## Context Health: State Dump
 
