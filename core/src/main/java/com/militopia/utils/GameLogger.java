@@ -30,6 +30,7 @@ public class GameLogger {
     public static final String SUMMON = "SUMMON";
     public static final String BUILD = "BUILD";
     public static final String CAPTURE = "CAPTURE";
+    public static final String SCAVENGE = "SCAVENGE";
     public static final String ECONOMY = "ECONOMY";
     public static final String GAME_OVER = "GAME_OVER";
 

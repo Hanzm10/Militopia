@@ -20,6 +20,7 @@ public class GameState {
     public ArrayList<UnitData> units = new ArrayList<>();
     public ArrayList<StructureData> structures = new ArrayList<>();
     public ArrayList<AnimalData> animals = new ArrayList<>();
+    public com.militopia.map.MapGenerator.ObjectType[][] mapObjects;
 
     public int currentPlayer = 1;
     public int turnCount = 1;
@@ -31,6 +32,8 @@ public class GameState {
     // Base Counters
     public int p1BaseCount = 0;
     public int p2BaseCount = 0;
+    public boolean isGameOver = false;
+    public int winnerID = 0;
 
     public GameState() {
     }

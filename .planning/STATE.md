@@ -8,19 +8,19 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 **Current focus:** Phase 7: Polish & UX
 
 ## Current Position
-- **Last Position**: Phase 5 Refactor, Status: COMPLETE (2026-03-23)
-- **Current Milestone**: [Milestone 3]
-- **Current Phase**: Phase 5 (Specialized Structures) — REFACTORED; Phase 7 next
+- **Last Position**: Phase 6: Win/Loss Conditions, Status: COMPLETE (2026-03-23)
+- **Current Milestone**: [Milestone 4]
+- **Current Phase**: Phase 7: Exploration & Persistence — ACTIVE
 - **Status**: Active (session 2026-03-23)
 
 ## Last Session Summary
-- Refactored Phase 5 economy logic from `GameScreen.processTurnEconomy()` into `StructureEconomySystem.java` (new Ashley ECS system).
-- Confirmed all Phase 5 features were already implemented (PORT filtering, adjacent spawning, coastal placement, Hospital healing).
-- Closed all Phase 5 tracking debt: 4x SUMMARY.md files written, `05-UAT.md` marked COMPLETE.
-- Added `PortSummonTest.java` with 4 unit tests covering PORT/BASE filtering and Hospital healing regression.
+- Refactored win/loss detection logic from `GameScreen.render()` into a dedicated Ashley ECS `WinConditionSystem`.
+- Replaced the full-screen `GameOverScreen` with a modal `GameOverPopup` overlay for a seamless experience.
+- Implemented and verified `UITest.java` and `WinConditionTest.java` (all tests passing).
+- Closed all Phase 6 tracking debt: written `06-01-SUMMARY.md` and marked `06-UAT.md` COMPLETE.
 
 ## In-Progress Work
-- None — Phase 5 refactor complete.
+- None — Phase 6 complete.
 
 ## Blockers
 - None.
@@ -44,9 +44,9 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 - `STACK.md`: Full technology audit.
 
 ## Next Steps
-1. Run `/gsd-plan-phase 6` to plan Phase 6 (Win/Loss Conditions) refactor — same pattern as Phase 5.
-2. Run `/gsd-plan-phase 7` to decompose Polish & UX requirements into executable plans.
-3. Run `./gradlew test` to verify `PortSummonTest` and all existing tests pass.
+1. Run `/gsd-discuss-phase 7` to gather requirements for Polish & UX (SFX, animations, undo system).
+2. Run `/gsd-plan-phase 7` to decompose Polish & UX into executable plans.
+3. Run `./gradlew test` to ensure no regressions after Phase 6 changes.
 
 ## Context Health: State Dump
 

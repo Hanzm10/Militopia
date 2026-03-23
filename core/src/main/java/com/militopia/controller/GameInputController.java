@@ -159,13 +159,16 @@ public class GameInputController extends InputAdapter {
             }
 
             boolean isVisible = gameMap.visibleTiles[gridX][gridY];
-            if (screen.isFogEnabled() && !isVisible) {
+            // --- NEW: Movement into Fog (Jammers) ---
+            // Allow interaction even if fogged IF there's a movement marker there.
+            Entity clickedMoveMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
+
+            if (screen.isFogEnabled() && !isVisible && clickedMoveMarker == null) {
                 deselect();
                 return true;
             }
 
             // --- MOVEMENT: click on a blue move-marker ---
-            Entity clickedMoveMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
             if (clickedMoveMarker != null && selectedUnitEntity != null) {
                 moveUnit(selectedUnitEntity, gridX, gridY);
                 return true;
@@ -346,6 +349,10 @@ public class GameInputController extends InputAdapter {
             if (isCapturable && structStats.owner != unitStats.owner) {
                 gameHUD.openCaptureMenu(foundStructure, foundUnit, unitFactory, this, gameMap, screen.getGameState());
             }
+
+            if (type == MapGenerator.ObjectType.RUINS) {
+                gameHUD.openScavengeMenu(foundStructure, foundUnit, unitFactory, this);
+            }
         }
     }
 
@@ -504,12 +511,13 @@ public class GameInputController extends InputAdapter {
     private void handleTerrainSelection(int x, int y) {
         MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
 
-        if (gameMap.objects[x][y] != MapGenerator.ObjectType.NONE) {
+        MapGenerator.ObjectType obj = gameMap.objects[x][y];
+        if (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL) {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
             return;
         }
-        if (getEntityAt(x, y, TypeComponent.Type.OBJECT) != null) {
+        if (getEntityAt(x, y, TypeComponent.Type.OBJECT) != null && obj != MapGenerator.ObjectType.OIL) {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
             return;

@@ -35,35 +35,38 @@ public class SaveManager {
 
             if (type.type == TypeComponent.Type.UNIT) {
                 // Save Unit
-                state.units.add(new UnitData(pos.x, pos.y, "RECRUIT", stats.owner));
+                state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, stats.unitTypeKey,
+                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
                 // --- FIX: DETECT ANIMALS VIA NAME TAG (Layer 2) ---
-                // We check the stats name because animals are no longer in map.objects
                 if (stats != null && stats.name != null && stats.name.startsWith("ANIMAL_")) {
                     String animalType = stats.name.replace("ANIMAL_", "");
                     state.animals.add(new AnimalData(pos.x, pos.y, animalType));
-                } // --- DETECT STRUCTURES VIA MAP DATA (Layer 1) ---
-                else {
-                    // Check the Map to see if this is a Base or Town
+                }
+                // --- DETECT STRUCTURES (Layer 1) ---
+                else if (stats != null && stats.owner != 0) {
+                    // Save any object with an owner as a structure (Bases, captured Towns,
+                    // Derricks, etc.)
+                    state.structures.add(new StructureData(
+                            pos.x, pos.y, stats.owner, stats.level,
+                            stats.currentBaseXP, stats.name, stats.baseOrdinal));
+                } else if (stats != null) {
+                    // Check for neutral Towns
                     MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
-
-                    if (objType == MapGenerator.ObjectType.BASE_P1
-                            || objType == MapGenerator.ObjectType.BASE_P2
-                            || objType == MapGenerator.ObjectType.TOWN) {
-
-                        if (stats != null) {
-                            state.structures.add(new StructureData(
-                                    pos.x, pos.y, stats.owner,
-                                    stats.currentBaseXP, stats.name, stats.baseOrdinal
-                            ));
-                        }
+                    if (objType == MapGenerator.ObjectType.TOWN) {
+                        state.structures.add(new StructureData(
+                                pos.x, pos.y, stats.owner, stats.level,
+                                stats.currentBaseXP, stats.name, stats.baseOrdinal));
                     }
                 }
             }
         }
 
-        // 3. Write to JSON File
+        // 3. Save Map Objects
+        state.mapObjects = map.objects;
+
+        // 4. Write to JSON File
         Json json = new Json();
         String jsonText = json.toJson(state);
 

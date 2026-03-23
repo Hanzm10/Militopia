@@ -18,6 +18,7 @@ import com.militopia.data.UnitSnapshot;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.ui.GameHUD;
+import com.militopia.utils.GameLogger;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -663,6 +664,8 @@ public class UnitFactory {
                 hud.showLevelUpPopup(stats.owner, stats.name, stats.level, data.fundingBonus, data.unlockedUnits,
                         data.unlockedStructures, this);
             }
+            GameLogger.log(GameLogger.ECONOMY, stats.owner,
+                    stats.name + " leveled up to Level " + stats.level + "!");
         }
     }
 
@@ -687,14 +690,26 @@ public class UnitFactory {
         GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
 
         stats.owner = data.owner;
+        stats.level = data.level;
         stats.currentBaseXP = data.currentBaseXP;
         stats.name = data.baseName;
         stats.baseOrdinal = data.baseOrdinal;
 
-        // Only apply base texture for actual bases — towns keep their own sprite
         boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
+
+        // --- NEW: Sync Base Stats after load ---
         if (!isTown) {
+            com.militopia.config.BaseLevelConfig.LevelData levelData = com.militopia.config.BaseLevelConfig
+                    .getLevel(stats.level);
+            stats.maxBaseXP = levelData.maxXP;
+            stats.income = levelData.income;
+            stats.vision = levelData.borderRadius;
             updateBaseTexture(entity, stats);
+        } else {
+            // Towns have fixed stats
+            stats.maxBaseXP = 2000;
+            stats.income = 1;
+            stats.vision = 1;
         }
     }
 
@@ -707,11 +722,11 @@ public class UnitFactory {
         boolean wasBase = (oldType == MapGenerator.ObjectType.BASE_P1 || oldType == MapGenerator.ObjectType.BASE_P2);
         boolean isTown = (oldType == MapGenerator.ObjectType.TOWN);
         int oldOwner = stats.owner;
+        int preservedLevel = stats.level;
 
-        // Transform into a Level 1 Base for the new owner, whether it was a Town or an
-        // Enemy Base.
+        // Transform into a Base for the new owner, whether it was a Town or an Enemy
+        // Base.
         if (newOwner == 1) {
-            tex.region = baseRegions.get("lvl1_blue");
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
             state.p1BaseCount++;
             stats.owner = 1;
@@ -725,7 +740,6 @@ public class UnitFactory {
             stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
             state.p1XP += isTown ? 50 : 250;
         } else if (newOwner == 2) {
-            tex.region = baseRegions.get("lvl1_red");
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             state.p2BaseCount++;
             stats.owner = 2;
@@ -739,14 +753,26 @@ public class UnitFactory {
             stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
             state.p2XP += isTown ? 50 : 250;
         }
-        stats.vision = GameConfig.BORDER_RADIUS;
-        stats.income = 2;
-        stats.maxBaseXP = 2000;
-        stats.currentBaseXP = 0;
-        stats.level = 1;
 
-        // Spawn animals upon capture only if it was an enemy base (optional, but
-        // requested implicitly by keeping structure)
+        // Apply preserved level or reset to Level 1 if it was a Town
+        if (wasBase) {
+            BaseLevelConfig.LevelData levelData = BaseLevelConfig.getLevel(preservedLevel);
+            stats.level = preservedLevel;
+            stats.income = levelData.income;
+            stats.maxBaseXP = levelData.maxXP;
+            stats.vision = levelData.borderRadius;
+        } else {
+            stats.level = 1;
+            stats.income = 2;
+            stats.maxBaseXP = 2000;
+            stats.vision = GameConfig.BORDER_RADIUS;
+        }
+        stats.currentBaseXP = 0; // Reset progress but keep the level (if wasBase)
+
+        // Ensure texture matches the new owner & level
+        updateBaseTexture(objectEntity, stats);
+
+        // Spawn animals upon capture only if it was an enemy base
         if (!isTown) {
             spawnAnimalsAroundBase(pos.x, pos.y, map, state);
         }
@@ -811,14 +837,18 @@ public class UnitFactory {
 
     // --- HELPER: Checks for entity at coordinates and layer ---
     public boolean hasEntityAt(int x, int y, int zLayer) {
+        return getEntityAt(x, y, zLayer) != null;
+    }
+
+    public Entity getEntityAt(int x, int y, int zLayer) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
         for (Entity e : entities) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             if (pos.x == x && pos.y == y && pos.zIndex == zLayer) {
-                return true;
+                return e;
             }
         }
-        return false;
+        return null;
     }
 
     /**

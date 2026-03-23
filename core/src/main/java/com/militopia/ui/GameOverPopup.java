@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
+import com.militopia.screen.GameScreen;
 import com.militopia.screen.MenuScreen;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
@@ -24,14 +25,16 @@ public class GameOverPopup {
 
     private final Stage stage;
     private final MilitopiaGame game;
+    private final GameScreen gameScreen;
     private final GameInputController inputController;
     private final HudBottomBar bottomBar;
 
     private Table popupTable;
 
-    public GameOverPopup(MilitopiaGame game, Stage stage,
+    public GameOverPopup(MilitopiaGame game, GameScreen gameScreen, Stage stage,
             GameInputController inputController, HudBottomBar bottomBar) {
         this.game = game;
+        this.gameScreen = gameScreen;
         this.stage = stage;
         this.inputController = inputController;
         this.bottomBar = bottomBar;
@@ -95,8 +98,8 @@ public class GameOverPopup {
         menuBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                GameLogger.logScreen("Navigating → Main Menu from Game Over Popup");
-                game.setScreen(new MenuScreen(game));
+                GameLogger.logScreen("Navigating → Main Menu from Game Over Popup (Saving Game)");
+                gameScreen.saveAndExit();
             }
         });
         modal.add(menuBtn).size(250, 50);

@@ -101,23 +101,23 @@ Militopia is a **two-player, turn-based military strategy game** played on an is
 | Unit | HP | ATK | DEF | MOV | RNG | VIS | Cost | Unlock Level |
 |---|---|---|---|---|---|---|---|---|
 | Recruit | 10 | 3 | 1 | 1 | 1 | 1 | 2 | 1 |
-| Ranger | 12 | 5 | 1 | 1 | 2 | 3 | 5 | 2 |
-| Sniper | 8 | 15 | 0 | 1 | 4 | 5 | 8 | 3 |
+| Ranger | 12 | 5 | 1 | 1 | 2 | 2 | 5 | 2 |
+| Sniper | 8 | 15 | 0 | 1 | 3 | 3 | 8 | 3 |
 | Tank (MBT) | 30 | 12 | 5 | 2 | 3 | 3 | 15 | 4 |
-| Juggernaut | 50 | 12 | 6 | 5 | 1 | 5 | — | 5 (locked) |
+| Juggernaut | 50 | 12 | 6 | 3 | 1 | 3 | — | 5 |
 
 **Air & Sea Units**
 
 | Unit | HP | ATK | DEF | MOV | RNG | VIS | Cost | Domain | Unlock Level |
 |---|---|---|---|---|---|---|---|---|---|
-| Recon Drone | 5 | 0 | 0 | 6 | 0 | 6 | 4 | AIR | 2 |
-| Suicide Drone | 5 | 20 | 0 | 5 | 1 | 5 | 7 | AIR | 3 |
-| Apache | 20 | 15 | 2 | 4 | 2 | 4 | 18 | AIR | 4 |
-| Wraith (B2) | 45 | 18 | 3 | 5 | 4 | 5 | — | AIR | 5 (locked) |
-| Gunboat | 10 | 5 | 2 | 3 | 2 | 3 | 6 | SEA | 2 |
-| Destroyer | 30 | 15 | 3 | 4 | 4 | 4 | 13 | SEA | 3 |
-| Carrier | 45 | 5 | 4 | 4 | 3 | 6 | 25 | SEA | 4 |
-| Submarine | 40 | 25 | 3 | 5 | 5 | 5 | — | SEA | 5 (locked) |
+| Recon Drone | 5 | 0 | 0 | 3 | 0 | 3 | 4 | AIR | 2 |
+| Suicide Drone | 5 | 20 | 0 | 2 | 1 | 2 | 7 | AIR | 3 |
+| Apache | 20 | 15 | 2 | 3 | 2 | 3 | 18 | AIR | 4 |
+| Wraith (B2) | 45 | 18 | 3 | 3 | 3 | 3 | — | AIR | 5 |
+| Gunboat | 10 | 5 | 2 | 2 | 2 | 2 | 6 | SEA | 2 |
+| Destroyer | 30 | 15 | 3 | 3 | 3 | 3 | 13 | SEA | 3 |
+| Carrier | 45 | 5 | 4 | 3 | 3 | 3 | 25 | SEA | 4 |
+| Submarine | 40 | 25 | 3 | 4 | 4 | 3 | — | SEA | 5 |
 
 > Cost `—` = unlocked via Base level-up, not purchasable directly.
 
@@ -145,7 +145,7 @@ Militopia is a **two-player, turn-based military strategy game** played on an is
 | 2 | 3000 | 3 | 1 | 0 | Ranger, Recon Drone, Gunboat | Port, Hospital |
 | 3 | 4500 | 3 | 1 | 10 | Sniper, Suicide Drone, Destroyer | Oil Derrick, Radar |
 | 4 | 6750 | 3 | 2 | 0 | Tank, Apache, Carrier | Solar Array, Jammer |
-| 5 | 10125 | 3 | 2 | 10 | Juggernaut, Wraith (B2), Submarine | Nuclear Plant |
+| 5 | 10125 | 3 | 2 | 10 | Juggernaut, Wraith, Submarine | Nuclear Plant |
 | 6+ | × 1.5 each | 3 | 2 | 10 | — | — |
 
 ### 8.3 Level-Up Popup
@@ -162,7 +162,7 @@ Structures are built within a base's border zone. They link to their parent base
 | Base (City) | N/A | N/A | +2 | +250 | N/A | Core territory anchor |
 | Munitions Factory | N/A | 5 | +2 | +50 | Inside Borders | **Tech Synergy** eligible target |
 | Solar Array | N/A | 8 | +3 | +75 | Inside Borders | **Tech Synergy:** reduces Drone/Radar upkeep by 1 |
-| Oil Derrick | N/A | 10 | +6 | +100 | Inside Borders | **Volatile:** explodes on death (15 dmg to 8 tiles) |
+| Oil Derrick | N/A | 10 | +6 | +100 | Oil Reservoir | **Volatile:** explodes on death (15 dmg to 8 tiles). Can only be built on "Oil Reservoir" tiles. |
 | Nuclear Plant | N/A | 40 | +15 | +150 | Coastline Only | **Meltdown:** tiles become Wasteland on death (3×3) |
 | Field Hospital | N/A | 15 | 0 | +50 | Inside Borders | Heals adjacent units at turn start |
 | Radar Station | N/A | 20 | 0 | +75 | Inside Borders | **Scanner:** reveals invisible units in radius |
@@ -195,6 +195,18 @@ Each unit and structure has one unique ability. These define the tactical depth 
 | Nuclear Plant | **Meltdown** | Explodes on death; tiles become Wasteland | Change `TileType` of 3×3 area to `WASTELAND` |
 | Radar Station | **Scanner** | Reveals invisible units in radius | Overrides Stealth and Camouflage flags |
 | Signal Jammer | **Static** | Blocks enemy vision in 3-tile radius | Forces `isVisible = false` for enemies in radius |
+| Ruins | **Scavenge** | Randomized effects upon unit entry | See Section 10.1 |
+
+---
+
+## 10.1 Ruins Mechanics
+
+When a unit is on a Ruins tile, it can perform an explicit **Scavenge** action via the interaction menu. This triggers one of the following rewards:
+- **Funding:** +15 Funding Points.
+- **Experience:** +1000 XP (Global Pool).
+- **Recon Drone:** Spawns a Recon Drone that auto-moves toward the Enemy Base. It becomes visible to the enemy at Turn 2 and can be attacked.
+- **Sniper:** Spawns a friendly Sniper on the ruins tile (if empty).
+- **Destroyer:** Spawns a friendly Destroyer at the nearest valid water tile (if the ruins are coastal/in water).
 
 ---
 
@@ -219,7 +231,8 @@ Each unit and structure has one unique ability. These define the tactical depth 
 ## 13. Save / Load
 
 - Game state saved to JSON via libGDX's `Json` API under `saves/<saveName>.json`.
-- Saved data: seed, player names, turn count, XP, funding, unit list, structure list, animal list.
+- Saved data: seed, player names, turn count, XP, funding, unit list (including `hasMoved` and `hasActed` flags), structure list, animal list.
+- **Persistence:** All unit movements and actions are serialized. This ensures that if a player exits mid-turn, the "once per turn" action limits are still enforced upon reload.
 - Loading reconstructs all entities from the save file.
 
 ---

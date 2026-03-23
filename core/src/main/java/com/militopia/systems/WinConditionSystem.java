@@ -59,6 +59,8 @@ public class WinConditionSystem extends EntitySystem {
 
         // Ensure we don't trigger multiple times
         isPlaying = false;
+        gameState.isGameOver = true;
+        gameState.winnerID = winnerID;
 
         trigger.trigger(winnerID);
     }

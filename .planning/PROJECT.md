@@ -19,14 +19,14 @@ A tactically deep, heterogeneous unit combat system on a procedurally generated 
 - ✓ Capture & Territory mechanics
 - ✓ Fog of War visibility system
 - ✓ 10 playable units with Land/Sea/Air domains
-- ✓ Unit abilities (Phase 4b)
+- ✓ Unit abilities (Phase 4.1)
+- ✓ Specialized structure logic (Phase 5)
+- ✓ Win / Loss conditions (Phase 6)
 
 ### Active
 
-- [ ] Structure construction system (Build menu)
-- [ ] Specialized structure logic (Ports, Hospitals, etc.)
-- [ ] Win / Loss conditions (Base destruction)
-- [ ] Polish & UX (Animations, SFX, BGM)
+- [/] Exploration & Persistence (Phase 7)
+- [ ] Polish & UX (Animations, SFX, BGM) (Phase 8)
 
 ### Out of Scope
 

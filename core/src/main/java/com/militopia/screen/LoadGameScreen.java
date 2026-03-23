@@ -59,6 +59,9 @@ public class LoadGameScreen implements Screen {
                     final GameState state = json.fromJson(GameState.class, file.readString());
 
                     String buttonText = state.saveName + " (" + state.timestamp + ")";
+                    if (state.isGameOver) {
+                        buttonText += " [FINISHED]";
+                    }
                     TextButton btn = new TextButton(buttonText, game.skin);
                     btn.addListener(new HoverListener());
 
@@ -95,9 +98,9 @@ public class LoadGameScreen implements Screen {
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-        
+
         RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
-        
+
         stage.act();
         stage.draw();
     }

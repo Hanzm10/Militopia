@@ -69,6 +69,13 @@ public class FogSystem extends EntitySystem {
                 if (stats.name.contains("Radar Station")) {
                     radius += 4;
                 }
+
+                // --- NEW: Jammer Override ---
+                // If the unit is inside a jammed zone, its vision radius is forced to 1.
+                if (jammerMask[pos.x][pos.y]) {
+                    radius = 1;
+                }
+
                 clearFog(pos.x, pos.y, radius);
 
                 // --- NEW: Stealth Detection ---
@@ -101,8 +108,13 @@ public class FogSystem extends EntitySystem {
     private void clearFog(int centerX, int centerY, int radius) {
         for (int x = centerX - radius; x <= centerX + radius; x++) {
             for (int y = centerY - radius; y <= centerY + radius; y++) {
-                if (isValid(x, y) && !jammerMask[x][y]) {
-                    gameMap.visibleTiles[x][y] = true;
+                if (isValid(x, y)) {
+                    // Normal tiles revealed up to radius.
+                    // Jammed tiles ONLY revealed if within radius 1 of the unit.
+                    int dist = Math.max(Math.abs(x - centerX), Math.abs(y - centerY));
+                    if (!jammerMask[x][y] || dist <= 1) {
+                        gameMap.visibleTiles[x][y] = true;
+                    }
                 }
             }
         }

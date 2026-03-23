@@ -162,6 +162,104 @@ public class SlideMenu {
         slideIn(true);
     }
 
+    public void openScavengeMenu(final Entity ruinsEntity, final Entity unit,
+            final UnitFactory factory,
+            final GameInputController controller) {
+        menuTable.clear();
+        menuTable.setBackground(game.skin.newDrawable("white", BG_COLOR));
+        Table content = new Table();
+
+        TextureRegion ruinsRegion = factory.getHudIcon(MapGenerator.ObjectType.RUINS);
+
+        SummonButton.addTo(content, ruinsRegion, "Scavenge Ruins", game, assets,
+                new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        performScavenge(ruinsEntity, unit, factory, controller);
+                    }
+                });
+
+        menuTable.add(content).expandX().center();
+        slideIn(true);
+    }
+
+    private void performScavenge(Entity ruinsEntity, Entity unit, UnitFactory factory, GameInputController controller) {
+        com.militopia.components.GridPositionComponent unitPos = unit
+                .getComponent(com.militopia.components.GridPositionComponent.class);
+        StatsComponent unitStats = unit.getComponent(StatsComponent.class);
+        int owner = unitStats.owner;
+        GameState state = gameScreen.getGameState();
+        MapGenerator.GameMap map = gameScreen.getGameMap();
+
+        // 1. Mark unit as acted
+        unitStats.hasActed = true;
+
+        // 2. Remove ruins from map
+        map.objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
+        gameScreen.getEngine().removeEntity(ruinsEntity);
+
+        // 3. Roll for reward
+        int roll = com.badlogic.gdx.math.MathUtils.random(1, 100);
+        String rewardMsg = "";
+
+        if (roll <= 20) {
+            // Funding: +15
+            if (owner == 1)
+                state.p1Funding += 15;
+            else
+                state.p2Funding += 15;
+            rewardMsg = "Found 15 Funding!";
+        } else if (roll <= 40) {
+            // XP: +1000
+            if (owner == 1)
+                state.p1XP += 1000;
+            else
+                state.p2XP += 1000;
+            rewardMsg = "Found 1000 XP!";
+        } else if (roll <= 60) {
+            // Recon Drone
+            factory.createUnit("RECON_DRONE", unitPos.x, unitPos.y, owner, false);
+            rewardMsg = "Found a Recon Drone!";
+        } else if (roll <= 80) {
+            // Sniper: Adjacent Land
+            int[] spawn = factory.findValidSpawnPoint(unitPos.x, unitPos.y, StatsComponent.MoveType.LAND, map);
+            if (spawn != null) {
+                factory.createUnit("SNIPER", spawn[0], spawn[1], owner, false);
+                rewardMsg = "Found a Sniper!";
+            } else {
+                // Fallback to funding if no space
+                if (owner == 1)
+                    state.p1Funding += 15;
+                else
+                    state.p2Funding += 15;
+                rewardMsg = "Found supplies (+15 Funding)!";
+            }
+        } else {
+            // Destroyer: Adjacent Sea
+            int[] spawn = factory.findValidSpawnPoint(unitPos.x, unitPos.y, StatsComponent.MoveType.SEA, map);
+            if (spawn != null) {
+                factory.createUnit("DESTROYER", spawn[0], spawn[1], owner, false);
+                rewardMsg = "Found a Destroyer!";
+            } else {
+                // Fallback to XP if no space
+                if (owner == 1)
+                    state.p1XP += 1000;
+                else
+                    state.p2XP += 1000;
+                rewardMsg = "Discovered ancient data (+1000 XP)!";
+            }
+        }
+
+        GameLogger.log(GameLogger.SCAVENGE, owner, rewardMsg + " at " + GameLogger.pos(unitPos.x, unitPos.y));
+
+        // Update HUD
+        gameScreen.gameHUD.updateXP((owner == 1) ? state.p1XP : state.p2XP);
+        gameScreen.gameHUD.updateFunding((owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
+
+        hide();
+        controller.deselect();
+    }
+
     public void openBuildMenu(int x, int y, int owner, int maxLevel,
             boolean isWater, boolean isCoastalWater, boolean isCoastalLand,
             GameState state, int parentX, int parentY,
@@ -293,16 +391,24 @@ public class SlideMenu {
         java.util.Set<String> unlocked = unlockedForLevel(maxLevel, true);
         int addedCount = 0;
 
+        boolean isOilTile = gameScreen.getGameMap().objects[buildX][buildY] == MapGenerator.ObjectType.OIL;
+
         for (final String struct : unlocked) {
             boolean show;
-            if (struct.equals("PORT"))
-                show = isWater && isCoastalWater;
-            else if (struct.equals("NUCLEAR"))
-                show = !isWater && isCoastalLand;
-            else if (struct.equals("OIL_DERRICK"))
-                show = !isWater;
-            else
-                show = !isWater;
+            if (isOilTile) {
+                // On Oil tiles, ONLY show Oil Derrick
+                show = struct.equals("OIL_DERRICK");
+            } else {
+                // On regular tiles, show everything BUT Oil Derrick (and respect water/land)
+                if (struct.equals("PORT"))
+                    show = isWater && isCoastalWater;
+                else if (struct.equals("NUCLEAR"))
+                    show = !isWater && isCoastalLand;
+                else if (struct.equals("OIL_DERRICK"))
+                    show = false; // Hide on non-oil tiles
+                else
+                    show = !isWater;
+            }
             if (!show)
                 continue;
 
@@ -322,17 +428,33 @@ public class SlideMenu {
                                                 + funds + "<" + cost + ")");
                                 return;
                             }
-                            if (unitFactory.hasEntityAt(buildX, buildY, 1)) {
-                                GameLogger.log(GameLogger.BUILD, currentBaseOwner,
-                                        "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
-                                                + " — BLOCKED (tile occupied)");
-                                return;
+                            Entity existingAtLayer1 = unitFactory.getEntityAt(buildX, buildY, 1);
+                            if (existingAtLayer1 != null) {
+                                StatsComponent s = existingAtLayer1.getComponent(StatsComponent.class);
+                                boolean isOilRes = (s != null && s.name.equals("Oil Reservoir"));
+                                if (!(struct.equals("OIL_DERRICK") && isOilRes)) {
+                                    GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                            "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
+                                                    + " — BLOCKED (tile occupied)");
+                                    return;
+                                }
                             }
-                            if (gameScreen.getGameMap().objects[buildX][buildY] != MapGenerator.ObjectType.NONE) {
-                                GameLogger.log(GameLogger.BUILD, currentBaseOwner,
-                                        "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
-                                                + " — BLOCKED (map object present)");
-                                return;
+                            MapGenerator.ObjectType existingObj = gameScreen.getGameMap().objects[buildX][buildY];
+                            if (existingObj != MapGenerator.ObjectType.NONE) {
+                                // Allow Oil Derrick to be built over Oil Reservoir
+                                if (struct.equals("OIL_DERRICK") && existingObj == MapGenerator.ObjectType.OIL) {
+                                    // SUCCESS: Remove the oil reservoir map object
+                                    gameScreen.getGameMap().objects[buildX][buildY] = MapGenerator.ObjectType.NONE;
+                                    // Also remove the associated Oil Reservoir entity if it exists
+                                    if (existingAtLayer1 != null) {
+                                        gameScreen.getEngine().removeEntity(existingAtLayer1);
+                                    }
+                                } else {
+                                    GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                            "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
+                                                    + " — BLOCKED (map object present)");
+                                    return;
+                                }
                             }
                             if (currentBaseOwner == 1)
                                 state.p1Funding -= cost;

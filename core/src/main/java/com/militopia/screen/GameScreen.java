@@ -99,6 +99,9 @@ public class GameScreen implements Screen {
 
         MapGenerator generator = new MapGenerator();
         gameMap = generator.generateMap(loadedState.mapWidth, loadedState.mapHeight, loadedState.seed);
+        if (loadedState.mapObjects != null) {
+            gameMap.objects = loadedState.mapObjects;
+        }
 
         centerCameraOnBase(gameState.currentPlayer);
 
@@ -161,8 +164,24 @@ public class GameScreen implements Screen {
 
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
-                if ("RECRUIT".equals(u.type)) {
-                    unitFactory.createUnit("RECRUIT", u.x, u.y, u.owner, false);
+                String key = (u.unitTypeKey != null) ? u.unitTypeKey : u.type;
+                if (key == null)
+                    key = "RECRUIT";
+
+                unitFactory.createUnit(key, u.x, u.y, u.owner, u.hasActed);
+
+                // Restore HP and moved flag
+                Entity freshUnit = findUnitAt(u.x, u.y);
+                if (freshUnit != null) {
+                    StatsComponent s = freshUnit.getComponent(StatsComponent.class);
+                    if (s != null) {
+                        if (u.hp > 0)
+                            s.currentHP = u.hp;
+                        if (u.maxHp > 0)
+                            s.maxHP = u.maxHp;
+                        s.hasMoved = u.hasMoved;
+                        s.hasActed = u.hasActed;
+                    }
                 }
             }
         }
@@ -198,6 +217,13 @@ public class GameScreen implements Screen {
         // --- Snapshot the initial state so undo can rewind to turn 1 ---
         turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
 
+        // --- NEW: Handle Finished Games on Load ---
+        if (gameState.isGameOver) {
+            Gdx.app.log("GameScreen", "Loading a finished game. Showing Game Over popup.");
+            gameHUD.showGameOverPopup(gameState.winnerID);
+            winConditionSystem.setPlaying(false);
+        }
+
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
         multiplexer.addProcessor(inputController);
@@ -216,6 +242,23 @@ public class GameScreen implements Screen {
             }
         }
         return null;
+    }
+
+    private Entity findUnitAt(int x, int y) {
+        ImmutableArray<Entity> entities = engine
+                .getEntitiesFor(Family.all(GridPositionComponent.class, TypeComponent.class).get());
+        for (Entity e : entities) {
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+            TypeComponent type = e.getComponent(TypeComponent.class);
+            if (pos.x == x && pos.y == y && type.type == TypeComponent.Type.UNIT) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    public PooledEngine getEngine() {
+        return engine;
     }
 
     public GameState getGameState() {
@@ -562,8 +605,8 @@ public class GameScreen implements Screen {
 
                 // --- FIX: Only list Bases in the log ---
                 if (stats.name.contains("Base")) {
-                    String entry = String.format("  - %-25s : %4.0f / %4.0f XP", stats.name, stats.currentBaseXP,
-                            stats.maxBaseXP);
+                    String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP", stats.name, stats.level,
+                            stats.currentBaseXP, stats.maxBaseXP);
                     if (stats.owner == 1) {
                         p1Logs.add(entry);
                     } else {

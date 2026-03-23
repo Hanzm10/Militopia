@@ -18,7 +18,8 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 - [x] **Phase 4.1: Unit & Building Abilities** - Unique skills for units and structures
 - [x] **Phase 5: Specialized Structures** - Construction system and building logic
 - [x] **Phase 6: Win / Loss Conditions** - Win conditions and game over state
-- [/] **Phase 7: Polish & UX** - Visuals, SFX, and UI improvements
+- [/] **Phase 7: Exploration & Persistence** - Ruins mechanics, Oil extraction, and move persistence
+- [ ] **Phase 8: Polish & UX** - Visuals, SFX, and UI improvements
 
 ## Phase Details
 
@@ -97,9 +98,21 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
   2. Game over screen displays winner and returns to menu.
 **Plans**: TBD
 
-### Phase 7: Polish & UX
-**Goal**: Animations, sound effects, and UI polish.
+### Phase 7: Exploration & Persistence
+**Goal**: Add map exploration rewards and resource extraction constraints.
 **Depends on**: Phase 6
+**Success Criteria** (what must be TRUE):
+  1. Units entering Ruins trigger randomized rewards (+FP, +XP, or unit spawns).
+  2. Oil Derricks can only be constructed on "Oil Reservoir" tiles.
+  3. Movement state is preserved upon game save/exit mid-turn.
+**Plans**: 
+  - 07-01: Ruins Mechanics & Random Rewards
+  - 07-02: Oil Resource Constraints
+  - 07-03: Turn State Persistence
+
+### Phase 8: Polish & UX
+**Goal**: Animations, sound effects, and UI polish.
+**Depends on**: Phase 7
 **Success Criteria** (what must be TRUE):
   1. Animated turn transitions and sound effects are active.
   2. Action undo allows canceling moves before committing.
@@ -116,4 +129,5 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 | 4.1 Unit Abilities | 1/1 | Complete | 2026-02-22 |
 | 5. Specialized Structures | 4/4 | Complete | 2026-03-23 |
 | 6. Win / Loss | 1/1 | Complete | 2026-03-23 |
-| 7. Polish & UX | 0/1 | In progress | - |
+| 7. Exploration | 1/1 | In progress | - |
+| 8. Polish & UX | 0/1 | Planned | - |

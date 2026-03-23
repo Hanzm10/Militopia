@@ -71,7 +71,7 @@ public class GameHUD {
         slideMenu = new SlideMenu(game, assets, stage, bottomBar, infoPanel,
                 screen, inputController, unitFactory);
         levelUpPopup = new LevelUpPopup(game, assets, stage, inputController, bottomBar);
-        gameOverPopup = new GameOverPopup(game, stage, inputController, bottomBar);
+        gameOverPopup = new GameOverPopup(game, screen, stage, inputController, bottomBar);
 
         // Expose summonMenu for callers that still reference gameHUD.summonMenu
         summonMenu = slideMenu.menuTable;
@@ -185,6 +185,11 @@ public class GameHUD {
             final MapGenerator.GameMap map,
             final GameState state) {
         slideMenu.openCaptureMenu(townEntity, capturingUnit, factory, controller, map, state);
+    }
+
+    public void openScavengeMenu(final Entity ruinsEntity, final Entity unit,
+            final UnitFactory factory, final GameInputController controller) {
+        slideMenu.openScavengeMenu(ruinsEntity, unit, factory, controller);
     }
 
     public void openBuildMenu(int x, int y, int owner, int maxLevel,

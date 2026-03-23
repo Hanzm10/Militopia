@@ -38,9 +38,17 @@ Every change requires verification evidence:
 
 ---
 
+## Logging & Verification
+
+1. **Test Logs**: All test outputs and research results in `.txt` and `.json` format must be stored in the `logs/` directory.
+2. **Clean Workspace**: Large data dumps (health checks, test reports) should be redirected to `logs/` to prevent cluttering the root directory.
+
+---
+
 ## Search-First Discipline
 
 **Before reading any file completely:**
+
 
 1. **Search first** — Use grep, ripgrep, or IDE search to find relevant snippets
 2. **Evaluate snippets** — Determine if full file read is justified
