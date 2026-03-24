@@ -88,6 +88,8 @@ public class InfoPanel {
         }
         if (statsTable != null)
             statsTable.setVisible(false);
+
+        GameLogger.log(GameLogger.UI, "InfoPanel: Show Tile Info | " + name);
         if (animate)
             slideIn();
         else
@@ -162,6 +164,8 @@ public class InfoPanel {
             statsTable.setVisible(true);
         }
 
+        GameLogger.log(GameLogger.UI, "InfoPanel: Show Structure Info | " + name
+                + (stats != null ? " | Lvl: " + stats.level : ""));
         if (animate)
             slideIn();
         else
@@ -270,6 +274,7 @@ public class InfoPanel {
             statsTable.setVisible(false);
         }
 
+        GameLogger.log(GameLogger.UI, "InfoPanel: Show Unit Info | " + name + " | HP: " + currentHP + "/" + maxHP);
         // Ability buttons for the active player's own units
         AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
         if (stats != null && abilities != null
@@ -310,6 +315,7 @@ public class InfoPanel {
                 Actions.moveTo(0, -tileInfoTable.getHeight(), 0.3f, Interpolation.pow2In));
         bottomBar.getBottomContainer().addAction(
                 Actions.moveTo(bottomBar.getBottomContainer().getX(), 0, 0.3f, Interpolation.pow2In));
+        GameLogger.log(GameLogger.UI, "InfoPanel: Hide");
     }
 
     /** Snaps HP label immediately after combat resolves. */

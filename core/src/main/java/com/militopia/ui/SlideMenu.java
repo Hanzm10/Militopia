@@ -89,6 +89,8 @@ public class SlideMenu {
         this.currentBaseLevel = level;
         this.lastState = state;
         populateSummonMenu(state, producerType);
+        GameLogger.log(GameLogger.UI,
+                "SlideMenu: Open Summon Menu | Owner: P" + owner + " | Lvl: " + level + " | Type: " + producerType);
         slideIn(true);
     }
 
@@ -101,6 +103,7 @@ public class SlideMenu {
         Table content = new Table();
 
         UnitFactory.UiInfo info = factory.getObjectUi(animalType);
+        GameLogger.log(GameLogger.UI, "SlideMenu: Open Hunt Menu | Target: " + info.name);
         TextureRegion iconRegion = factory.getHudIcon(animalType);
         SummonButton.addTo(content, iconRegion, "Hunt " + info.name, game, assets,
                 new ClickListener() {
@@ -127,7 +130,6 @@ public class SlideMenu {
         TextureRegion baseRegion = (newOwner == 1)
                 ? factory.getHudIcon(MapGenerator.ObjectType.BASE_P1)
                 : factory.getHudIcon(MapGenerator.ObjectType.BASE_P2);
-
         // Determine label
         StatsComponent sStats = structureEntity.getComponent(StatsComponent.class);
         String label = "Capture Structure";
@@ -137,6 +139,8 @@ public class SlideMenu {
             else
                 label = "Capture Enemy Base";
         }
+
+        GameLogger.log(GameLogger.UI, "SlideMenu: Open Capture Menu | Target: " + label);
 
         SummonButton.addTo(content, baseRegion, label, game, assets,
                 new ClickListener() {
@@ -176,6 +180,7 @@ public class SlideMenu {
         Table content = new Table();
 
         TextureRegion ruinsRegion = factory.getHudIcon(MapGenerator.ObjectType.RUINS);
+        GameLogger.log(GameLogger.UI, "SlideMenu: Open Scavenge Menu");
 
         SummonButton.addTo(content, ruinsRegion, "Scavenge Ruins", game, assets,
                 new ClickListener() {
@@ -219,6 +224,8 @@ public class SlideMenu {
         this.lastState = state;
         boolean hasItems = populateBuildMenu(state, maxLevel, isWater, isCoastalWater, isCoastalLand);
         if (hasItems) {
+            GameLogger.log(GameLogger.UI, "SlideMenu: Open Build Menu | At: " + GameLogger.pos(x, y) + " | Owner: P"
+                    + owner + " | Max Lvl: " + maxLevel);
             slideIn(true);
         } else {
             // No buildable structures for this tile — show terrain info in the Info Panel
@@ -236,6 +243,7 @@ public class SlideMenu {
         bottomBar.getBottomContainer()
                 .addAction(Actions.moveTo(bottomBar.getBottomContainer().getX(), 0,
                         0.3f, Interpolation.pow2In));
+        GameLogger.log(GameLogger.UI, "SlideMenu: Hide");
     }
 
     public void resize(int width, int height) {
@@ -323,11 +331,13 @@ public class SlideMenu {
                 "Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
+
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 hide();
                 inputController.resetLastClicked();
             }
+
         });
         content.add(closeBtn).pad(10);
     }

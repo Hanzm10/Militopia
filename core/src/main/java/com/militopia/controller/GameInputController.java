@@ -267,7 +267,7 @@ public class GameInputController extends InputAdapter {
             else if (currentTarget.equals("STRUCTURE"))
                 handleStructureTarget(foundStructure, gridX, gridY);
             else
-                handleTerrainSelection(gridX, gridY);
+                handleTerrainSelection(gridX, gridY, clickedTerrain);
 
         } else {
             deselect();
@@ -524,9 +524,15 @@ public class GameInputController extends InputAdapter {
     // Terrain
     // -------------------------------------------------------------------------
 
-    private void handleTerrainSelection(int x, int y) {
-        MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+    private void handleTerrainSelection(int x, int y, MapGenerator.TerrainType terrain) {
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
+
+        // If there's a blocking object that isn't Oil, just show terrain info
+        if (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL) {
+            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
+                    unitFactory.getTextureForTerrain(terrain.ordinal()));
+            return;
+        }
 
         int owner = screen.getCurrentPlayer();
         int maxLevel = 0;
