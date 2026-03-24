@@ -38,6 +38,9 @@ public class FloatingTextComponent implements Component {
      */
     public boolean isCounter;
 
+    /** Current alpha for fading out */
+    public float alpha = 1f;
+
     public FloatingTextComponent(String text, float worldX, float worldY, boolean isCounter) {
         this.text = text;
         this.worldX = worldX;

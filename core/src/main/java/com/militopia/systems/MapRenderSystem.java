@@ -9,6 +9,14 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.militopia.config.GameConfig;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
+import com.militopia.components.GridPositionComponent;
+import com.militopia.components.StatsComponent;
+import com.militopia.components.TypeComponent;
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MapRenderSystem extends EntitySystem {
 
@@ -22,6 +30,12 @@ public class MapRenderSystem extends EntitySystem {
     private float bounceTimer;
 
     private boolean fogEnabled = true;
+
+    private static class BaseInfo {
+        int x, y, owner, radius;
+    }
+
+    private final List<BaseInfo> activeBases = new ArrayList<>();
 
     public MapRenderSystem(SpriteBatch batch, UnitFactory factory, MapGenerator.GameMap map) {
         this.batch = batch;
@@ -45,11 +59,31 @@ public class MapRenderSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
+        // --- Cache active bases for territory calculation ---
+        activeBases.clear();
+        ImmutableArray<Entity> baseEntities = getEngine().getEntitiesFor(
+                Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
+        for (Entity e : baseEntities) {
+            TypeComponent t = e.getComponent(TypeComponent.class);
+            if (t.type != TypeComponent.Type.OBJECT)
+                continue;
+
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (s.name.contains("Base") && s.income >= 2) {
+                GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+                BaseInfo bi = new BaseInfo();
+                bi.x = p.x;
+                bi.y = p.y;
+                bi.owner = s.owner;
+                bi.radius = s.vision;
+                activeBases.add(bi);
+            }
+        }
+
         float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
         float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
 
         batch.begin();
-        // --- UPDATED: Use dynamic width/height ---
         for (int x = gameMap.width - 1; x >= 0; x--) {
             for (int y = gameMap.height - 1; y >= 0; y--) {
                 drawTerrainTile(x, y, xOffset, yOffset);
@@ -76,7 +110,8 @@ public class MapRenderSystem extends EntitySystem {
         }
 
         if (regionToDraw != null) {
-            batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+            batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH,
+                    GameConfig.DRAW_HEIGHT);
         }
 
         if (x == selectedX && y == selectedY && regionToDraw != null) {
@@ -119,7 +154,7 @@ public class MapRenderSystem extends EntitySystem {
             float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
             animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
         }
-        return new float[]{isoX, isoY, animY};
+        return new float[] { isoX, isoY, animY };
     }
 
     private void drawHighlight(TextureRegion t, float x, float y) {
@@ -175,31 +210,19 @@ public class MapRenderSystem extends EntitySystem {
     }
 
     private int getTileOwner(int x, int y) {
-        // --- UPDATED: Dynamic dimensions ---
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) {
             return 0;
         }
 
-        if (isBase(x, y, 1)) {
-            return 1;
-        }
-        if (isBase(x, y, 2)) {
-            return 2;
-        }
-        for (int i = -GameConfig.BORDER_RADIUS; i <= GameConfig.BORDER_RADIUS; i++) {
-            for (int j = -GameConfig.BORDER_RADIUS; j <= GameConfig.BORDER_RADIUS; j++) {
-                int nx = x + i;
-                int ny = y + j;
-                if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) { // UPDATED
-                    if (isBase(nx, ny, 1)) {
-                        return 1;
-                    }
-                    if (isBase(nx, ny, 2)) {
-                        return 2;
-                    }
-                }
+        // Check against cached bases
+        for (BaseInfo bi : activeBases) {
+            int dx = Math.abs(bi.x - x);
+            int dy = Math.abs(bi.y - y);
+            if (dx <= bi.radius && dy <= bi.radius) {
+                return bi.owner;
             }
         }
+
         return 0;
     }
 

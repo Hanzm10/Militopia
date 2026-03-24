@@ -1,7 +1,9 @@
 package com.militopia.config;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class BaseLevelConfig {
 
@@ -32,28 +34,28 @@ public class BaseLevelConfig {
     static {
         // Level 1 (Initial)
         levels.put(1, new LevelData(1, 2000, 2, 5, GameConfig.BORDER_RADIUS,
-                new String[]{"RECRUIT"},
-                new String[]{"MUNITION_FACTORY"}));
+                new String[] { "RECRUIT" },
+                new String[] { "MUNITION_FACTORY" }));
 
         // Level 2
         levels.put(2, new LevelData(2, 3000, 3, 0, GameConfig.BORDER_RADIUS,
-                new String[]{"RANGER", "RECON_DRONE", "GUNBOAT"},
-                new String[]{"PORT", "HOSPITAL"}));
+                new String[] { "RANGER", "RECON_DRONE", "GUNBOAT" },
+                new String[] { "PORT", "HOSPITAL" }));
 
         // Level 3
         levels.put(3, new LevelData(3, 4500, 3, 10, GameConfig.BORDER_RADIUS,
-                new String[]{"SNIPER", "SUICIDE_DRONE", "DESTROYER"},
-                new String[]{"OIL_DERRICK", "RADAR"}));
+                new String[] { "SNIPER", "SUICIDE_DRONE", "DESTROYER" },
+                new String[] { "OIL_DERRICK", "RADAR" }));
 
         // Level 4 (Border Growth)
         levels.put(4, new LevelData(4, 6750, 3, 0, GameConfig.BORDER_RADIUS + 1,
-                new String[]{"TANK", "APACHE", "CARRIER"},
-                new String[]{"SOLAR", "JAMMER"}));
+                new String[] { "TANK", "APACHE", "CARRIER" },
+                new String[] { "SOLAR", "JAMMER" }));
 
         // Level 5
         levels.put(5, new LevelData(5, 10125, 3, 10, GameConfig.BORDER_RADIUS + 1,
-                new String[]{"SUPER_UNIT"},
-                new String[]{"NUCLEAR"}));
+                new String[] { "SUPER_UNIT" },
+                new String[] { "NUCLEAR" }));
     }
 
     public static LevelData getLevel(int level) {
@@ -67,9 +69,25 @@ public class BaseLevelConfig {
                 prevMaxXP *= 1.5f;
             }
             return new LevelData(level, prevMaxXP, 3, 10, GameConfig.BORDER_RADIUS + 1,
-                    new String[]{"SUPER_UNIT"},
-                    new String[]{});
+                    new String[] { "SUPER_UNIT" },
+                    new String[] {});
         }
         return levels.get(1);
+    }
+
+    /**
+     * Collects all unlocked keys (units or structures) up to a maximum base level.
+     */
+    public static Set<String> getUnlockedForLevel(int maxLevel, boolean structs) {
+        Set<String> set = new HashSet<>();
+        for (int i = 1; i <= maxLevel; i++) {
+            LevelData data = getLevel(i);
+            String[] keys = structs ? data.unlockedStructures : data.unlockedUnits;
+            if (keys != null) {
+                for (String k : keys)
+                    set.add(k);
+            }
+        }
+        return set;
     }
 }

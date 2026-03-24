@@ -11,6 +11,8 @@ import com.badlogic.gdx.utils.Scaling;
 import com.militopia.MilitopiaGame;
 import com.militopia.config.GameConfig;
 import com.militopia.managers.AssetManager;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.utils.Align;
 
 /**
  * Top gradient strip showing XP, Funding, and Turn counter.
@@ -54,8 +56,21 @@ public class HudTopBar {
     // -------------------------------------------------------------------------
 
     public void updateXP(int xp) {
-        if (xpLabel != null)
-            xpLabel.setText(String.valueOf(xp));
+        if (xpLabel != null) {
+            String currentText = (xpLabel.getText() != null) ? xpLabel.getText().toString() : "";
+            if (!String.valueOf(xp).equals(currentText)) {
+                xpLabel.setText(String.valueOf(xp));
+                xpLabel.setOrigin(Align.center);
+                xpLabel.clearActions();
+                xpLabel.addAction(Actions.sequence(
+                        Actions.scaleTo(1.5f, 1.5f, 0.1f),
+                        Actions.color(Color.YELLOW, 0.1f),
+                        Actions.scaleTo(1.0f, 1.0f, 0.3f),
+                        Actions.color(Color.WHITE, 0.2f)));
+            } else {
+                xpLabel.setText(String.valueOf(xp));
+            }
+        }
     }
 
     public void updateTurn(int turn) {
@@ -64,10 +79,31 @@ public class HudTopBar {
     }
 
     public void updateFunding(int funding, int income) {
-        if (fundsLabel != null)
-            fundsLabel.setText(String.valueOf(funding));
-        if (fundingTitleLabel != null)
-            fundingTitleLabel.setText("Funding (+" + income + ")");
+        if (fundsLabel != null) {
+            String currentText = (fundsLabel.getText() != null) ? fundsLabel.getText().toString() : "";
+            if (!String.valueOf(funding).equals(currentText)) {
+                fundsLabel.setText(String.valueOf(funding));
+                fundsLabel.setOrigin(Align.center);
+                fundsLabel.clearActions();
+                fundsLabel.addAction(Actions.sequence(
+                        Actions.scaleTo(1.3f, 1.3f, 0.1f),
+                        Actions.color(Color.GREEN, 0.1f),
+                        Actions.scaleTo(1.0f, 1.0f, 0.3f),
+                        Actions.color(Color.WHITE, 0.2f)));
+            } else {
+                fundsLabel.setText(String.valueOf(funding));
+            }
+        }
+        if (fundingTitleLabel != null) {
+            String newIncomeText = "Funding (+" + income + ")";
+            if (!fundingTitleLabel.getText().toString().equals(newIncomeText)) {
+                fundingTitleLabel.setText(newIncomeText);
+                fundingTitleLabel.clearActions();
+                fundingTitleLabel.addAction(Actions.sequence(
+                        Actions.color(Color.GOLD, 0.1f),
+                        Actions.color(Color.WHITE, 0.4f)));
+            }
+        }
     }
 
     // -------------------------------------------------------------------------

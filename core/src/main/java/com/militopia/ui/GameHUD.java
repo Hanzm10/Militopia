@@ -48,6 +48,10 @@ public class GameHUD {
     private LevelUpPopup levelUpPopup;
     private GameOverPopup gameOverPopup;
 
+    private GameScreen screen;
+    private GameInputController inputController;
+    private UnitFactory unitFactory;
+
     private AssetManager assets;
     private MilitopiaGame game;
 
@@ -65,6 +69,10 @@ public class GameHUD {
             final GameInputController inputController,
             final UnitFactory unitFactory,
             final GameState state) {
+
+        this.screen = screen;
+        this.inputController = inputController;
+        this.unitFactory = unitFactory;
 
         // 1. Create components
         ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, state, screen.getGameMap());
@@ -142,7 +150,20 @@ public class GameHUD {
     // -------------------------------------------------------------------------
 
     public void showTileInfo(String name, TextureRegion region) {
-        infoPanel.showTileInfo(name, region);
+        showTileInfo(name, region, true);
+    }
+
+    public void showTileInfo(String name, TextureRegion region, boolean animate) {
+        infoPanel.showTileInfo(name, region, animate);
+    }
+
+    public void showBaseInfo(final Entity base, String name, TextureRegion region) {
+        showBaseInfo(base, name, region, true);
+    }
+
+    public void showBaseInfo(final Entity base, String name, TextureRegion region, boolean animate) {
+        infoPanel.showBaseInfo(base, name, region,
+                slideMenu.getInputController(), slideMenu.getUnitFactory(), slideMenu.getGameScreen(), animate);
     }
 
     public void showUnitInfo(final Entity unit, String name, TextureRegion region,
@@ -172,6 +193,10 @@ public class GameHUD {
 
     public void openSummonMenu(int owner, GameState state, int level, String producerType) {
         slideMenu.openSummonMenu(owner, state, level, producerType);
+    }
+
+    public void showBaseInfoUnified(Entity base, GameState state, int level, String producerType) {
+        infoPanel.showBaseInfoUnified(base, inputController, unitFactory, screen);
     }
 
     public void hideSummonMenu() {

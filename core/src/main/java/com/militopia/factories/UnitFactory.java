@@ -167,6 +167,27 @@ public class UnitFactory {
                 new TextureRegion(assets.get(AssetManager.CARRIER_DISPLAY))
         });
 
+        // Juggernaut
+        unitRegions.put("JUGGERNAUT", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.JUGGERNAUT_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.JUGGERNAUT_LEFT)),
+                new TextureRegion(assets.get(AssetManager.JUGGERNAUT_DISPLAY))
+        });
+
+        // B2 Bomber
+        unitRegions.put("B2", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.B2_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.B2_LEFT)),
+                new TextureRegion(assets.get(AssetManager.B2_DISPLAY))
+        });
+
+        // Submarine
+        unitRegions.put("SUBMARINE", new TextureRegion[] {
+                new TextureRegion(assets.get(AssetManager.SUBMARINE_RIGHT)),
+                new TextureRegion(assets.get(AssetManager.SUBMARINE_LEFT)),
+                new TextureRegion(assets.get(AssetManager.SUBMARINE_DISPLAY))
+        });
+
         // Structures
         structRegions.put("MUNITION_FACTORY", new TextureRegion(assets.get(AssetManager.MUNITION_FACTORY)));
         structRegions.put("PORT", new TextureRegion(assets.get(AssetManager.PORT)));
@@ -192,6 +213,11 @@ public class UnitFactory {
         this.cactusRegion = new TextureRegion(assets.get(AssetManager.OBJ_CACTUS));
         this.mountainObjRegion = new TextureRegion(assets.get(AssetManager.OBJ_MOUNTAIN));
         this.fogRegion = new TextureRegion(assets.get(AssetManager.FOG_OF_WAR));
+
+        // Add to map for consistent lookup via getTextureForPopup
+        structRegions.put("TOWN", townRegion);
+        structRegions.put("RUINS", ruinsRegion);
+        structRegions.put("OIL", oilRegion);
 
         // Animals
         this.horseRegion = new TextureRegion(assets.get(AssetManager.HORSE));
@@ -543,6 +569,7 @@ public class UnitFactory {
         // Create Stats (Default Income = 0, we add it to Base XP instead)
         StatsComponent stats = new StatsComponent(niceName, 10, 0, 0, 0, 0, 1, getStructureCost(type),
                 StatsComponent.MoveType.LAND, owner, 0);
+        stats.unitTypeKey = type; // Store the key for HUD icon lookup
 
         // --- NEW: Link to Parent Base ---
         stats.parentBaseX = parentX;
@@ -615,6 +642,7 @@ public class UnitFactory {
             StatsComponent animalStats = new StatsComponent(info.name, 1, 0, 0, 0, 0, 0, 0,
                     StatsComponent.MoveType.LAND, 0);
             animalStats.name = "ANIMAL_" + type.name();
+            animalStats.unitTypeKey = type.name();
             entity.add(animalStats);
         } else if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
             int owner = (type == MapGenerator.ObjectType.BASE_P1) ? 1 : 2;
@@ -627,6 +655,7 @@ public class UnitFactory {
                     (owner == 1 ? state.p1Name : state.p2Name) + "'s " + ordinal + " Base",
                     100, 0, 0, 0, 0, GameConfig.BORDER_RADIUS, 0, StatsComponent.MoveType.LAND, owner, 2);
 
+            stats.unitTypeKey = type.name(); // Store key (e.g. "BASE_P1")
             stats.baseOrdinal = ordinal;
             updateBaseTexture(entity, stats);
             entity.add(stats);
@@ -635,6 +664,7 @@ public class UnitFactory {
             int income = (type == MapGenerator.ObjectType.TOWN) ? 1 : 0;
             StatsComponent stats = new StatsComponent(info.name, 10, 0, 0, 0, 0, 1, 0, StatsComponent.MoveType.LAND, 0,
                     income);
+            stats.unitTypeKey = type.name(); // Store key (e.g. "TOWN", "RUINS")
             entity.add(stats);
         }
         engine.addEntity(entity);
@@ -931,6 +961,9 @@ public class UnitFactory {
         if (structRegions.containsKey(key)) {
             return structRegions.get(key);
         }
+        if (key.startsWith("BASE_P")) {
+            return getHudIcon(MapGenerator.ObjectType.valueOf(key));
+        }
         return horseDisplayRegion;
     }
 
@@ -1111,6 +1144,7 @@ public class UnitFactory {
         if (type == MapGenerator.ObjectType.ZEBRA) {
             return new UiInfo("Zebra", zebraRegion);
         }
+
         return new UiInfo("Unknown Object", grassRegion);
     }
 

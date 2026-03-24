@@ -266,28 +266,18 @@ public class UnitRenderSystem extends EntitySystem {
 
         for (Entity e : floaters) {
             FloatingTextComponent ft = e.getComponent(FloatingTextComponent.class);
-            ft.timer += deltaTime;
-
-            if (ft.timer >= FloatingTextComponent.MAX_TIME) {
-                toRemove.add(e);
-                continue;
-            }
-
-            float progress = ft.timer / FloatingTextComponent.MAX_TIME;
-            float alpha = 1f - progress;
-            float driftY = progress * 18f; // drift 18 world units upward over 1s
 
             // Colour: gold for "BLOCKED", red for damage numbers
             if ("BLOCKED".equals(ft.text)) {
-                font.setColor(1f, 0.85f, 0f, alpha); // Gold
+                font.setColor(1f, 0.85f, 0f, ft.alpha); // Gold
             } else {
-                font.setColor(1f, 0.2f, 0.2f, alpha); // Red
+                font.setColor(1f, 0.2f, 0.2f, ft.alpha); // Red
             }
 
             GlyphLayout layout = new GlyphLayout(font, ft.text);
             font.draw(batch, ft.text,
                     ft.worldX - layout.width / 2f,
-                    ft.worldY + driftY);
+                    ft.worldY);
         }
 
         font.getData().setScale(originalScaleX, originalScaleY);
@@ -325,7 +315,7 @@ public class UnitRenderSystem extends EntitySystem {
                 float dX = isoX - xOff + GameConfig.DRAW_WIDTH / 2f;
                 float dY = isoY - yOff + 15;
                 drawXPBar(dX, dY - 8, stats);
-                drawBaseName(dX, dY + 20, stats.name);
+                // drawBaseName removed per user request
             }
         }
     }

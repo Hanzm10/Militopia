@@ -19,7 +19,8 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 - [x] **Phase 5: Specialized Structures** - Construction system and building logic
 - [x] **Phase 6: Win / Loss Conditions** - Win conditions and game over state
 - [x] **Phase 7: Exploration & Persistence** - Ruins mechanics, Oil extraction, and move persistence
-- [ ] **Phase 8: Polish & UX** - Visuals, SFX, and UI improvements
+- [ ] **Phase 8: Polish & UX** - UI overhaul, unit animations, text popups, and sound effects
+- [ ] **Phase 9: Advanced Mechanics** - Railways infrastructure
 
 ## Phase Details
 
@@ -111,11 +112,24 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
   - 07-03: Turn State Persistence
 
 ### Phase 8: Polish & UX
-**Goal**: Animations, sound effects, and UI polish.
+**Goal**: Comprehensive UI overhaul, dynamic visual feedback, animations, and sound effects.
 **Depends on**: Phase 7
 **Success Criteria** (what must be TRUE):
-  1. Animated turn transitions and sound effects are active.
-  2. Action undo allows canceling moves before committing.
+  1. Base UI uses PNG assets and features a sliding info panel instead of floating text.
+  2. Territory indicator properly expands when a base reaches Level 4 (Bug Fix).
+  3. Attack animations play for each unit type.
+  4. Sound effects play for movement, attack, defend, and background music.
+  5. HUD top bar updates live when players receive additional income/funding mid-turn.
+  6. Floating text popups appear above bases when gaining income, funding, or XP.
+  7. Action undo allows canceling moves before committing.
+  8. Units with an attack range of 1 automatically advance into the defender's tile upon a lethal attack.
+**Plans**: TBD
+
+### Phase 9: Advanced Mechanics
+**Goal**: Implement advanced mobility and infrastructure.
+**Depends on**: Phase 8
+**Success Criteria** (what must be TRUE):
+  1. Railway feature (inspired by Polytopia roads) is implemented for enhanced unit mobility.
 **Plans**: TBD
 
 ---
@@ -130,4 +144,5 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 | 5. Specialized Structures | 4/4 | Complete | 2026-03-23 |
 | 6. Win / Loss | 1/1 | Complete | 2026-03-23 |
 | 7. Exploration | 1/1 | Complete | 2026-03-24 |
-| 8. Polish & UX | 0/1 | Planned | - |
+| 8. Polish & UX | 0/7 | Planned | - |
+| 9. Adv. Mechanics | 0/1 | Planned | - |

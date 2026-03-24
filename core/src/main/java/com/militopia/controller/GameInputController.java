@@ -234,7 +234,8 @@ public class GameInputController extends InputAdapter {
                     if (type.type == TypeComponent.Type.UNIT) {
                         foundUnit = e;
                     } else if (type.type == TypeComponent.Type.OBJECT) {
-                        if (pos.zIndex == 2) {
+                        StatsComponent s = e.getComponent(StatsComponent.class);
+                        if (pos.zIndex == 2 || (s != null && s.name.startsWith("ANIMAL_"))) {
                             foundAnimal = e;
                         } else {
                             foundStructure = e;
@@ -270,6 +271,7 @@ public class GameInputController extends InputAdapter {
 
         } else {
             deselect();
+            gameHUD.hideTileInfo(); // NEW: Auto-hide D-03
         }
         return true;
     }
@@ -304,7 +306,7 @@ public class GameInputController extends InputAdapter {
         StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
 
         if (unitStats.owner != screen.getCurrentPlayer()) {
-            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitTypeKey);
             GameLogger.log(GameLogger.INPUT, unitStats.owner,
                     "Enemy unit inspected: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY)
                             + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
@@ -316,7 +318,8 @@ public class GameInputController extends InputAdapter {
         if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
             GameLogger.log(GameLogger.INPUT,
                     "Unit exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
-            gameHUD.showTileInfo("Unit Exhausted", unitFactory.getUnitUi("RECRUIT").region);
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitTypeKey);
+            gameHUD.showTileInfo("Unit Exhausted (" + unitStats.name + ")", info.region);
             return;
         }
 
@@ -325,7 +328,7 @@ public class GameInputController extends InputAdapter {
                 + " at " + GameLogger.pos(gridX, gridY)
                 + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
         showRangeMarkers(gridX, gridY);
-        UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.name.toUpperCase());
+        UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitTypeKey);
         gameHUD.showUnitInfo(foundUnit, info.name, info.region, unitStats.currentHP, unitStats.maxHP);
 
         if (foundAnimal != null) {
@@ -378,37 +381,44 @@ public class GameInputController extends InputAdapter {
         StatsComponent structStats = foundStructure.getComponent(StatsComponent.class);
         int sOwner = (structStats != null) ? structStats.owner : 0;
         String sOwnerStr = (sOwner == 0) ? "neutral" : "P" + sOwner;
+        String structName = (structStats != null) ? structStats.name : objType.name();
+
         GameLogger.log(GameLogger.INPUT,
-                "Structure selected: " + (structStats != null ? structStats.name : objType.name())
+                "Structure selected: " + structName
                         + " at " + GameLogger.pos(gridX, gridY) + " | owner=" + sOwnerStr);
 
         // --- Handle Bases ---
         if (objType == MapGenerator.ObjectType.BASE_P1 || objType == MapGenerator.ObjectType.BASE_P2) {
             int owner = (objType == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
+
+            // Show base info in the bottom panel (D-01)
             if (owner == screen.getCurrentPlayer()) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
                     int level = structStats.level;
-                    gameHUD.openSummonMenu(owner, screen.getGameState(), level, "BASE");
+                    // --- UNIQUE: Unified Base Menu (Stats + Summons) ---
+                    gameHUD.showBaseInfoUnified(foundStructure, screen.getGameState(), level, "BASE");
                     return;
                 }
             }
+            // Enemy Base or unit on top: Show standard InfoPanel scouting
+            // Use specialized name and icon
+            gameHUD.showBaseInfo(foundStructure, structName, unitFactory.getHudIcon(objType), true);
+            return;
         }
 
         // --- Handle Specialized Structures (like PORTS) ---
         if (structStats != null && structStats.owner == screen.getCurrentPlayer()) {
-            // Check for Port specifically
             if (structStats.name.equalsIgnoreCase("Port")) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
-                    // Use the highest friendly base level whose territory contains this Port.
                     int portLevel = 1;
                     ImmutableArray<Entity> allEnts = engine.getEntitiesFor(
                             Family.all(StatsComponent.class, GridPositionComponent.class).get());
                     for (Entity e : allEnts) {
                         StatsComponent bs = e.getComponent(StatsComponent.class);
                         GridPositionComponent bp = e.getComponent(GridPositionComponent.class);
-                        if (bs.owner == structStats.owner && bs.income >= 2 && bs.name.contains("Base")) {
+                        if (bs.owner == structStats.owner && bs.level >= 1 && bs.name.contains("Base")) {
                             int radius = bs.vision;
                             if (Math.abs(bp.x - gridX) <= radius && Math.abs(bp.y - gridY) <= radius) {
                                 if (bs.level > portLevel)
@@ -422,8 +432,14 @@ public class GameInputController extends InputAdapter {
             }
         }
 
-        UnitFactory.UiInfo info = unitFactory.getObjectUi(objType);
-        gameHUD.showTileInfo(info.name, info.region);
+        // If it's a structure with stats (income/xp), use showBaseInfo to show stats
+        if (structStats != null && (structStats.income > 0 || structStats.xpGain > 0 || structStats.owner > 0)) {
+            gameHUD.showBaseInfo(foundStructure, structName, unitFactory.getTextureForPopup(structStats.unitTypeKey),
+                    true);
+        } else {
+            UnitFactory.UiInfo info = unitFactory.getObjectUi(objType);
+            gameHUD.showTileInfo(info.name, info.region);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -510,24 +526,14 @@ public class GameInputController extends InputAdapter {
 
     private void handleTerrainSelection(int x, int y) {
         MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
-
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
-        if (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL) {
-            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
-                    unitFactory.getTextureForTerrain(terrain.ordinal()));
-            return;
-        }
-        if (getEntityAt(x, y, TypeComponent.Type.OBJECT) != null && obj != MapGenerator.ObjectType.OIL) {
-            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
-                    unitFactory.getTextureForTerrain(terrain.ordinal()));
-            return;
-        }
 
         int owner = screen.getCurrentPlayer();
         int maxLevel = 0;
         boolean isTerritory = false;
         int parentX = -1, parentY = -1;
 
+        // --- 1. TERRITORY CHECK (Critical for Build Menu) ---
         ImmutableArray<Entity> entities = engine
                 .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
         for (Entity e : entities) {
@@ -546,14 +552,14 @@ public class GameInputController extends InputAdapter {
             }
         }
 
+        // --- 3. BUILD MENU OR TERRAIN INFO ---
         if (isTerritory) {
             boolean isWater = (terrain == MapGenerator.TerrainType.WATER
                     || terrain == MapGenerator.TerrainType.DEEP_WATER);
             boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
             boolean isCoastalLand = !isWater && hasAdjacentWater(x, y);
-            // Only open the build menu if there is at least one build category to show.
-            // Non-coastal (open/deep) water has nothing to build — show tile info instead.
             boolean hasBuildOptions = !isWater || isCoastalWater;
+
             if (hasBuildOptions) {
                 gameHUD.openBuildMenu(x, y, owner, maxLevel, isWater, isCoastalWater, isCoastalLand,
                         screen.getGameState(), parentX, parentY, terrain, unitFactory);

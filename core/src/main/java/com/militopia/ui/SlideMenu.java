@@ -155,8 +155,8 @@ public class SlideMenu {
                             unitStats.hasActed = true;
 
                         int newXP = (newOwner == 1) ? state.p1XP : state.p2XP;
-                        int newIncome = gameScreen.calculateIncome(newOwner);
                         int curFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
+                        int newIncome = gameScreen.calculateIncome(newOwner);
                         gameScreen.gameHUD.updateXP(newXP);
                         gameScreen.gameHUD.updateFunding(curFunds, newIncome);
                         hide();
@@ -251,7 +251,11 @@ public class SlideMenu {
         menuTable.clear();
         menuTable.setBackground(game.skin.newDrawable("white", BG_COLOR));
         Table content = new Table();
+        populateSummonContent(content, state, producerType);
+        menuTable.add(content).expandX().center();
+    }
 
+    private void populateSummonContent(Table content, GameState state, String producerType) {
         java.util.Set<String> unlocked = unlockedForLevel(currentBaseLevel, false);
         String[] allUnits = {
                 "RECRUIT", "RANGER", "SNIPER", "TANK", "RECON_DRONE",
@@ -304,7 +308,10 @@ public class SlideMenu {
                             GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
                                     "Summoned " + unit + " at " + GameLogger.pos(spawn[0], spawn[1])
                                             + " | cost=" + cost + " | funds remaining=" + remaining);
-                            gameScreen.gameHUD.updateFunding(remaining, currentIncome);
+
+                            // Use fresh income calculation for HUD update
+                            int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
                             hide();
                             inputController.resetLastClicked();
                         }
@@ -312,7 +319,8 @@ public class SlideMenu {
         }
 
         // Cancel button
-        TextButton closeBtn = new TextButton("Cancel", game.skin);
+        com.badlogic.gdx.scenes.scene2d.ui.TextButton closeBtn = new com.badlogic.gdx.scenes.scene2d.ui.TextButton(
+                "Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
             @Override
@@ -321,7 +329,7 @@ public class SlideMenu {
                 inputController.resetLastClicked();
             }
         });
-        menuTable.add(content).expandX().center();
+        content.add(closeBtn).pad(10);
     }
 
     /**
@@ -377,7 +385,8 @@ public class SlideMenu {
                                     buildParentY);
 
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
-                            gameScreen.gameHUD.updateFunding(remaining, currentIncome);
+                            int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
                             hide();
                             inputController.resetLastClicked();
                         }
@@ -421,16 +430,7 @@ public class SlideMenu {
 
     /** Collect unlocked unit OR structure keys for levels 1..maxLevel. */
     private java.util.Set<String> unlockedForLevel(int maxLevel, boolean structs) {
-        java.util.Set<String> set = new java.util.HashSet<>();
-        for (int i = 1; i <= maxLevel; i++) {
-            BaseLevelConfig.LevelData data = BaseLevelConfig.getLevel(i);
-            String[] keys = structs ? data.unlockedStructures : data.unlockedUnits;
-            if (keys != null) {
-                for (String k : keys)
-                    set.add(k);
-            }
-        }
-        return set;
+        return BaseLevelConfig.getUnlockedForLevel(maxLevel, structs);
     }
 
     /**

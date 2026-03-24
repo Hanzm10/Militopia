@@ -35,6 +35,7 @@ import com.militopia.systems.FogSystem;
 import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
 import com.militopia.systems.UnitRenderSystem;
+import com.militopia.systems.FloatingTextSystem;
 import com.militopia.systems.AbilityStatusSystem;
 import com.militopia.systems.StructureEconomySystem;
 import com.militopia.systems.WinConditionSystem;
@@ -161,6 +162,8 @@ public class GameScreen implements Screen {
         unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
         unitRenderSystem.setPlayer(gameState.currentPlayer);
         engine.addSystem(unitRenderSystem);
+
+        engine.addSystem(new FloatingTextSystem());
 
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
@@ -431,32 +434,100 @@ public class GameScreen implements Screen {
         turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
     }
 
+    public int calculateBaseXPGain(Entity base) {
+        StatsComponent stats = base.getComponent(StatsComponent.class);
+        if (stats == null)
+            return 0;
+
+        int totalGain = 0;
+        // Natural gain (Bases only)
+        if (stats.name.contains("Base")) {
+            totalGain = 250 + ((stats.level - 1) * 10);
+
+            // Add XP from child structures
+            GridPositionComponent bPos = base.getComponent(GridPositionComponent.class);
+            if (bPos != null) {
+                ImmutableArray<Entity> entities = engine
+                        .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
+                for (Entity other : entities) {
+                    StatsComponent oStats = other.getComponent(StatsComponent.class);
+                    if (oStats.owner == stats.owner && oStats.parentBaseX == bPos.x && oStats.parentBaseY == bPos.y) {
+                        totalGain += oStats.xpGain;
+                    }
+                }
+            }
+        } else {
+            // Specialized structures show their own contribution
+            totalGain = stats.xpGain;
+        }
+        return totalGain;
+    }
+
+    public int calculateBaseIncome(Entity entity) {
+        StatsComponent stats = entity.getComponent(StatsComponent.class);
+        if (stats == null)
+            return 0;
+
+        int individualIncome = stats.income;
+        GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
+
+        if (pos != null) {
+            // SOLAR ARRAY: Tech Synergy (+1 for each adjacent friendly structure)
+            if (stats.name.contains("Solar Array")) {
+                ImmutableArray<Entity> entities = engine
+                        .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
+                for (Entity other : entities) {
+                    if (other == entity)
+                        continue;
+                    StatsComponent oStats = other.getComponent(StatsComponent.class);
+                    GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
+                    if (oStats.owner == stats.owner && (oStats.income > 0 || oStats.name.contains("Base"))) {
+                        if (Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
+                            individualIncome += 1;
+                        }
+                    }
+                }
+            }
+        }
+        return individualIncome;
+    }
+
+    /**
+     * Calculates the grouped income for a base, including all linked structures.
+     * Used by InfoPanel for display.
+     */
+    public int calculateGroupedBaseIncome(Entity base) {
+        StatsComponent stats = base.getComponent(StatsComponent.class);
+        if (stats == null || !stats.name.contains("Base"))
+            return calculateBaseIncome(base);
+
+        int totalGroupedIncome = calculateBaseIncome(base);
+        GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
+
+        if (pos != null) {
+            ImmutableArray<Entity> entities = engine
+                    .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
+            for (Entity other : entities) {
+                if (other == base)
+                    continue;
+                StatsComponent oStats = other.getComponent(StatsComponent.class);
+                if (oStats.owner == stats.owner && oStats.parentBaseX == pos.x && oStats.parentBaseY == pos.y) {
+                    totalGroupedIncome += calculateBaseIncome(other);
+                }
+            }
+        }
+        return totalGroupedIncome;
+    }
+
     public int calculateIncome(int playerID) {
         int totalIncome = 0;
         ImmutableArray<Entity> entities = engine
-                .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
+                .getEntitiesFor(Family.all(StatsComponent.class).get());
 
         for (Entity entity : entities) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
             if (stats.owner == playerID) {
-                totalIncome += stats.income;
-
-                // SOLAR ARRAY: Tech Synergy (+1 for each adjacent friendly structure)
-                if (stats.name.contains("Solar Array")) {
-                    GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
-                    for (Entity other : entities) {
-                        if (other == entity)
-                            continue;
-                        StatsComponent oStats = other.getComponent(StatsComponent.class);
-                        GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
-                        // Check if other is a friendly structure (income > 0 or base)
-                        if (oStats.owner == playerID && (oStats.income > 0 || oStats.name.contains("Base"))) {
-                            if (Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
-                                totalIncome += 1;
-                            }
-                        }
-                    }
-                }
+                totalIncome += calculateBaseIncome(entity);
             }
         }
         return totalIncome;
@@ -605,8 +676,10 @@ public class GameScreen implements Screen {
 
                 // --- FIX: Only list Bases in the log ---
                 if (stats.name.contains("Base")) {
-                    String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP", stats.name, stats.level,
-                            stats.currentBaseXP, stats.maxBaseXP);
+                    int bInc = calculateGroupedBaseIncome(e);
+                    String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP (+%d) | Inc: +%d",
+                            stats.name, stats.level, stats.currentBaseXP, stats.maxBaseXP, this.calculateBaseXPGain(e),
+                            bInc);
                     if (stats.owner == 1) {
                         p1Logs.add(entry);
                     } else {

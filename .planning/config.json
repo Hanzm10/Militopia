@@ -6,5 +6,8 @@
   "research": true,
   "plan_checker": true,
   "verifier": true,
-  "parallelization": true
+  "parallelization": true,
+  "workflow": {
+    "_auto_chain_active": false
+  }
 }
