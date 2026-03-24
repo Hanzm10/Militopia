@@ -20,6 +20,8 @@ import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
+import com.militopia.systems.ScavengeSystem;
+import com.militopia.systems.StructurePlacementSystem;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
 
@@ -55,10 +57,12 @@ public class SlideMenu {
     private static final float PANEL_HEIGHT = 140f;
     private static final Color BG_COLOR = new Color(0.1f, 0.1f, 0.1f, 0.95f);
 
-    public SlideMenu(MilitopiaGame game, AssetManager assets, Stage stage,
-            HudBottomBar bottomBar, InfoPanel infoPanel,
-            GameScreen gameScreen, GameInputController inputController,
-            UnitFactory unitFactory) {
+    private final ScavengeSystem scavengeSystem;
+    private final StructurePlacementSystem placementSystem;
+
+    public SlideMenu(MilitopiaGame game, AssetManager assets, Stage stage, HudBottomBar bottomBar, InfoPanel infoPanel,
+            GameScreen gameScreen, GameInputController inputController, UnitFactory unitFactory,
+            ScavengeSystem scavengeSystem, StructurePlacementSystem placementSystem) {
         this.game = game;
         this.assets = assets;
         this.stage = stage;
@@ -67,6 +71,8 @@ public class SlideMenu {
         this.gameScreen = gameScreen;
         this.inputController = inputController;
         this.unitFactory = unitFactory;
+        this.scavengeSystem = scavengeSystem;
+        this.placementSystem = placementSystem;
 
         menuTable = new Table();
         menuTable.setSize(stage.getWidth(), PANEL_HEIGHT);
@@ -184,75 +190,16 @@ public class SlideMenu {
     }
 
     private void performScavenge(Entity ruinsEntity, Entity unit, UnitFactory factory, GameInputController controller) {
-        com.militopia.components.GridPositionComponent unitPos = unit
-                .getComponent(com.militopia.components.GridPositionComponent.class);
         StatsComponent unitStats = unit.getComponent(StatsComponent.class);
         int owner = unitStats.owner;
         GameState state = gameScreen.getGameState();
-        MapGenerator.GameMap map = gameScreen.getGameMap();
 
-        // 1. Mark unit as acted
-        unitStats.hasActed = true;
+        ScavengeSystem.ScavengeReward reward = scavengeSystem.performScavenge(ruinsEntity, unit);
+        if (reward == null)
+            return;
 
-        // 2. Remove ruins from map
-        map.objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
-        gameScreen.getEngine().removeEntity(ruinsEntity);
-
-        // 3. Roll for reward
-        int roll = com.badlogic.gdx.math.MathUtils.random(1, 100);
-        String rewardMsg = "";
-
-        if (roll <= 20) {
-            // Funding: +15
-            if (owner == 1)
-                state.p1Funding += 15;
-            else
-                state.p2Funding += 15;
-            rewardMsg = "Found 15 Funding!";
-        } else if (roll <= 40) {
-            // XP: +1000
-            if (owner == 1)
-                state.p1XP += 1000;
-            else
-                state.p2XP += 1000;
-            rewardMsg = "Found 1000 XP!";
-        } else if (roll <= 60) {
-            // Recon Drone
-            factory.createUnit("RECON_DRONE", unitPos.x, unitPos.y, owner, false);
-            rewardMsg = "Found a Recon Drone!";
-        } else if (roll <= 80) {
-            // Sniper: Adjacent Land
-            int[] spawn = factory.findValidSpawnPoint(unitPos.x, unitPos.y, StatsComponent.MoveType.LAND, map);
-            if (spawn != null) {
-                factory.createUnit("SNIPER", spawn[0], spawn[1], owner, false);
-                rewardMsg = "Found a Sniper!";
-            } else {
-                // Fallback to funding if no space
-                if (owner == 1)
-                    state.p1Funding += 15;
-                else
-                    state.p2Funding += 15;
-                rewardMsg = "Found supplies (+15 Funding)!";
-            }
-        } else {
-            // Destroyer: Adjacent Sea
-            int[] spawn = factory.findValidSpawnPoint(unitPos.x, unitPos.y, StatsComponent.MoveType.SEA, map);
-            if (spawn != null) {
-                factory.createUnit("DESTROYER", spawn[0], spawn[1], owner, false);
-                rewardMsg = "Found a Destroyer!";
-            } else {
-                // Fallback to XP if no space
-                if (owner == 1)
-                    state.p1XP += 1000;
-                else
-                    state.p2XP += 1000;
-                rewardMsg = "Discovered ancient data (+1000 XP)!";
-            }
-        }
-
-        GameLogger.log(GameLogger.SCAVENGE, owner, rewardMsg + " at " + GameLogger.pos(unitPos.x, unitPos.y));
-
-        // Update HUD
+        // Update HUD (ScavengeSystem already updated the GameState numbers, but UI
+        // needs snap)
         gameScreen.gameHUD.updateXP((owner == 1) ? state.p1XP : state.p2XP);
         gameScreen.gameHUD.updateFunding((owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
 
@@ -421,52 +368,15 @@ public class SlideMenu {
                     new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
-                            int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
-                            if (funds < cost) {
-                                GameLogger.log(GameLogger.BUILD, currentBaseOwner,
-                                        "Attempted " + struct + " — insufficient funds ("
-                                                + funds + "<" + cost + ")");
+                            if (!placementSystem.canBuild(struct, buildX, buildY, currentBaseOwner, cost, isWater,
+                                    isCoastalWater, isCoastalLand)) {
                                 return;
                             }
-                            Entity existingAtLayer1 = unitFactory.getEntityAt(buildX, buildY, 1);
-                            if (existingAtLayer1 != null) {
-                                StatsComponent s = existingAtLayer1.getComponent(StatsComponent.class);
-                                boolean isOilRes = (s != null && s.name.equals("Oil Reservoir"));
-                                if (!(struct.equals("OIL_DERRICK") && isOilRes)) {
-                                    GameLogger.log(GameLogger.BUILD, currentBaseOwner,
-                                            "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
-                                                    + " — BLOCKED (tile occupied)");
-                                    return;
-                                }
-                            }
-                            MapGenerator.ObjectType existingObj = gameScreen.getGameMap().objects[buildX][buildY];
-                            if (existingObj != MapGenerator.ObjectType.NONE) {
-                                // Allow Oil Derrick to be built over Oil Reservoir
-                                if (struct.equals("OIL_DERRICK") && existingObj == MapGenerator.ObjectType.OIL) {
-                                    // SUCCESS: Remove the oil reservoir map object
-                                    gameScreen.getGameMap().objects[buildX][buildY] = MapGenerator.ObjectType.NONE;
-                                    // Also remove the associated Oil Reservoir entity if it exists
-                                    if (existingAtLayer1 != null) {
-                                        gameScreen.getEngine().removeEntity(existingAtLayer1);
-                                    }
-                                } else {
-                                    GameLogger.log(GameLogger.BUILD, currentBaseOwner,
-                                            "Build " + struct + " at " + GameLogger.pos(buildX, buildY)
-                                                    + " — BLOCKED (map object present)");
-                                    return;
-                                }
-                            }
-                            if (currentBaseOwner == 1)
-                                state.p1Funding -= cost;
-                            else
-                                state.p2Funding -= cost;
 
-                            unitFactory.createStructure(struct, buildX, buildY,
-                                    currentBaseOwner, buildParentX, buildParentY);
+                            placementSystem.performBuild(struct, buildX, buildY, currentBaseOwner, cost, buildParentX,
+                                    buildParentY);
+
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
-                            GameLogger.log(GameLogger.BUILD, currentBaseOwner,
-                                    "Built " + struct + " at " + GameLogger.pos(buildX, buildY)
-                                            + " | cost=" + cost + " | funds remaining=" + remaining);
                             gameScreen.gameHUD.updateFunding(remaining, currentIncome);
                             hide();
                             inputController.resetLastClicked();

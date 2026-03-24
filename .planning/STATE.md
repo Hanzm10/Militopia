@@ -5,13 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** A tactically deep, heterogeneous unit combat system on a procedurally generated isometric map.
-**Current focus:** Phase 7: Polish & UX
+**Current focus:** Phase 8: Polish & UX
 
 ## Current Position
-- **Last Position**: Phase 6: Win/Loss Conditions, Status: COMPLETE (2026-03-23)
+- **Last Position**: Phase 7: Exploration & Persistence, Status: COMPLETE (2026-03-24)
 - **Current Milestone**: [Milestone 4]
-- **Current Phase**: Phase 7: Exploration & Persistence — ACTIVE
-- **Status**: Active (session 2026-03-23)
+- **Current Phase**: Phase 8: Polish & UX — ACTIVE
+- **Status**: Active (session 2026-03-24)
 
 ## Last Session Summary
 - Refactored win/loss detection logic from `GameScreen.render()` into a dedicated Ashley ECS `WinConditionSystem`.
@@ -20,7 +20,10 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 - Closed all Phase 6 tracking debt: written `06-01-SUMMARY.md` and marked `06-UAT.md` COMPLETE.
 
 ## In-Progress Work
-- None — Phase 6 complete.
+- Extracted Scavenge and Building logic into modular Ashley ECS systems (`ScavengeSystem`, `StructurePlacementSystem`).
+- Integrated systems into `SlideMenu` and `GameHUD` with enhanced validation (Oil/Coastal constraints).
+- Verified turn-state persistence (`hasMoved`, `hasActed`) via `SaveManager` and system-level tests.
+- All Phase 7 automated tests passing after resolving environment setup and null-safety issues.
 
 ## Blockers
 - None.
@@ -44,9 +47,9 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 - `STACK.md`: Full technology audit.
 
 ## Next Steps
-1. Run `/gsd-discuss-phase 7` to gather requirements for Polish & UX (SFX, animations, undo system).
-2. Run `/gsd-plan-phase 7` to decompose Polish & UX into executable plans.
-3. Run `./gradlew test` to ensure no regressions after Phase 6 changes.
+1. Run `/gsd-discuss-phase 8` to gather requirements for Polish & UX (SFX, animations, undo system).
+2. Run `/gsd-plan-phase 8` to decompose Polish & UX into executable plans.
+3. Run `./gradlew test` to ensure no regressions after full Phase 7 integration.
 
 ## Context Health: State Dump
 

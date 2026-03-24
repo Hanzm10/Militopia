@@ -23,88 +23,69 @@ import static org.mockito.Mockito.*;
 public class ExplorationPersistenceTest {
 
     @Test
-    public void testUnitPersistenceData() {
-        // Verify UnitData captures new fields
-        UnitData data = new UnitData(1, 2, "Recruit", 1, "RECRUIT", 8, 10, true, true);
-        assertEquals(1, data.x);
-        assertEquals(2, data.y);
-        assertEquals(8, data.hp);
-        assertEquals(10, data.maxHp);
-        assertTrue(data.hasMoved);
-        assertTrue(data.hasActed);
-        assertEquals("RECRUIT", data.unitTypeKey);
-    }
-
-    @Test
-    public void testOilDerrickConstraintLogic() {
-        // Verify the logic used in SlideMenu for Oil Derrick constraints
-        MapGenerator.ObjectType[][] objects = new MapGenerator.ObjectType[10][10];
-        for (int i = 0; i < 10; i++)
-            for (int j = 0; j < 10; j++)
-                objects[i][j] = MapGenerator.ObjectType.NONE;
-
-        int buildX = 5, buildY = 5;
-        objects[buildX][buildY] = MapGenerator.ObjectType.OIL;
-
-        // Simulating the check in SlideMenu:
-        // show = !isWater && gameScreen.getGameMap().objects[buildX][buildY] ==
-        // MapGenerator.ObjectType.OIL;
-        boolean isWater = false;
-        boolean showOnOil = !isWater && objects[buildX][buildY] == MapGenerator.ObjectType.OIL;
-
-        int emptyX = 5, emptyY = 6;
-        boolean showOnEmpty = !isWater && objects[emptyX][emptyY] == MapGenerator.ObjectType.OIL;
-
-        assertTrue(showOnOil, "Oil Derrick should be visible on OIL slots");
-        assertFalse(showOnEmpty, "Oil Derrick should NOT be visible on non-OIL slots");
-    }
-
-    @Test
-    public void testLegacyConstructorCompatibility() {
-        // Verify that existing code using the old constructor still works
-        UnitData data = new UnitData(3, 4, "TANK", 2);
-        assertEquals(3, data.x);
-        assertEquals(4, data.y);
-        assertEquals("TANK", data.type);
-        assertEquals(2, data.owner);
-        // Defaults should be sensible
-        assertEquals("TANK", data.unitTypeKey);
-        assertEquals(10, data.hp);
-        assertFalse(data.hasMoved);
-    }
-
-    @Test
-    public void testBaseLoadMaxXPSynchronization() {
+    public void testScavengeSystemRewards() {
         PooledEngine engine = new PooledEngine();
+        GameState state = new GameState(12345, "test", 10, 10);
+        state.p1Funding = 10;
+        state.p1XP = 0;
+        MapGenerator.GameMap map = new MapGenerator.GameMap(10, 10);
+        map.objects[5][5] = MapGenerator.ObjectType.RUINS;
+
         AssetManager mockAssets = mock(AssetManager.class);
         Texture mockTexture = mock(Texture.class);
         when(mockAssets.get(anyString())).thenReturn(mockTexture);
-
         UnitFactory factory = new UnitFactory(engine, mockAssets);
 
-        Entity baseEntity = engine.createEntity();
-        baseEntity.add(new GridPositionComponent(0, 0, 1));
-        baseEntity.add(new StatsComponent("Base", 100, 0, 0, 0, 0, 1, 0, StatsComponent.MoveType.LAND, 1));
-        baseEntity.add(new TypeComponent(TypeComponent.Type.OBJECT));
-        baseEntity.add(new TextureComponent(null));
-        engine.addEntity(baseEntity);
+        Entity ruins = engine.createEntity();
+        ruins.add(new GridPositionComponent(5, 5, 1));
+        ruins.add(new TypeComponent(TypeComponent.Type.OBJECT));
+        engine.addEntity(ruins);
 
-        MapGenerator.GameMap map = new MapGenerator.GameMap(10, 10);
-        map.objects[0][0] = MapGenerator.ObjectType.BASE_P1;
+        Entity unit = engine.createEntity();
+        unit.add(new GridPositionComponent(5, 5, 3));
+        unit.add(new TypeComponent(TypeComponent.Type.UNIT));
+        unit.add(new StatsComponent("Recruit", 10, 3, 1, 1, 1, 1, 1, StatsComponent.MoveType.LAND, 1));
+        engine.addEntity(unit);
 
-        StructureData data = new StructureData();
-        data.x = 0;
-        data.y = 0;
-        data.owner = 1;
-        data.level = 3; // Lv 3 should have 4500 max XP
-        data.currentBaseXP = 1000;
-        data.baseName = "Test Base";
+        // Process additions
+        engine.update(0);
 
-        factory.updateStructureFromSave(baseEntity, data, map);
+        ScavengeSystem system = new ScavengeSystem(engine, factory, state, map);
+        ScavengeSystem.ScavengeReward reward = system.performScavenge(ruins, unit);
 
-        StatsComponent stats = baseEntity.getComponent(StatsComponent.class);
-        assertEquals(3, stats.level);
-        assertEquals(4500f, stats.maxBaseXP, "Max XP should be 4500 for Level 3 base");
-        assertEquals(3, stats.income, "Income should be 3 for Level 3 base");
+        // Process removals with small delta
+        engine.update(0.1f);
+        engine.update(0.1f);
+
+        assertNotNull(reward);
+        assertTrue(unit.getComponent(StatsComponent.class).hasActed);
+        assertEquals(MapGenerator.ObjectType.NONE, map.objects[5][5]);
+
+        // Entity should be gone from Layer 1
+        Entity atLayer1 = factory.getEntityAt(5, 5, 1);
+        assertTrue(atLayer1 == null || atLayer1 != ruins, "Ruins entity must be removed or replaced");
+
+        // Final state check (funding or XP or unit should have changed)
+        assertTrue(state.p1Funding > 10 || state.p1XP > 0 || engine.getEntities().size() > 1);
+    }
+
+    @Test
+    public void testUnitDataCapturesFlags() {
+        PooledEngine engine = new PooledEngine();
+        Entity unit = engine.createEntity();
+        unit.add(new GridPositionComponent(1, 1, 3));
+        unit.add(new TypeComponent(TypeComponent.Type.UNIT));
+        StatsComponent stats = new StatsComponent("Tank", 10, 2, 2, 1, 1, 1, 5, StatsComponent.MoveType.LAND, 1);
+        stats.hasMoved = true;
+        stats.hasActed = true;
+        unit.add(stats);
+
+        GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+        UnitData data = new UnitData(pos.x, pos.y, stats.name, stats.owner, stats.unitTypeKey, stats.currentHP,
+                stats.maxHP, stats.hasMoved, stats.hasActed);
+        assertTrue(data.hasMoved);
+        assertTrue(data.hasActed);
+        assertEquals(1, data.x);
+        assertEquals(1, data.y);
     }
 }

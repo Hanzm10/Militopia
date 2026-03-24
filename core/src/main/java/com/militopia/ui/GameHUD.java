@@ -6,11 +6,13 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
-import com.militopia.data.GameState;
-import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
+import com.militopia.systems.ScavengeSystem;
+import com.militopia.systems.StructurePlacementSystem;
+import com.militopia.data.GameState;
+import com.militopia.factories.UnitFactory;
 
 /**
  * Thin coordinator / facade for all HUD components.
@@ -65,11 +67,15 @@ public class GameHUD {
             final GameState state) {
 
         // 1. Create components
+        ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, state, screen.getGameMap());
+        StructurePlacementSystem placementSystem = new StructurePlacementSystem(screen.getEngine(), unitFactory, state,
+                screen.getGameMap());
+
         topBar = new HudTopBar(game, assets);
         bottomBar = new HudBottomBar(game, assets, screen, stage, inputController);
         infoPanel = new InfoPanel(game, assets, stage, bottomBar);
         slideMenu = new SlideMenu(game, assets, stage, bottomBar, infoPanel,
-                screen, inputController, unitFactory);
+                screen, inputController, unitFactory, scavengeSystem, placementSystem);
         levelUpPopup = new LevelUpPopup(game, assets, stage, inputController, bottomBar);
         gameOverPopup = new GameOverPopup(game, screen, stage, inputController, bottomBar);
 
