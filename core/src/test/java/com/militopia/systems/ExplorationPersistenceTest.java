@@ -8,6 +8,7 @@ import com.militopia.data.GameState;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.managers.SaveManager;
+import com.militopia.factories.EntityFactory;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.core.Entity;
 import com.militopia.components.GridPositionComponent;
@@ -50,7 +51,8 @@ public class ExplorationPersistenceTest {
         // Process additions
         engine.update(0);
 
-        ScavengeSystem system = new ScavengeSystem(engine, factory, state, map);
+        EntityFactory mockEntityFactory = mock(EntityFactory.class);
+        ScavengeSystem system = new ScavengeSystem(engine, factory, mockEntityFactory, state, map);
         ScavengeSystem.ScavengeReward reward = system.performScavenge(ruins, unit);
 
         // Process removals with small delta

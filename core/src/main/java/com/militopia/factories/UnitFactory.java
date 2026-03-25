@@ -29,6 +29,7 @@ public class UnitFactory {
 
     private final PooledEngine engine;
     private final AssetManager assets;
+    private EntityFactory entityFactory;
 
     // Storage for the manually loaded regions
     private final Map<String, TextureRegion[]> unitRegions = new java.util.HashMap<>();
@@ -768,7 +769,15 @@ public class UnitFactory {
 
             stats.baseOrdinal = getOrdinal(state.p1BaseCount);
             stats.name = state.p1Name + "'s " + stats.baseOrdinal + " Base";
-            state.p1XP += isTown ? 50 : 250;
+            int xpGain = isTown ? 50 : 250;
+            state.p1XP += xpGain;
+
+            // --- NEW: Floating Text ---
+            if (entityFactory != null) {
+                float worldX = EntityFactory.gridToIsoX(pos.x, pos.y);
+                float worldY = EntityFactory.gridToIsoY(pos.x, pos.y);
+                entityFactory.createFloatingText("+" + xpGain + " XP", worldX, worldY, FloatingTextComponent.Type.XP);
+            }
         } else if (newOwner == 2) {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             state.p2BaseCount++;
@@ -781,7 +790,15 @@ public class UnitFactory {
 
             stats.baseOrdinal = getOrdinal(state.p2BaseCount);
             stats.name = state.p2Name + "'s " + stats.baseOrdinal + " Base";
-            state.p2XP += isTown ? 50 : 250;
+            int xpGain = isTown ? 50 : 250;
+            state.p2XP += xpGain;
+
+            // --- NEW: Floating Text ---
+            if (entityFactory != null) {
+                float worldX = EntityFactory.gridToIsoX(pos.x, pos.y);
+                float worldY = EntityFactory.gridToIsoY(pos.x, pos.y);
+                entityFactory.createFloatingText("+" + xpGain + " XP", worldX, worldY, FloatingTextComponent.Type.XP);
+            }
         }
 
         // Apply preserved level or reset to Level 1 if it was a Town
@@ -1180,6 +1197,10 @@ public class UnitFactory {
             default:
                 return new UiInfo("Grassland", grassRegion);
         }
+    }
+
+    public void setEntityFactory(EntityFactory entityFactory) {
+        this.entityFactory = entityFactory;
     }
 
     public static class UiInfo {

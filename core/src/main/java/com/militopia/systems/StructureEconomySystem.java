@@ -4,10 +4,12 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.militopia.components.FloatingTextComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.data.GameState;
+import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
@@ -44,13 +46,16 @@ public class StructureEconomySystem extends EntitySystem {
 
     private final GameState gameState;
     private final UnitFactory unitFactory;
+    private final EntityFactory entityFactory;
     private GameHUD gameHUD;
 
-    public StructureEconomySystem(GameState gameState, UnitFactory unitFactory, GameHUD gameHUD) {
+    public StructureEconomySystem(GameState gameState, UnitFactory unitFactory, EntityFactory entityFactory,
+            GameHUD gameHUD) {
         // Priority 0 — runs last in the engine update chain (we call it manually)
         super(0);
         this.gameState = gameState;
         this.unitFactory = unitFactory;
+        this.entityFactory = entityFactory;
         this.gameHUD = gameHUD;
     }
 
@@ -104,6 +109,13 @@ public class StructureEconomySystem extends EntitySystem {
                 if (baseStats.owner == playerID) {
                     baseStats.currentBaseXP += structStats.xpGain;
                     totalXPGain += structStats.xpGain;
+
+                    // --- NEW: Floating Text for Structure XP ---
+                    float worldX = EntityFactory.gridToIsoX(structStats.parentBaseX, structStats.parentBaseY);
+                    float worldY = EntityFactory.gridToIsoY(structStats.parentBaseX, structStats.parentBaseY);
+                    entityFactory.createFloatingText("+" + structStats.xpGain + " XP", worldX, worldY,
+                            FloatingTextComponent.Type.XP);
+
                     GameLogger.log(GameLogger.ECONOMY, playerID,
                             "Structure XP: " + structStats.name
                                     + " → " + baseStats.name
@@ -143,10 +155,28 @@ public class StructureEconomySystem extends EntitySystem {
         // 3. Base natural XP growth + level-up check
         for (Entity base : myBases) {
             StatsComponent stats = base.getComponent(StatsComponent.class);
+            GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
             // Dynamic gain: 250 + (level-1)*10 per turn
             int naturalGain = 250 + ((stats.level - 1) * 10);
             stats.currentBaseXP += naturalGain;
             totalXPGain += naturalGain;
+
+            // --- NEW: Floating Text for Natural XP & Income ---
+            if (pos != null) {
+                float worldX = EntityFactory.gridToIsoX(pos.x, pos.y);
+                float worldY = EntityFactory.gridToIsoY(pos.x, pos.y);
+
+                // Income text (Bases reflect the per-turn income distrib)
+                if (stats.income > 0) {
+                    entityFactory.createFloatingText("+$" + stats.income, worldX, worldY,
+                            FloatingTextComponent.Type.FUNDING);
+                    worldY += 15f;
+                }
+                // XP text
+                entityFactory.createFloatingText("+" + naturalGain + " XP", worldX, worldY,
+                        FloatingTextComponent.Type.XP);
+            }
+
             unitFactory.checkAndApplyLevelUp(base, gameState, gameHUD);
         }
 

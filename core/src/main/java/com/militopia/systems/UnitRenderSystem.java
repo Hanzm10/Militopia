@@ -267,11 +267,21 @@ public class UnitRenderSystem extends EntitySystem {
         for (Entity e : floaters) {
             FloatingTextComponent ft = e.getComponent(FloatingTextComponent.class);
 
-            // Colour: gold for "BLOCKED", red for damage numbers
-            if ("BLOCKED".equals(ft.text)) {
-                font.setColor(1f, 0.85f, 0f, ft.alpha); // Gold
-            } else {
-                font.setColor(1f, 0.2f, 0.2f, ft.alpha); // Red
+            // Colour based on text type
+            switch (ft.type) {
+                case BLOCKED:
+                    font.setColor(1f, 0.85f, 0f, ft.alpha); // Gold
+                    break;
+                case XP:
+                    font.setColor(0.2f, 0.8f, 1f, ft.alpha); // Light Blue/Cyan
+                    break;
+                case FUNDING:
+                    font.setColor(0.2f, 1f, 0.2f, ft.alpha); // Green
+                    break;
+                case DAMAGE:
+                default:
+                    font.setColor(1f, 0.2f, 0.2f, ft.alpha); // Red
+                    break;
             }
 
             GlyphLayout layout = new GlyphLayout(font, ft.text);

@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.militopia.managers.AssetManager;
@@ -94,7 +95,10 @@ public class UITest {
             setupTableMock(mock);
         });
                 MockedConstruction<Label> mLabel = mockConstruction(Label.class);
-                MockedConstruction<ScrollPane> mScroll = mockConstruction(ScrollPane.class);
+                MockedConstruction<ScrollPane> mScroll = mockConstruction(ScrollPane.class, (mock, context) -> {
+                    ScrollPane.ScrollPaneStyle style = mock(ScrollPane.ScrollPaneStyle.class);
+                    when(mock.getStyle()).thenReturn(style);
+                });
                 MockedConstruction<Texture> mTexture = mockConstruction(Texture.class)) {
 
             Stage mockStage = mock(Stage.class);

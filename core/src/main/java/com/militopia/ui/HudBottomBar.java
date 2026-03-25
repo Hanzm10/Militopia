@@ -78,9 +78,9 @@ public class HudBottomBar {
         TextureRegionDrawable bottomBg = createGradientDrawable(80, false);
 
         Table bottomContent = new Table();
-        ImageButton settingsBtn = createCircleButton("icon_settings");
-        ImageButton statsBtn = createCircleButton("icon_stats");
-        ImageButton endTurnBtn = createCircleButton("icon_end");
+        ImageButton settingsBtn = createCircleButton(AssetManager.ICON_SETTINGS);
+        ImageButton statsBtn = createCircleButton(AssetManager.ICON_STATS);
+        ImageButton endTurnBtn = createCircleButton(AssetManager.ICON_END);
 
         bottomContent.add(createIconGroup(settingsBtn, "Settings")).expandX();
         bottomContent.add(createIconGroup(statsBtn, "Game Stats")).expandX();
@@ -186,12 +186,12 @@ public class HudBottomBar {
     // Widget helpers
     // -------------------------------------------------------------------------
 
-    private ImageButton createCircleButton(String iconName) {
+    private ImageButton createCircleButton(String texturePath) {
         ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
         try {
-            Texture texture = assets.get(iconName + ".png");
+            Texture texture = assets.get(texturePath);
             if (texture == null)
-                texture = new Texture(iconName + ".png");
+                texture = new Texture(texturePath);
             texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(texture));
             style.imageUp = drawable;

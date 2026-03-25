@@ -51,9 +51,14 @@ public class StructurePlacementTest {
         // 2. Test Non-Oil on Oil
         assertFalse(system.canBuild("TOWN", 5, 5, 1, 50, false, false, true), "Should NOT build Town on OIL");
 
-        // 3. Test Oil Derrick on Non-Oil
-        map.objects[5][6] = MapGenerator.ObjectType.NONE;
-        assertFalse(system.canBuild("OIL_DERRICK", 5, 6, 1, 50, false, false, true),
+        // 3. Test Oil Derrick on Oil in WATER
+        map.objects[5][6] = MapGenerator.ObjectType.OIL;
+        assertTrue(system.canBuild("OIL_DERRICK", 5, 6, 1, 50, true, true, false),
+                "Should build Oil Derrick on OIL even in WATER");
+
+        // 4. Test Oil Derrick on Non-Oil
+        map.objects[5][7] = MapGenerator.ObjectType.NONE;
+        assertFalse(system.canBuild("OIL_DERRICK", 5, 7, 1, 50, false, false, true),
                 "Should NOT build Oil Derrick on empty");
 
         // 4. Test Port on Water (using 1,1 to avoid potential 0,0 issues)

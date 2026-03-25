@@ -14,139 +14,138 @@ public class AssetManager {
     public final com.badlogic.gdx.assets.AssetManager manager;
 
     // Terrain
-    public static final String TILE_GRASS = "tile_grass.png";
-    public static final String TILE_WATER = "tile_water.png";
-    public static final String TILE_DEEPWATER = "tile_deepwater.png";
-    public static final String TILE_SAND = "tile_sand.png";
-    public static final String TILE_MOUNTAIN = "tile_mountain.png";
-    public static final String FOG_OF_WAR = "fog_of_war.png";
+    public static final String TILE_GRASS = "tiles/tile_grass.png";
+    public static final String TILE_WATER = "tiles/tile_water.png";
+    public static final String TILE_DEEPWATER = "tiles/tile_deepwater.png";
+    public static final String TILE_SAND = "tiles/tile_sand.png";
+    public static final String TILE_MOUNTAIN = "tiles/tile_mountain.png";
+    public static final String FOG_OF_WAR = "tiles/fog_of_war.png";
 
     // Objects
-    public static final String OBJ_TREE = "obj_tree.png";
-    public static final String OBJ_RUINS = "obj_ruins.png";
-    public static final String OBJ_OIL = "obj_oil.png";
-    public static final String OBJ_CACTUS = "obj_cactus.png";
-    public static final String OBJ_MOUNTAIN = "obj_mountain.png";
-    public static final String STRUCT_TOWN = "struct_town.png";
+    public static final String OBJ_TREE = "objects/obj_tree.png";
+    public static final String OBJ_RUINS = "objects/obj_ruins.png";
+    public static final String OBJ_OIL = "objects/obj_oil.png";
+    public static final String OBJ_CACTUS = "objects/obj_cactus.png";
+    public static final String OBJ_MOUNTAIN = "objects/obj_mountain.png";
+    public static final String STRUCT_TOWN = "bases/struct_town.png";
 
     // Base 1-10
-    public static final String BASE_LVL1_BLUE = "struct_base_lvl1_blue.png";
-    public static final String BASE_LVL1_RED = "struct_base_lvl1_red.png";
-    public static final String BASE_LVL2_BLUE = "struct_base_lvl2_blue.png";
-    public static final String BASE_LVL2_RED = "struct_base_lvl2_red.png";
-    public static final String BASE_LVL3_BLUE = "struct_base_lvl3_blue.png";
-    public static final String BASE_LVL3_RED = "struct_base_lvl3_red.png";
-    public static final String BASE_LVL4_BLUE = "struct_base_lvl4_blue.png";
-    public static final String BASE_LVL4_RED = "struct_base_lvl4_red.png";
-    public static final String BASE_LVL5_BLUE = "struct_base_lvl5_blue.png";
-    public static final String BASE_LVL5_RED = "struct_base_lvl5_red.png";
-    public static final String BASE_LVL6_BLUE = "struct_base_lvl6_blue.png";
-    public static final String BASE_LVL6_RED = "struct_base_lvl6_red.png";
-    public static final String BASE_LVL7_BLUE = "struct_base_lvl7_blue.png";
-    public static final String BASE_LVL7_RED = "struct_base_lvl7_red.png";
-    public static final String BASE_LVL8_BLUE = "struct_base_lvl8_blue.png";
-    public static final String BASE_LVL8_RED = "struct_base_lvl8_red.png";
-    public static final String BASE_LVL9_BLUE = "struct_base_lvl9_blue.png";
-    public static final String BASE_LVL9_RED = "struct_base_lvl9_red.png";
-    public static final String BASE_LVL10_BLUE = "struct_base_lvl10_blue.png";
-    public static final String BASE_LVL10_RED = "struct_base_lvl10_red.png";
+    public static final String BASE_LVL1_BLUE = "bases/struct_base_lvl1_blue.png";
+    public static final String BASE_LVL1_RED = "bases/struct_base_lvl1_red.png";
+    public static final String BASE_LVL2_BLUE = "bases/struct_base_lvl2_blue.png";
+    public static final String BASE_LVL2_RED = "bases/struct_base_lvl2_red.png";
+    public static final String BASE_LVL3_BLUE = "bases/struct_base_lvl3_blue.png";
+    public static final String BASE_LVL3_RED = "bases/struct_base_lvl3_red.png";
+    public static final String BASE_LVL4_BLUE = "bases/struct_base_lvl4_blue.png";
+    public static final String BASE_LVL4_RED = "bases/struct_base_lvl4_red.png";
+    public static final String BASE_LVL5_BLUE = "bases/struct_base_lvl5_blue.png";
+    public static final String BASE_LVL5_RED = "bases/struct_base_lvl5_red.png";
+    public static final String BASE_LVL6_BLUE = "bases/struct_base_lvl6_blue.png";
+    public static final String BASE_LVL6_RED = "bases/struct_base_lvl6_red.png";
+    public static final String BASE_LVL7_BLUE = "bases/struct_base_lvl7_blue.png";
+    public static final String BASE_LVL7_RED = "bases/struct_base_lvl7_red.png";
+    public static final String BASE_LVL8_BLUE = "bases/struct_base_lvl8_blue.png";
+    public static final String BASE_LVL8_RED = "bases/struct_base_lvl8_red.png";
+    public static final String BASE_LVL9_BLUE = "bases/struct_base_lvl9_blue.png";
+    public static final String BASE_LVL9_RED = "bases/struct_base_lvl9_red.png";
+    public static final String BASE_LVL10_BLUE = "bases/struct_base_lvl10_blue.png";
+    public static final String BASE_LVL10_RED = "bases/struct_base_lvl10_red.png";
 
     // Land Units
-    public static final String RECRUIT_RIGHT = "recruit_right.png";
-    public static final String RECRUIT_LEFT = "recruit_left.png";
-    public static final String RECRUIT_DISPLAY = "display_recruit.png";
+    public static final String RECRUIT_RIGHT = "units/recruit_right.png";
+    public static final String RECRUIT_LEFT = "units/recruit_left.png";
+    public static final String RECRUIT_DISPLAY = "displays/display_recruit.png";
 
-    public static final String RANGER_RIGHT = "ranger_right.png";
-    public static final String RANGER_LEFT = "ranger_left.png";
-    public static final String RANGER_DISPLAY = "display_ranger.png";
+    public static final String RANGER_RIGHT = "units/ranger_right.png";
+    public static final String RANGER_LEFT = "units/ranger_left.png";
+    public static final String RANGER_DISPLAY = "displays/display_ranger.png";
 
-    public static final String SNIPER_RIGHT = "sniper_right.png";
-    public static final String SNIPER_LEFT = "sniper_left.png";
-    public static final String SNIPER_DISPLAY = "display_sniper.png";
+    public static final String SNIPER_RIGHT = "units/sniper_right.png";
+    public static final String SNIPER_LEFT = "units/sniper_left.png";
+    public static final String SNIPER_DISPLAY = "displays/display_sniper.png";
 
-    public static final String TANK_RIGHT = "tank_right.png";
-    public static final String TANK_LEFT = "tank_left.png";
-    public static final String TANK_DISPLAY = "display_tank.png";
+    public static final String TANK_RIGHT = "units/tank_right.png";
+    public static final String TANK_LEFT = "units/tank_left.png";
+    public static final String TANK_DISPLAY = "displays/display_tank.png";
 
     // Land Super Unit
-    public static final String JUGGERNAUT_RIGHT = "juggernaut_right.png";
-    public static final String JUGGERNAUT_LEFT = "juggernaut_left.png";
-    public static final String JUGGERNAUT_DISPLAY = "display_juggernaut.png";
+    public static final String JUGGERNAUT_RIGHT = "units/juggernaut_right.png";
+    public static final String JUGGERNAUT_LEFT = "units/juggernaut_left.png";
+    public static final String JUGGERNAUT_DISPLAY = "displays/display_juggernaut.png";
 
     // Air Units
-    public static final String RECON_DRONE_RIGHT = "recon_drone_right.png";
-    public static final String RECON_DRONE_LEFT = "recon_drone_left.png";
-    public static final String RECON_DRONE_DISPLAY = "display_recon_drone.png";
+    public static final String RECON_DRONE_RIGHT = "units/recon_drone_right.png";
+    public static final String RECON_DRONE_LEFT = "units/recon_drone_left.png";
+    public static final String RECON_DRONE_DISPLAY = "displays/display_recon_drone.png";
 
-    public static final String SUICIDE_DRONE_RIGHT = "suicide_drone_right.png";
-    public static final String SUICIDE_DRONE_LEFT = "suicide_drone_left.png";
-    public static final String SUICIDE_DRONE_DISPLAY = "display_suicide_drone.png";
+    public static final String SUICIDE_DRONE_RIGHT = "units/suicide_drone_right.png";
+    public static final String SUICIDE_DRONE_LEFT = "units/suicide_drone_left.png";
+    public static final String SUICIDE_DRONE_DISPLAY = "displays/display_suicide_drone.png";
 
-    public static final String APACHE_RIGHT = "apache_right.png";
-    public static final String APACHE_LEFT = "apache_left.png";
-    public static final String APACHE_DISPLAY = "display_apache.png";
+    public static final String APACHE_RIGHT = "units/apache_right.png";
+    public static final String APACHE_LEFT = "units/apache_left.png";
+    public static final String APACHE_DISPLAY = "displays/display_apache.png";
 
     // Air Super Unit
-    public static final String B2_RIGHT = "b2_right.png";
-    public static final String B2_LEFT = "b2_left.png";
-    public static final String B2_DISPLAY = "display_b2.png";
+    public static final String B2_RIGHT = "units/b2_right.png";
+    public static final String B2_LEFT = "units/b2_left.png";
+    public static final String B2_DISPLAY = "displays/display_b2.png";
 
     // Water Units
-    public static final String GUNBOAT_RIGHT = "gunboat_right.png";
-    public static final String GUNBOAT_LEFT = "gunboat_left.png";
-    public static final String GUNBOAT_DISPLAY = "display_gunboat.png";
+    public static final String GUNBOAT_RIGHT = "units/gunboat_right.png";
+    public static final String GUNBOAT_LEFT = "units/gunboat_left.png";
+    public static final String GUNBOAT_DISPLAY = "displays/display_gunboat.png";
 
-    public static final String DESTROYER_RIGHT = "destroyer_right.png";
-    public static final String DESTROYER_LEFT = "destroyer_left.png";
-    public static final String DESTROYER_DISPLAY = "display_destroyer.png";
+    public static final String DESTROYER_RIGHT = "units/destroyer_right.png";
+    public static final String DESTROYER_LEFT = "units/destroyer_left.png";
+    public static final String DESTROYER_DISPLAY = "displays/display_destroyer.png";
 
-    public static final String CARRIER_RIGHT = "carrier_right.png";
-    public static final String CARRIER_LEFT = "carrier_left.png";
-    public static final String CARRIER_DISPLAY = "display_carrier.png";
+    public static final String CARRIER_RIGHT = "units/carrier_right.png";
+    public static final String CARRIER_LEFT = "units/carrier_left.png";
+    public static final String CARRIER_DISPLAY = "displays/display_carrier.png";
 
     // Water Super Unit
-    public static final String SUBMARINE_RIGHT = "submarine_right.png";
-    public static final String SUBMARINE_LEFT = "submarine_left.png";
-    public static final String SUBMARINE_DISPLAY = "display_submarine.png";
+    public static final String SUBMARINE_RIGHT = "units/submarine_right.png";
+    public static final String SUBMARINE_LEFT = "units/submarine_left.png";
+    public static final String SUBMARINE_DISPLAY = "displays/display_submarine.png";
 
     // Structures
-    public static final String MUNITION_FACTORY = "munition_factory.png";
-    public static final String PORT = "port.png";
-    public static final String SOLAR_ARRAY = "solar_array.png";
-    public static final String OIL_DERRICK = "oil_derrick.png";
-    public static final String NUCLEAR_PLANT = "nuclear_plant.png";
-    public static final String FIELD_HOSPITAL = "field_hospital.png";
-    public static final String RADAR_STATION = "radar_station.png";
-    public static final String SIGNAL_JAMMER = "signal_jammer.png";
+    public static final String MUNITION_FACTORY = "structures/munition_factory.png";
+    public static final String PORT = "structures/port.png";
+    public static final String SOLAR_ARRAY = "structures/solar_array.png";
+    public static final String OIL_DERRICK = "structures/oil_derrick.png";
+    public static final String NUCLEAR_PLANT = "structures/nuclear_plant.png";
+    public static final String FIELD_HOSPITAL = "structures/field_hospital.png";
+    public static final String RADAR_STATION = "structures/radar_station.png";
+    public static final String SIGNAL_JAMMER = "units/signal_jammer.png";
 
     // Animals
-    public static final String DEER_DISPLAY = "display_deer.png";
-    public static final String FISH_DISPLAY = "display_fish.png";
-    public static final String ZEBRA_DISPLAY = "display_zebra.png";
-    public static final String HORSE_DISPLAY = "display_horse.png";
+    public static final String DEER_DISPLAY = "displays/display_deer.png";
+    public static final String FISH_DISPLAY = "displays/display_fish.png";
+    public static final String ZEBRA_DISPLAY = "displays/display_zebra.png";
+    public static final String HORSE_DISPLAY = "displays/display_horse.png";
 
-    public static final String DEER = "deer.png";
-    public static final String FISH = "fish.png";
-    public static final String ZEBRA = "zebra.png";
-    public static final String HORSE = "horse.png";
+    public static final String DEER = "objects/deer.png";
+    public static final String FISH = "objects/fish.png";
+    public static final String ZEBRA = "objects/zebra.png";
+    public static final String HORSE = "objects/horse.png";
 
     // UI
-    public static final String ENEMY_MARKER = "enemy_marker.png";
-    public static final String MARKER_DOT = "marker_dot.png";
-    public static final String ICON_SETTINGS = "icon_settings.png";
-    public static final String ICON_STATS = "icon_stats.png";
-    public static final String ICON_END = "icon_end.png";
-    public static final String BTN_SLIDEDOWN = "slidedown_btn.png";
-    public static final String CIRCLE_UI = "circle_ui.png";
-    public static final String CIRCLE_UI2 = "circle_ui2.png";
-    public static final String UISKIN = "uiskin.json";
-    public static final String BACKGROUND = "militopia_background.png";
+    public static final String ENEMY_MARKER = "ui/enemy_marker.png";
+    public static final String MARKER_DOT = "ui/marker_dot.png";
+    public static final String ICON_SETTINGS = "ui/icon_settings.png";
+    public static final String ICON_STATS = "ui/icon_stats.png";
+    public static final String ICON_END = "ui/icon_end.png";
+    public static final String BTN_SLIDEDOWN = "ui/slidedown_btn.png";
+    public static final String CIRCLE_UI = "ui/circle_ui.png";
+    public static final String CIRCLE_UI2 = "ui/circle_ui2.png";
+    public static final String BACKGROUND = "game-system/militopia_background.png";
 
-    public static final String FUNDING_ICON = "funding_icon.png";
-    public static final String FUNDING_ICON2 = "funding_icon2.png";
+    public static final String FUNDING_ICON = "ui/funding_icon.png";
+    public static final String FUNDING_ICON2 = "ui/funding_icon2.png";
 
     // Fonts
-    public static final String GAME_FONT = "game_font.ttf";
+    public static final String GAME_FONT = "game-system/game_font.ttf";
 
     public AssetManager() {
         manager = new com.badlogic.gdx.assets.AssetManager();
@@ -281,8 +280,6 @@ public class AssetManager {
         manager.load(FUNDING_ICON, Texture.class);
         manager.load(FUNDING_ICON2, Texture.class);
 
-        manager.load(UISKIN, Skin.class);
-
         FileHandleResolver resolver = new InternalFileHandleResolver();
         manager.setLoader(FreeTypeFontGenerator.class, new FreeTypeFontGeneratorLoader(resolver));
         manager.setLoader(BitmapFont.class, ".ttf", new FreetypeFontLoader(resolver));
@@ -310,7 +307,7 @@ public class AssetManager {
     }
 
     public Skin getSkin() {
-        return manager.get(UISKIN, Skin.class);
+        return new Skin();
     }
 
     public BitmapFont getFont() {

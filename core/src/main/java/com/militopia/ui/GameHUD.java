@@ -75,7 +75,8 @@ public class GameHUD {
         this.unitFactory = unitFactory;
 
         // 1. Create components
-        ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, state, screen.getGameMap());
+        ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, screen.getEntityFactory(),
+                state, screen.getGameMap());
         StructurePlacementSystem placementSystem = new StructurePlacementSystem(screen.getEngine(), unitFactory, state,
                 screen.getGameMap());
 

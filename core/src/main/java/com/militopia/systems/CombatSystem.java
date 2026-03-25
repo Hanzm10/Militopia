@@ -365,8 +365,10 @@ public class CombatSystem extends EntitySystem {
         if (entityFactory == null)
             return;
         String label = (dmg == 0) ? "BLOCKED" : String.valueOf(dmg);
+        FloatingTextComponent.Type type = (dmg == 0) ? FloatingTextComponent.Type.BLOCKED
+                : FloatingTextComponent.Type.DAMAGE;
         float worldX = EntityFactory.gridToIsoX(gx, gy);
         float worldY = EntityFactory.gridToIsoY(gx, gy);
-        entityFactory.createFloatingText(label, worldX, worldY, isCounter);
+        entityFactory.createFloatingText(label, worldX, worldY, type);
     }
 }

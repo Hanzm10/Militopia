@@ -3,9 +3,11 @@ package com.militopia.systems;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.gdx.math.MathUtils;
+import com.militopia.components.FloatingTextComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.data.GameState;
+import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
 import com.militopia.utils.GameLogger;
@@ -18,12 +20,15 @@ public class ScavengeSystem {
 
     private final PooledEngine engine;
     private final UnitFactory factory;
+    private final EntityFactory entityFactory;
     private final GameState gameState;
     private final MapGenerator.GameMap map;
 
-    public ScavengeSystem(PooledEngine engine, UnitFactory factory, GameState gameState, MapGenerator.GameMap map) {
+    public ScavengeSystem(PooledEngine engine, UnitFactory factory, EntityFactory entityFactory, GameState gameState,
+            MapGenerator.GameMap map) {
         this.engine = engine;
         this.factory = factory;
+        this.entityFactory = entityFactory;
         this.gameState = gameState;
         this.map = map;
     }
@@ -96,6 +101,20 @@ public class ScavengeSystem {
         } else {
             gameState.p2Funding += fundingGain;
             gameState.p2XP += xpGain;
+        }
+
+        // --- NEW: Floating Text Feedback ---
+        if (fundingGain > 0 || xpGain > 0) {
+            float worldX = EntityFactory.gridToIsoX(unitPos.x, unitPos.y);
+            float worldY = EntityFactory.gridToIsoY(unitPos.x, unitPos.y);
+            if (fundingGain > 0) {
+                entityFactory.createFloatingText("+$" + fundingGain, worldX, worldY,
+                        FloatingTextComponent.Type.FUNDING);
+                worldY += 15f; // Offset if both appear
+            }
+            if (xpGain > 0) {
+                entityFactory.createFloatingText("+" + xpGain + " XP", worldX, worldY, FloatingTextComponent.Type.XP);
+            }
         }
 
         GameLogger.log(GameLogger.SCAVENGE, owner, rewardMsg + " at " + GameLogger.pos(unitPos.x, unitPos.y));

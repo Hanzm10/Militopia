@@ -47,9 +47,9 @@ public class EntityFactory {
      * @param worldY    iso-world Y of the target tile (base; system drifts up)
      * @param isCounter true when this feedback represents a counterattack
      */
-    public Entity createFloatingText(String text, float worldX, float worldY, boolean isCounter) {
+    public Entity createFloatingText(String text, float worldX, float worldY, FloatingTextComponent.Type type) {
         Entity entity = engine.createEntity();
-        entity.add(new FloatingTextComponent(text, worldX, worldY, isCounter));
+        entity.add(new FloatingTextComponent(text, worldX, worldY, type));
         engine.addEntity(entity);
         return entity;
     }

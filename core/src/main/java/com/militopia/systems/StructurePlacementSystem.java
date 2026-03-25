@@ -68,6 +68,9 @@ public class StructurePlacementSystem {
         } else if (struct.equals("NUCLEAR")) {
             if (isWater || !isCoastalLand)
                 return false;
+        } else if (struct.equals("OIL_DERRICK")) {
+            // Oil Derricks allowed on both land and water (offshore drilling)
+            // as long as there is an Oil Reservoir (checked earlier in this method)
         } else {
             if (isWater)
                 return false;

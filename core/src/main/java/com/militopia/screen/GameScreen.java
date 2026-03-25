@@ -93,6 +93,7 @@ public class GameScreen implements Screen {
         engine = new PooledEngine();
         entityFactory = new EntityFactory(engine, game.assets);
         unitFactory = new UnitFactory(engine, game.assets);
+        unitFactory.setEntityFactory(entityFactory);
         saveManager = new SaveManager();
 
         font = game.skin.getFont("default-font");
@@ -150,7 +151,7 @@ public class GameScreen implements Screen {
 
         gameHUD = new GameHUD(game);
 
-        structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, null);
+        structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, entityFactory, null);
         engine.addSystem(structureEconomySystem);
 
         winConditionSystem = new WinConditionSystem(loadedState, winnerID -> gameHUD.showGameOverPopup(winnerID));
@@ -262,6 +263,10 @@ public class GameScreen implements Screen {
 
     public PooledEngine getEngine() {
         return engine;
+    }
+
+    public EntityFactory getEntityFactory() {
+        return entityFactory;
     }
 
     public GameState getGameState() {

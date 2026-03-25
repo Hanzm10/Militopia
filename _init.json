@@ -1,0 +1,139 @@
+﻿{
+  "executor_model": "sonnet",
+  "planner_model": "opus",
+  "commit_docs": true,
+  "milestone_version": "v1.0",
+  "milestone_name": "milestone",
+  "phases": [
+    {
+      "number": "0",
+      "name": "foundation",
+      "directory": null,
+      "status": "not_started",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    },
+    {
+      "number": "1",
+      "name": "turn-engine-economy",
+      "directory": null,
+      "status": "not_started",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    },
+    {
+      "number": "2",
+      "name": "base-progression",
+      "directory": null,
+      "status": "not_started",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    },
+    {
+      "number": "3",
+      "name": "capture-territory",
+      "directory": null,
+      "status": "not_started",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    },
+    {
+      "number": "04",
+      "name": "unit-roster-combat",
+      "directory": ".planning/phases/04-unit-roster-combat",
+      "status": "pending",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    },
+    {
+      "number": "4.1",
+      "name": "unit-building-abilities",
+      "directory": null,
+      "status": "not_started",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    },
+    {
+      "number": "05",
+      "name": "specialized-structures",
+      "directory": ".planning/phases/05-specialized-structures",
+      "status": "complete",
+      "plan_count": 4,
+      "summary_count": 4,
+      "has_research": true
+    },
+    {
+      "number": "06",
+      "name": "win-loss-conditions",
+      "directory": ".planning/phases/06-win-loss-conditions",
+      "status": "in_progress",
+      "plan_count": 2,
+      "summary_count": 1,
+      "has_research": true
+    },
+    {
+      "number": "07",
+      "name": "exploration-persistence",
+      "directory": ".planning/phases/07-exploration-persistence",
+      "status": "complete",
+      "plan_count": 1,
+      "summary_count": 1,
+      "has_research": false
+    },
+    {
+      "number": "08",
+      "name": "polish-ux",
+      "directory": ".planning/phases/08-polish-ux",
+      "status": "in_progress",
+      "plan_count": 3,
+      "summary_count": 0,
+      "has_research": true
+    },
+    {
+      "number": "9",
+      "name": "advanced-mechanics",
+      "directory": null,
+      "status": "not_started",
+      "plan_count": 0,
+      "summary_count": 0,
+      "has_research": false
+    }
+  ],
+  "phase_count": 11,
+  "completed_count": 2,
+  "in_progress_count": 2,
+  "current_phase": {
+    "number": "06",
+    "name": "win-loss-conditions",
+    "directory": ".planning/phases/06-win-loss-conditions",
+    "status": "in_progress",
+    "plan_count": 2,
+    "summary_count": 1,
+    "has_research": true
+  },
+  "next_phase": {
+    "number": "04",
+    "name": "unit-roster-combat",
+    "directory": ".planning/phases/04-unit-roster-combat",
+    "status": "pending",
+    "plan_count": 0,
+    "summary_count": 0,
+    "has_research": false
+  },
+  "paused_at": null,
+  "has_work_in_progress": true,
+  "project_exists": true,
+  "roadmap_exists": true,
+  "state_exists": true,
+  "state_path": ".planning/STATE.md",
+  "roadmap_path": ".planning/ROADMAP.md",
+  "project_path": ".planning/PROJECT.md",
+  "config_path": ".planning/config.json",
+  "project_root": "C:\\Users\\Hanz Mapua\\Workspace\\Militopia"
+}
