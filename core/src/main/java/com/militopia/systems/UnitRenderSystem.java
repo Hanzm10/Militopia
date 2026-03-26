@@ -106,6 +106,7 @@ public class UnitRenderSystem extends EntitySystem {
         TypeComponent typeC = e.getComponent(TypeComponent.class);
         StatsComponent stats = e.getComponent(StatsComponent.class);
         DeathAnimComponent death = e.getComponent(DeathAnimComponent.class);
+        SpriteAnimationComponent spriteAnim = e.getComponent(SpriteAnimationComponent.class);
 
         boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
         boolean isAttackMarker = (typeC.type == TypeComponent.Type.ATTACK_MARKER);
@@ -184,11 +185,11 @@ public class UnitRenderSystem extends EntitySystem {
             float startIsoY = (move.startX + move.startY) * (GameConfig.TILE_HEIGHT / 2.0f);
             float endIsoX = (move.targetX - move.targetY) * (GameConfig.TILE_WIDTH / 2.0f);
             float endIsoY = (move.targetX + move.targetY) * (GameConfig.TILE_HEIGHT / 2.0f);
-            isoX = MathUtils.lerp(startIsoX, endIsoX, alpha);
-            isoY = MathUtils.lerp(startIsoY, endIsoY, alpha);
+            isoX = MathUtils.lerp(startIsoX, endIsoX, alpha) + pos.visualOffsetX;
+            isoY = MathUtils.lerp(startIsoY, endIsoY, alpha) + pos.visualOffsetY;
         } else {
-            isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f);
-            isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
+            isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f) + pos.visualOffsetX;
+            isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f) + pos.visualOffsetY;
         }
 
         // Bounce animation
@@ -231,6 +232,18 @@ public class UnitRenderSystem extends EntitySystem {
                 isoX - xOffset,
                 isoY - yOffset + verticalOff + animY,
                 GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        
+        // --- Sprite Animation (Overlay) ---
+        if (spriteAnim != null && spriteAnim.animation != null) {
+            com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime, spriteAnim.loop);
+            if (frame != null) {
+                batch.draw(frame,
+                        isoX - xOffset + spriteAnim.worldOffsetX,
+                        isoY - yOffset + verticalOff + animY + spriteAnim.worldOffsetY,
+                        GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+            }
+        }
+
         batch.setColor(Color.WHITE);
 
         // Selection glow

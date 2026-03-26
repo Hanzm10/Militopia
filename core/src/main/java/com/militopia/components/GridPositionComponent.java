@@ -14,6 +14,9 @@ public class GridPositionComponent implements Component {
     // 4 = UI Markers / Effects
     public int zIndex = 0;
 
+    public float visualOffsetX = 0;
+    public float visualOffsetY = 0;
+
     public GridPositionComponent(int x, int y, int z) {
         this.x = x;
         this.y = y;

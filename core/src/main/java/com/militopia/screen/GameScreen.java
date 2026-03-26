@@ -19,6 +19,7 @@ import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
+import com.militopia.systems.*;
 import com.militopia.data.AnimalData;
 import com.militopia.data.GameState;
 import com.militopia.data.UnitData;
@@ -34,6 +35,7 @@ import com.militopia.systems.CombatSystem;
 import com.militopia.systems.FogSystem;
 import com.militopia.systems.MapRenderSystem;
 import com.militopia.systems.MovementSystem;
+import com.militopia.systems.AnimationSystem;
 import com.militopia.systems.UnitRenderSystem;
 import com.militopia.systems.FloatingTextSystem;
 import com.militopia.systems.AbilityStatusSystem;
@@ -139,9 +141,11 @@ public class GameScreen implements Screen {
         }
 
         engine.addSystem(new MovementSystem());
+        engine.addSystem(new AnimationSystem());
 
         CombatSystem combatSystem = new CombatSystem(gameMap, entityFactory, gameState);
         engine.addSystem(combatSystem);
+        engine.addSystem(new EffectSystem());
 
         fogSystem = new FogSystem(gameMap, gameState.currentPlayer);
         engine.addSystem(fogSystem);
@@ -267,6 +271,10 @@ public class GameScreen implements Screen {
 
     public EntityFactory getEntityFactory() {
         return entityFactory;
+    }
+
+    public TurnHistoryManager getTurnHistory() {
+        return turnHistory;
     }
 
     public GameState getGameState() {

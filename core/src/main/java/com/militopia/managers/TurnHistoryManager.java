@@ -11,7 +11,7 @@ import java.util.Deque;
  */
 public class TurnHistoryManager {
 
-    private static final int MAX_HISTORY = 10;
+    private static final int MAX_HISTORY = 50; // Increased for granular undo
 
     private final Deque<TurnSnapshot> stack = new ArrayDeque<>();
 

@@ -117,7 +117,7 @@ public class AssetManager {
     public static final String NUCLEAR_PLANT = "structures/nuclear_plant.png";
     public static final String FIELD_HOSPITAL = "structures/field_hospital.png";
     public static final String RADAR_STATION = "structures/radar_station.png";
-    public static final String SIGNAL_JAMMER = "units/signal_jammer.png";
+    public static final String SIGNAL_JAMMER = "structures/signal_jammer.png";
 
     // Animals
     public static final String DEER_DISPLAY = "displays/display_deer.png";

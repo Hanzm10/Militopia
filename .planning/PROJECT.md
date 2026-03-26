@@ -26,7 +26,7 @@ A tactically deep, heterogeneous unit combat system on a procedurally generated 
 ### Active
 
 - [/] Exploration & Persistence (Phase 7)
-- [ ] Polish & UX (Animations, SFX, BGM) (Phase 8)
+- [/] Polish & UX (Animations, SFX, BGM) (Phase 8) - Wave 1 Finished <!-- id: 7 -->
 
 ### Out of Scope
 

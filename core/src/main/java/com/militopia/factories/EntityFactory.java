@@ -11,11 +11,18 @@ public class EntityFactory {
     private PooledEngine engine;
     private TextureRegion markerRegion;
     private TextureRegion enemyMarkerRegion;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> explosionAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> hitAnim;
 
     public EntityFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
         this.markerRegion = new TextureRegion(assets.get(AssetManager.MARKER_DOT));
         this.enemyMarkerRegion = new TextureRegion(assets.get(AssetManager.ENEMY_MARKER));
+        
+        // --- Placeholders for animations ---
+        TextureRegion placeholder = new TextureRegion(assets.get(AssetManager.MARKER_DOT));
+        explosionAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.1f, placeholder);
+        hitAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.05f, enemyMarkerRegion);
     }
 
     /** Blue movement-range marker. */
@@ -52,6 +59,36 @@ public class EntityFactory {
         entity.add(new FloatingTextComponent(text, worldX, worldY, type));
         engine.addEntity(entity);
         return entity;
+    }
+
+    public void createExplosion(int x, int y) {
+        Entity e = engine.createEntity();
+        e.add(new GridPositionComponent(x, y, 4)); // Above units
+        e.add(new TypeComponent(TypeComponent.Type.OBJECT));
+        e.add(new TextureComponent(markerRegion)); // Placeholder base
+        
+        SpriteAnimationComponent anim = new SpriteAnimationComponent();
+        anim.animation = explosionAnim;
+        anim.duration = 0.5f;
+        anim.autoRemove = true;
+        e.add(anim);
+        
+        engine.addEntity(e);
+    }
+
+    public void createHit(int x, int y) {
+        Entity e = engine.createEntity();
+        e.add(new GridPositionComponent(x, y, 4));
+        e.add(new TypeComponent(TypeComponent.Type.OBJECT));
+        e.add(new TextureComponent(markerRegion));
+        
+        SpriteAnimationComponent anim = new SpriteAnimationComponent();
+        anim.animation = hitAnim;
+        anim.duration = 0.2f;
+        anim.autoRemove = true;
+        e.add(anim);
+        
+        engine.addEntity(e);
     }
 
     // -------------------------------------------------------------------------

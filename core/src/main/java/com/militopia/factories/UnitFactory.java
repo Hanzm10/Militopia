@@ -243,7 +243,8 @@ public class UnitFactory {
         entity.add(new TextureComponent(regions[0]));
         entity.add(new FacingComponent(regions[1], regions[0]));
         entity.add(new TypeComponent(TypeComponent.Type.UNIT));
-        entity.add(new AbilitiesComponent()); // NEW: Add abilities state
+        entity.add(new AbilitiesComponent());
+        entity.add(new AnimationComponent());
 
         // --- MANUAL STATS CONFIGURATION ---
         int hp = 10, atk = 5, def = 0, move = 3, rng = 1, vis = 3, cost = 3;
@@ -637,6 +638,7 @@ public class UnitFactory {
         entity.add(new GridPositionComponent(x, y, zIndex));
         entity.add(new TextureComponent(info.region));
         entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
+        entity.add(new AnimationComponent());
 
         if (isAnimal) {
             // Animal: Use Unit Constructor (0 Income)

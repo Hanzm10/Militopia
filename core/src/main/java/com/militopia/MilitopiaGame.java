@@ -1,6 +1,7 @@
 package com.militopia;
 
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.AudioManager;
 import com.militopia.screen.MenuScreen;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.Color;
@@ -79,6 +80,7 @@ public class MilitopiaGame extends Game {
 
     @Override
     public void render() {
+        AudioManager.getInstance().update();
         super.render();
     }
 
@@ -86,5 +88,6 @@ public class MilitopiaGame extends Game {
     public void dispose() {
         batch.dispose();
         assets.dispose();
+        AudioManager.getInstance().dispose();
     }
 }

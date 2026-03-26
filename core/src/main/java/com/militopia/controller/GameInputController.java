@@ -12,11 +12,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
-import com.militopia.components.AbilitiesComponent;
-import com.militopia.components.GridPositionComponent;
-import com.militopia.components.MovementComponent;
-import com.militopia.components.StatsComponent;
-import com.militopia.components.TypeComponent;
+import com.militopia.components.*;
 import com.militopia.config.GameConfig;
 import com.militopia.data.GameState;
 import com.militopia.factories.EntityFactory;
@@ -124,6 +120,18 @@ public class GameInputController extends InputAdapter {
                 bouncingY = -1;
             }
         }
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        if (!inputEnabled) return false;
+
+        // Undo Shortcut (Ctrl+Z)
+        if (keycode == Input.Keys.Z && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT))) {
+            screen.undoTurn();
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -291,6 +299,7 @@ public class GameInputController extends InputAdapter {
         clearMarkers();
         selectedUnitEntity = null;
         gameHUD.hideTileInfo();
+        snapshot();
     }
 
     /** Chebyshev distance for range checks. */
@@ -469,6 +478,7 @@ public class GameInputController extends InputAdapter {
         gameHUD.updateFunding((hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
         gameHUD.hideSummonMenu();
         deselect();
+        snapshot();
     }
 
     // -------------------------------------------------------------------------
@@ -494,6 +504,7 @@ public class GameInputController extends InputAdapter {
             // Visual feedback could be added here (e.g., spawn floating text "DUG IN")
             gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
             deselect();
+            snapshot();
         } else if (abilityKey.equals("LAUNCH_NUKE")) {
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "LAUNCH NUKE: " + stats.name + " at " + posStr + " — awaiting target tile");
@@ -518,6 +529,7 @@ public class GameInputController extends InputAdapter {
         targetingAbilityKey = null;
         targetingUnit = null;
         deselect();
+        snapshot();
     }
 
     // -------------------------------------------------------------------------
@@ -683,6 +695,7 @@ public class GameInputController extends InputAdapter {
         gameHUD.hideTileInfo();
         clearMarkers();
         selectedUnitEntity = null;
+        snapshot();
     }
 
     /**
@@ -814,5 +827,9 @@ public class GameInputController extends InputAdapter {
                 return e;
         }
         return null;
+    }
+
+    private void snapshot() {
+        screen.getTurnHistory().push(unitFactory.captureSnapshot(engine, screen.getGameState(), gameMap));
     }
 }

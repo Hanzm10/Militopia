@@ -12,6 +12,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.militopia.components.*;
 import com.militopia.components.AbilitiesComponent;
 import com.militopia.factories.EntityFactory;
+import com.militopia.managers.AudioManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.utils.GameLogger;
 
@@ -111,6 +112,15 @@ public class CombatSystem extends EntitySystem {
         }
 
         // --- 1. Attacker strikes ---
+        triggerAttackAnimation(attacker, defender);
+
+        // Play Attack SFX
+        if (aStats.attackRange > 1) {
+            AudioManager.getInstance().playSFX("attack_ranged.wav");
+        } else {
+            AudioManager.getInstance().playSFX("attack_melee.wav");
+        }
+
         int dist = chebyshev(aPos.x, aPos.y, dPos.x, dPos.y);
         boolean maxRange = (dist == aStats.attackRange);
         int defTerrainBonus = terrainDefBonus(dPos.x, dPos.y);
@@ -141,11 +151,24 @@ public class CombatSystem extends EntitySystem {
             dStats.currentHP = 0;
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     dStats.name + " at " + GameLogger.pos(dPos.x, dPos.y) + " DESTROYED");
+
+            AudioManager.getInstance().playSFX("explode.wav");
+            entityFactory.createExplosion(dPos.x, dPos.y);
+
+            // Melee Auto-Advance
+            if (aStats.attackRange <= 1) {
+                aPos.x = dPos.x;
+                aPos.y = dPos.y;
+            }
+
             flagDeath(defender);
 
             // Attacker-first resolution: no counter if defender is dead
             exhaustAttacker(attacker, aStats, true);
             return;
+        } else {
+            AudioManager.getInstance().playSFX("hit.wav");
+            entityFactory.createHit(dPos.x, dPos.y);
         }
 
         // --- 3. Counterattack (range-gated) ---
@@ -370,5 +393,35 @@ public class CombatSystem extends EntitySystem {
         float worldX = EntityFactory.gridToIsoX(gx, gy);
         float worldY = EntityFactory.gridToIsoY(gx, gy);
         entityFactory.createFloatingText(label, worldX, worldY, type);
+    }
+
+    private void triggerAttackAnimation(Entity attacker, Entity defender) {
+        AnimationComponent anim = attacker.getComponent(AnimationComponent.class);
+        GridPositionComponent aPos = attacker.getComponent(GridPositionComponent.class);
+        GridPositionComponent dPos = defender.getComponent(GridPositionComponent.class);
+        StatsComponent s = attacker.getComponent(StatsComponent.class);
+
+        if (anim == null || aPos == null || dPos == null)
+            return;
+
+        anim.startX = 0;
+        anim.startY = 0;
+
+        // Calculate relative vector in pixels (isometric)
+        float dx = (dPos.x - aPos.x - (dPos.y - aPos.y)) * (com.militopia.config.GameConfig.TILE_WIDTH / 4.0f);
+        float dy = (dPos.x - aPos.x + (dPos.y - aPos.y)) * (com.militopia.config.GameConfig.TILE_HEIGHT / 4.0f);
+
+        if (s.attackRange <= 1) {
+            anim.type = AnimationComponent.Type.LUNGE;
+            anim.targetX = dx * 1.5f;
+            anim.targetY = dy * 1.5f;
+            anim.duration = 0.4f;
+        } else {
+            anim.type = AnimationComponent.Type.LUNGE; // Simple pop for ranged
+            anim.targetX = dx * -0.1f;
+            anim.targetY = dy * -0.1f;
+            anim.duration = 0.15f;
+        }
+        anim.stateTime = 0;
     }
 }
