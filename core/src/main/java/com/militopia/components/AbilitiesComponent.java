@@ -10,7 +10,7 @@ public class AbilitiesComponent implements Component {
     // --- State flags ---
     public boolean isDiggingIn = false; // Recruit
     public boolean hasUsedDigIn = false; // Recruit
-    public boolean isOverwatchActive = true; // Ranger (resets each turn)
+    public boolean isOverwatchActive = false; // Ranger (must be manually activated)
     public boolean isCloaked = false; // Sniper / Wraith / Submarine
 
     // --- Resources / Cooldowns ---

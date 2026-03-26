@@ -45,10 +45,6 @@ public class AbilityStatusSystem extends EntitySystem {
             if (stats.owner == currentPlayerID) {
                 // --- TURN START: My units ---
 
-                // RANGER: Overwatch Reset
-                if (stats.unitTypeKey.equals("RANGER")) {
-                    abilities.isOverwatchActive = true;
-                }
 
                 // SUBMARINE: Nuke Cooldown
                 if (abilities.nukeCooldown > 0) {

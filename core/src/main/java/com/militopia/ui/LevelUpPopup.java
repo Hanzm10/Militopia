@@ -105,11 +105,6 @@ public class LevelUpPopup {
             }
 
             @Override
-            public boolean scrolled(InputEvent e, float x, float y, float ax, float ay) {
-                return true;
-            }
-
-            @Override
             public boolean keyDown(InputEvent e, int keycode) {
                 return true;
             }

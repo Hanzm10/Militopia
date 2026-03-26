@@ -68,7 +68,8 @@ public class UnitRenderSystem extends EntitySystem {
 
     @Override
     public void addedToEngine(com.badlogic.ashley.core.Engine engine) {
-        entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class, TextureComponent.class).get());
+        entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class)
+                .one(TextureComponent.class, SpriteAnimationComponent.class).get());
     }
 
     @Override
@@ -228,26 +229,35 @@ public class UnitRenderSystem extends EntitySystem {
             batch.setColor(Color.WHITE);
         }
 
-        batch.draw(tex.region,
-                isoX - xOffset,
-                isoY - yOffset + verticalOff + animY,
-                GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        if (tex != null && tex.region != null) {
+            batch.draw(tex.region,
+                    isoX - xOffset,
+                    isoY - yOffset + verticalOff + animY,
+                    GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        }
         
         // --- Sprite Animation (Overlay) ---
         if (spriteAnim != null && spriteAnim.animation != null) {
             com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime, spriteAnim.loop);
             if (frame != null) {
+                float dW = (spriteAnim.drawWidth > 0) ? spriteAnim.drawWidth : GameConfig.DRAW_WIDTH;
+                float dH = (spriteAnim.drawHeight > 0) ? spriteAnim.drawHeight : GameConfig.DRAW_HEIGHT;
+                
+                // Center the sprite relative to the 16x10 tile size
+                float currentXOffset = (dW - GameConfig.TILE_WIDTH) / 2f;
+                float currentYOffset = (dH - GameConfig.TILE_HEIGHT) / 2f;
+
                 batch.draw(frame,
-                        isoX - xOffset + spriteAnim.worldOffsetX,
-                        isoY - yOffset + verticalOff + animY + spriteAnim.worldOffsetY,
-                        GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+                        isoX - currentXOffset + spriteAnim.worldOffsetX,
+                        isoY - currentYOffset + verticalOff + animY + spriteAnim.worldOffsetY,
+                        dW, dH);
             }
         }
 
         batch.setColor(Color.WHITE);
 
         // Selection glow
-        if (!isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {
+        if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {
             Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
             batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
             batch.setColor(0.4f, 0.4f, 0.4f, 1f);

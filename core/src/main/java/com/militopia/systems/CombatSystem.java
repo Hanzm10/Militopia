@@ -112,15 +112,6 @@ public class CombatSystem extends EntitySystem {
         }
 
         // --- 1. Attacker strikes ---
-        triggerAttackAnimation(attacker, defender);
-
-        // Play Attack SFX
-        if (aStats.attackRange > 1) {
-            AudioManager.getInstance().playSFX("attack_ranged.wav");
-        } else {
-            AudioManager.getInstance().playSFX("attack_melee.wav");
-        }
-
         int dist = chebyshev(aPos.x, aPos.y, dPos.x, dPos.y);
         boolean maxRange = (dist == aStats.attackRange);
         int defTerrainBonus = terrainDefBonus(dPos.x, dPos.y);
@@ -134,6 +125,64 @@ public class CombatSystem extends EntitySystem {
 
         int dmg = Math.max(0, (aStats.attack + shoreBonus) - (dStats.defense + digInBonus) - defTerrainBonus
                 - (maxRange && aStats.attackRange > 1 ? 1 : 0));
+
+        boolean isKill = (dmg >= dStats.currentHP);
+        boolean isRecruitMelee = aStats.unitTypeKey.equalsIgnoreCase("RECRUIT") && aStats.attackRange <= 1;
+
+        if (!(isKill && isRecruitMelee)) {
+            triggerAttackAnimation(attacker, defender);
+        }
+
+        // Custom attack sprites (Enemy only)
+        String unitKey = aStats.unitTypeKey;
+        if (dStats.owner != aStats.owner && dStats.owner != 0) {
+            if (unitKey.equalsIgnoreCase("RECRUIT") && aStats.attackRange <= 1) {
+                entityFactory.createRecruitAttack(dPos.x, dPos.y);
+            } else if (unitKey.equalsIgnoreCase("TANK") || unitKey.equalsIgnoreCase("SUICIDE_DRONE")) {
+                entityFactory.createTankAttack(dPos.x, dPos.y);
+            } else if (unitKey.equalsIgnoreCase("JUGGERNAUT") || unitKey.equalsIgnoreCase("B2")
+                    || unitKey.equalsIgnoreCase("SUBMARINE")) {
+                entityFactory.createNuclearAttack(dPos.x, dPos.y);
+            }
+        }
+
+        // --- NEW: Muzzle Flash for ranged units ---
+        if (aStats.attackRange > 1) {
+            FacingComponent facing = attacker.getComponent(FacingComponent.class);
+            TextureComponent tex = attacker.getComponent(TextureComponent.class);
+            float muzzleOffsetX = 3.5f; // Default Right
+            float muzzleOffsetY = -2.5f; // Lift near gun tip
+            if (facing != null && tex != null && tex.region == facing.leftRegion) {
+                muzzleOffsetX = -3.5f; // Facing Left
+            }
+            entityFactory.createMuzzleFlash(aPos.x, aPos.y, muzzleOffsetX, muzzleOffsetY);
+        }
+
+        // Play Attack SFX
+        if (unitKey.equalsIgnoreCase("JUGGERNAUT") || unitKey.equalsIgnoreCase("B2")
+                || unitKey.equalsIgnoreCase("SUBMARINE")) {
+            AudioManager.getInstance().playSFX("explode.wav");
+        } else if (unitKey.equalsIgnoreCase("RANGER")) {
+            boolean isManTarget = dStats.moveType == StatsComponent.MoveType.LAND
+                    && !dStats.unitTypeKey.equalsIgnoreCase("JUGGERNAUT")
+                    && !dStats.unitTypeKey.equalsIgnoreCase("TANK");
+            if (!(isKill && isManTarget)) {
+                AudioManager.getInstance().playSFX("ranger-ak47.WAV");
+            }
+        } else if (unitKey.equalsIgnoreCase("RECRUIT")) {
+            AudioManager.getInstance().playSFX("recruit-knife.WAV");
+        } else if (unitKey.equalsIgnoreCase("SNIPER")) {
+            AudioManager.getInstance().playSFX("sniper-awp.WAV");
+        } else if (unitKey.equalsIgnoreCase("TANK")) {
+            AudioManager.getInstance().playSFX("tank-fire.WAV");
+        } else {
+            if (aStats.attackRange > 1) {
+                AudioManager.getInstance().playSFX("attack_ranged.wav");
+            } else {
+                AudioManager.getInstance().playSFX("attack_melee.wav");
+            }
+        }
+
         dStats.currentHP -= dmg;
 
         // LOG: attack result
@@ -152,11 +201,13 @@ public class CombatSystem extends EntitySystem {
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     dStats.name + " at " + GameLogger.pos(dPos.x, dPos.y) + " DESTROYED");
 
-            AudioManager.getInstance().playSFX("explode.wav");
             entityFactory.createExplosion(dPos.x, dPos.y);
 
             // Melee Auto-Advance
             if (aStats.attackRange <= 1) {
+                if (isRecruitMelee) {
+                    attacker.add(new MovementComponent(aPos.x, aPos.y, dPos.x, dPos.y));
+                }
                 aPos.x = dPos.x;
                 aPos.y = dPos.y;
             }
@@ -278,6 +329,16 @@ public class CombatSystem extends EntitySystem {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
         if (stats == null)
             return;
+
+        // Play Death SFX
+        if (stats.moveType == StatsComponent.MoveType.LAND &&
+                !stats.unitTypeKey.equalsIgnoreCase("JUGGERNAUT") &&
+                !stats.unitTypeKey.equalsIgnoreCase("TANK")) {
+            AudioManager.getInstance().playSFX("man-finished.WAV");
+        } else {
+            AudioManager.getInstance().playSFX("machine-finished.WAV");
+            AudioManager.getInstance().playSFX("explode.wav");
+        }
 
         // --- NEW: Track Base Destruction ---
         if (stats.name.contains("Base")) {

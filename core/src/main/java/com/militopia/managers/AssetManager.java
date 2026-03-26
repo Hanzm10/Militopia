@@ -141,6 +141,62 @@ public class AssetManager {
     public static final String CIRCLE_UI2 = "ui/circle_ui2.png";
     public static final String BACKGROUND = "game-system/militopia_background.png";
 
+    // --- NEW: Attack Animations ---
+    public static final String[] ATTACK_RECRUIT_FRAMES = {
+            "sprites/recruit-attack/warrior_skill4_frame1.png",
+            "sprites/recruit-attack/warrior_skill4_frame2.png",
+            "sprites/recruit-attack/warrior_skill4_frame3.png",
+            "sprites/recruit-attack/warrior_skill4_frame4.png",
+            "sprites/recruit-attack/warrior_skill4_frame5.png",
+            "sprites/recruit-attack/warrior_skill4_frame6.png",
+            "sprites/recruit-attack/warrior_skill4_frame7.png"
+    };
+
+    public static final String[] ATTACK_TANK_FRAMES = {
+            "sprites/tank-attack/frame0000.png",
+            "sprites/tank-attack/frame0001.png",
+            "sprites/tank-attack/frame0002.png",
+            "sprites/tank-attack/frame0003.png",
+            "sprites/tank-attack/frame0004.png",
+            "sprites/tank-attack/frame0005.png",
+            "sprites/tank-attack/frame0006.png",
+            "sprites/tank-attack/frame0007.png",
+            "sprites/tank-attack/frame0008.png",
+            "sprites/tank-attack/frame0009.png",
+            "sprites/tank-attack/frame0010.png",
+            "sprites/tank-attack/frame0011.png",
+            "sprites/tank-attack/frame0012.png",
+            "sprites/tank-attack/frame0013.png"
+    };
+
+    public static final String[] ATTACK_NUCLEAR_FRAMES = {
+            "sprites/nuclear-attack/frame0000.png",
+            "sprites/nuclear-attack/frame0001.png",
+            "sprites/nuclear-attack/frame0002.png",
+            "sprites/nuclear-attack/frame0003.png",
+            "sprites/nuclear-attack/frame0004.png",
+            "sprites/nuclear-attack/frame0005.png",
+            "sprites/nuclear-attack/frame0006.png",
+            "sprites/nuclear-attack/frame0007.png",
+            "sprites/nuclear-attack/frame0008.png",
+            "sprites/nuclear-attack/frame0009.png",
+            "sprites/nuclear-attack/frame0010.png",
+            "sprites/nuclear-attack/frame0011.png",
+            "sprites/nuclear-attack/frame0012.png"
+    };
+
+    public static final String[] GUN_NOZZLE_FLASH_FRAMES = {
+            "sprites/gun-nozzle-flash/frame0000.png",
+            "sprites/gun-nozzle-flash/frame0001.png",
+            "sprites/gun-nozzle-flash/frame0002.png",
+            "sprites/gun-nozzle-flash/frame0003.png",
+            "sprites/gun-nozzle-flash/frame0004.png",
+            "sprites/gun-nozzle-flash/frame0005.png",
+            "sprites/gun-nozzle-flash/frame0006.png",
+            "sprites/gun-nozzle-flash/frame0007.png",
+            "sprites/gun-nozzle-flash/frame0008.png"
+    };
+
     public static final String FUNDING_ICON = "ui/funding_icon.png";
     public static final String FUNDING_ICON2 = "ui/funding_icon2.png";
 
@@ -276,6 +332,16 @@ public class AssetManager {
         manager.load(CIRCLE_UI, Texture.class);
         manager.load(CIRCLE_UI2, Texture.class);
         manager.load(BACKGROUND, Texture.class);
+
+        // Load Attack Animations
+        for (String frame : ATTACK_RECRUIT_FRAMES)
+            manager.load(frame, Texture.class);
+        for (String frame : ATTACK_TANK_FRAMES)
+            manager.load(frame, Texture.class);
+        for (String frame : ATTACK_NUCLEAR_FRAMES)
+            manager.load(frame, Texture.class);
+        for (String frame : GUN_NOZZLE_FLASH_FRAMES)
+            manager.load(frame, Texture.class);
 
         manager.load(FUNDING_ICON, Texture.class);
         manager.load(FUNDING_ICON2, Texture.class);

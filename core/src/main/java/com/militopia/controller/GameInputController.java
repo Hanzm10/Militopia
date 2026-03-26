@@ -22,6 +22,7 @@ import com.militopia.screen.GameScreen;
 import com.militopia.systems.CombatSystem;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
+import com.militopia.managers.AudioManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -136,11 +137,14 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
-        if (!inputEnabled)
-            return false;
+        GameLogger.log(GameLogger.INPUT, "Mouse scrolled: x=" + amountX + ", y=" + amountY);
+        float oldZoom = camera.zoom;
         camera.zoom += amountY * GameConfig.ZOOM_SPEED;
         camera.zoom = MathUtils.clamp(camera.zoom, GameConfig.ZOOM_MIN, GameConfig.ZOOM_MAX);
         camera.update();
+        if (oldZoom != camera.zoom) {
+            GameLogger.log(GameLogger.CAMERA, String.format("Camera zoom: %.2f (delta: %.2f)", camera.zoom, amountY));
+        }
         return true;
     }
 
@@ -513,6 +517,15 @@ public class GameInputController extends InputAdapter {
             targetingUnit = unit;
             // Highlight area or show range markers if needed
             gameHUD.hideTileInfo();
+        } else if (abilityKey.equals("OVERWATCH")) {
+            GameLogger.log(GameLogger.ABILITY, stats.owner,
+                    "OVERWATCH: " + stats.name + " goes into overwatch at " + posStr);
+            abilities.isOverwatchActive = true;
+            stats.hasActed = true;
+            stats.hasMoved = true;
+            gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
+            deselect();
+            snapshot();
         }
     }
 
@@ -685,6 +698,13 @@ public class GameInputController extends InputAdapter {
         if (stats != null) {
             stats.hasActed = true;
             stats.hasMoved = true;
+
+            // Play Movement SFX
+            if (stats.moveType == StatsComponent.MoveType.LAND) {
+                AudioManager.getInstance().playSFX("move-land.WAV");
+            } else if (stats.moveType == StatsComponent.MoveType.SEA) {
+                AudioManager.getInstance().playSFX("move-water.WAV");
+            }
         }
 
         AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);

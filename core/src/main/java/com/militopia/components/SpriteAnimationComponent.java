@@ -17,4 +17,8 @@ public class SpriteAnimationComponent implements Component {
     // Optional offset from the grid tile center
     public float worldOffsetX = 0;
     public float worldOffsetY = 0;
+
+    // Optional size override (if 0, use GameConfig.DRAW_WIDTH/HEIGHT)
+    public float drawWidth = 0;
+    public float drawHeight = 0;
 }

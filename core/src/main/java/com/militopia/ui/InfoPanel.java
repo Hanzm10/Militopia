@@ -302,6 +302,15 @@ public class InfoPanel {
                                 controller.performAbility(unit, "LAUNCH_NUKE");
                             }
                         });
+            } else if (stats.unitTypeKey.equals("RANGER") && !abilities.isOverwatchActive) {
+                addAbilityButton("Overwatch",
+                        factory.getTextureForPopup("RANGER"),
+                        new ClickListener() {
+                            @Override
+                            public void clicked(InputEvent event, float x, float y) {
+                                controller.performAbility(unit, "OVERWATCH");
+                            }
+                        });
             }
         }
 
@@ -377,7 +386,19 @@ public class InfoPanel {
 
         // Ability button row (wrapped in ScrollPane for D-02)
         abilityTable = new Table();
-        abilityScroll = new ScrollPane(abilityTable, game.skin);
+        // Custom ScrollPane that does NOT swallow scroll events so map zoom still works
+        abilityScroll = new ScrollPane(abilityTable, game.skin) {
+            @Override
+            public boolean notify(com.badlogic.gdx.scenes.scene2d.Event event, boolean capture) {
+                if (!capture && event instanceof com.badlogic.gdx.scenes.scene2d.InputEvent) {
+                    com.badlogic.gdx.scenes.scene2d.InputEvent ie = (com.badlogic.gdx.scenes.scene2d.InputEvent) event;
+                    if (ie.getType() == com.badlogic.gdx.scenes.scene2d.InputEvent.Type.scrolled) {
+                        return false;
+                    }
+                }
+                return super.notify(event, capture);
+            }
+        };
         abilityScroll.getStyle().background = null;
         abilityScroll.setScrollingDisabled(false, true); // Horizontal scroll only
         tileInfoTable.add(abilityScroll).expandX().fillX().padLeft(20).padRight(10);
