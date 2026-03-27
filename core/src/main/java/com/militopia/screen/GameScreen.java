@@ -29,6 +29,7 @@ import com.militopia.data.TurnSnapshot;
 import com.militopia.data.UnitSnapshot;
 import com.militopia.data.StructureSnapshot;
 import com.militopia.managers.SaveManager;
+import com.militopia.managers.AudioManager;
 import com.militopia.managers.TurnHistoryManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.systems.CombatSystem;
@@ -756,6 +757,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        AudioManager.getInstance().playBGM("battle_theme.wav", true);
     }
 
     @Override

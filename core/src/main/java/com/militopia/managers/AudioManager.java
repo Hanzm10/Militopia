@@ -24,7 +24,7 @@ public class AudioManager {
     private String currentBGMPath;
     
     private float masterVolume = 0.8f;
-    private float bgmVolume = 0.5f;
+    private float bgmVolume = 0.25f;
 
     public static AudioManager getInstance() {
         if (instance == null) {

@@ -249,6 +249,15 @@ public class CombatSystem extends EntitySystem {
                 // Spawn floating text above the attacker (isCounter = true)
                 spawnFloatingText(ctrDmg, aPos.x, aPos.y, true);
 
+                // Defend SFX — infantry vs machine
+                String defenderKey = dStats.unitTypeKey;
+                if (defenderKey.equalsIgnoreCase("RECRUIT") || defenderKey.equalsIgnoreCase("RANGER")
+                        || defenderKey.equalsIgnoreCase("SNIPER")) {
+                    AudioManager.getInstance().playSFX("man-blocked.WAV");
+                } else {
+                    AudioManager.getInstance().playSFX("machine-blocked.WAV");
+                }
+
                 if (aStats.currentHP <= 0) {
                     aStats.currentHP = 0;
                     GameLogger.log(GameLogger.ATTACK, dStats.owner,
