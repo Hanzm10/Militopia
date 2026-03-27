@@ -1,77 +1,117 @@
 {
-    "version": "1.0",
-    "timestamp": "2026-03-24T07:32:21.664Z",
-    "phase": "7",
-    "phase_name": "Exploration & Persistence",
-    "phase_dir": "07-exploration-persistence",
-    "plan": 1,
-    "task": 6,
-    "total_tasks": 6,
-    "status": "completed",
-    "completed_tasks": [
-        {
-            "id": 1,
-            "name": "Create and refine ScavengeSystem",
-            "status": "done"
-        },
-        {
-            "id": 2,
-            "name": "Create and refine StructurePlacementSystem",
-            "status": "done"
-        },
-        {
-            "id": 3,
-            "name": "Integrate systems into SlideMenu and GameHUD",
-            "status": "done"
-        },
-        {
-            "id": 4,
-            "name": "Verify persistence flags (hasMoved, hasActed)",
-            "status": "done"
-        },
-        {
-            "id": 5,
-            "name": "Finalize and pass automated tests (ExplorationPersistenceTest, StructurePlacementTest)",
-            "status": "done"
-        },
-        {
-            "id": 6,
-            "name": "Manual UAT and Phase 7 closure",
-            "status": "done"
-        }
-    ],
-    "remaining_tasks": [],
-    "blockers": [],
-    "human_actions_pending": [],
-    "decisions": [
-        {
-            "decision": "Used factory.getEntityAt for ruins removal check",
-            "rationale": "More reliable than ImmutableArray.contains in deferred PooledEngine updates.",
-            "phase": "7"
-        },
-        {
-            "decision": "Mocked UnitData constructor directly in tests",
-            "rationale": "Avoided Gdx.files NPE in headless environment.",
-            "phase": "7"
-        },
-        {
-            "decision": "Handled null mapping in StructurePlacementSystem",
-            "rationale": "Ensured test map compatibility where tiles are not fully initialized.",
-            "phase": "7"
-        }
-    ],
-    "uncommitted_files": [
-        ".planning/ROADMAP.md",
-        ".planning/STATE.md",
-        ".planning/config.json",
-        "core/src/main/java/com/militopia/systems/ScavengeSystem.java",
-        "core/src/main/java/com/militopia/systems/StructurePlacementSystem.java",
-        "core/src/main/java/com/militopia/ui/SlideMenu.java",
-        "core/src/main/java/com/militopia/ui/GameHUD.java",
-        "core/src/test/java/com/militopia/systems/ExplorationPersistenceTest.java",
-        "core/src/test/java/com/militopia/systems/StructurePlacementTest.java",
-        ".planning/phases/07-exploration-persistence/07-01-SUMMARY.md"
-    ],
-    "next_action": "/gsd-discuss-phase 8",
-    "context_notes": "Phase 7 is fully validated. The codebase is clean and ECS-driven. Next session should focus on Polish & UX including animations and UI transitions."
+  "version": "1.0",
+  "timestamp": "2026-03-27T13:58:05.469Z",
+  "phase": "tech-debt",
+  "phase_name": "Tech Debt Refactor (ad-hoc)",
+  "phase_dir": ".planning",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Phase A: Create CombatConstants.java",
+      "status": "done",
+      "commit": "ee6c4bf"
+    },
+    {
+      "id": 2,
+      "name": "Phase A: Replace magic numbers in CombatSystem.java",
+      "status": "done",
+      "commit": "ee6c4bf"
+    },
+    {
+      "id": 3,
+      "name": "Phase A: Replace Gdx.app.log / System.out.println with GameLogger",
+      "status": "done",
+      "commit": "ee6c4bf"
+    },
+    {
+      "id": 4,
+      "name": "Phase A: Remove duplicate gdx-freetype dependency in core/build.gradle",
+      "status": "done",
+      "commit": "ee6c4bf"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 5,
+      "name": "Phase B: Create UnitType enum (16 unit types)",
+      "status": "not_started"
+    },
+    {
+      "id": 6,
+      "name": "Phase B: Add unitType field to StatsComponent alongside unitTypeKey (dual-field migration)",
+      "status": "not_started"
+    },
+    {
+      "id": 7,
+      "name": "Phase B: Migrate string comparisons in CombatSystem.java (21 comparisons)",
+      "status": "not_started"
+    },
+    {
+      "id": 8,
+      "name": "Phase B: Migrate string comparisons in UnitFactory.java (21 switch cases)",
+      "status": "not_started"
+    },
+    {
+      "id": 9,
+      "name": "Phase B: Migrate string comparisons in GameInputController.java (3 comparisons)",
+      "status": "not_started"
+    },
+    {
+      "id": 10,
+      "name": "Phase B: Migrate string comparisons in InfoPanel.java (3 comparisons)",
+      "status": "not_started"
+    },
+    {
+      "id": 11,
+      "name": "Phase B: Migrate string comparisons in AbilityStatusSystem.java (3 comparisons)",
+      "status": "not_started"
+    },
+    {
+      "id": 12,
+      "name": "Phase B: Migrate string comparisons in UnitRenderSystem.java (1 comparison)",
+      "status": "not_started"
+    },
+    {
+      "id": 13,
+      "name": "Phase B: Update SaveManager serialization (unitTypeKey -> UnitType.name() / valueOf)",
+      "status": "not_started"
+    },
+    {
+      "id": 14,
+      "name": "Phase B: Remove unitTypeKey field from StatsComponent once all references gone",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    {
+      "action": "Run ./gradlew build to verify Phase B compiles clean after each file migration",
+      "context": "Build cannot be run from Claude's environment due to Gradle loopback connection issue on this machine",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Keep unitTypeKey String field alongside new UnitType enum field during migration (dual-field approach)",
+      "rationale": "Allows file-by-file migration without breaking the build at any intermediate step. Remove unitTypeKey only after all 44 string comparisons are eliminated.",
+      "phase": "tech-debt"
+    },
+    {
+      "decision": "CombatConstants placed in com.militopia.config package (alongside GameConfig)",
+      "rationale": "GameConfig already exists there for TILE_WIDTH/HEIGHT constants — natural home for combat tuning values.",
+      "phase": "tech-debt"
+    },
+    {
+      "decision": "AbilityTest failures are pre-existing (entityFactory null NPE), not caused by Phase A",
+      "rationale": "Verified by git stash — same 3 tests fail on clean main branch.",
+      "phase": "tech-debt"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Start Phase B: Read StatsComponent.java and SaveManager.java first to understand serialization, then create UnitType.java enum, then add unitType field to StatsComponent",
+  "context_notes": "This is an ad-hoc tech debt refactor session outside the normal GSD phase structure. The tech debt audit was generated fresh this session — see conversation history for the full prioritized report. Phase B is token-heavy because UnitFactory.java is 1291 lines and needs to be read in full. 16 unique unit types: RECRUIT, RANGER, SNIPER, TANK, JUGGERNAUT, RECON_DRONE, SUICIDE_DRONE, APACHE, B2, GUNBOAT, DESTROYER, CARRIER, SUBMARINE, TITAN, WRAITH, DREADNOUGHT."
 }
