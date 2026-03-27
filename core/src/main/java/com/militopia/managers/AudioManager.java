@@ -22,9 +22,9 @@ public class AudioManager {
     private final Map<String, Integer> sfxCountThisFrame = new HashMap<>();
     private Music currentBGM;
     private String currentBGMPath;
-    
+
     private float masterVolume = 0.8f;
-    private float bgmVolume = 0.25f;
+    private float bgmVolume = 0.5f;
 
     public static AudioManager getInstance() {
         if (instance == null) {
@@ -33,7 +33,8 @@ public class AudioManager {
         return instance;
     }
 
-    private AudioManager() {}
+    private AudioManager() {
+    }
 
     /**
      * Resets the frame-based rate limiting counters.
@@ -45,6 +46,7 @@ public class AudioManager {
 
     /**
      * Plays a sound effect from the assets/audio/sfx/ directory.
+     * 
      * @param path The relative path within assets/audio/sfx/ (e.g., "move.wav")
      */
     public void playSFX(String path) {
@@ -58,12 +60,15 @@ public class AudioManager {
         if (sound != null) {
             sound.play(masterVolume);
             sfxCountThisFrame.put(path, count + 1);
+            GameLogger.log(GameLogger.SFX, "Play: " + path);
         }
     }
 
     /**
      * Plays background music from the assets/audio/bgm/ directory.
-     * @param path The relative path within assets/audio/bgm/ (e.g., "battle_theme.mp3")
+     * 
+     * @param path The relative path within assets/audio/bgm/ (e.g.,
+     *             "battle_theme.mp3")
      * @param loop Whether the music should loop.
      */
     public void playBGM(String path, boolean loop) {
@@ -79,8 +84,9 @@ public class AudioManager {
             currentBGM.setLooping(loop);
             currentBGM.play();
             currentBGMPath = path;
+            GameLogger.log(GameLogger.SFX, "BGM started: " + path + " (volume=" + (bgmVolume * masterVolume) + ")");
         } catch (Exception e) {
-            GameLogger.log(GameLogger.UI, "ERROR: Could not load BGM: " + path);
+            GameLogger.log(GameLogger.SFX, "ERROR: Could not load BGM: " + path);
         }
     }
 
@@ -103,7 +109,7 @@ public class AudioManager {
             sounds.put(path, sound);
             return sound;
         } catch (Exception e) {
-            GameLogger.log(GameLogger.UI, "ERROR: Could not load SFX: " + path);
+            GameLogger.log(GameLogger.SFX, "ERROR: Could not load SFX: " + path);
             return null;
         }
     }

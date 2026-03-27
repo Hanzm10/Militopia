@@ -757,7 +757,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        AudioManager.getInstance().playBGM("battle_theme.wav", true);
+        AudioManager.getInstance().playBGM("battle_theme.ogg", true);
     }
 
     @Override

@@ -218,7 +218,15 @@ public class CombatSystem extends EntitySystem {
             exhaustAttacker(attacker, aStats, true);
             return;
         } else {
-            AudioManager.getInstance().playSFX("hit.wav");
+            if (dmg == 0) {
+                String defKey = dStats.unitTypeKey;
+                if (defKey.equalsIgnoreCase("RECRUIT") || defKey.equalsIgnoreCase("RANGER")
+                        || defKey.equalsIgnoreCase("SNIPER")) {
+                    AudioManager.getInstance().playSFX("man-blocked.WAV");
+                } else {
+                    AudioManager.getInstance().playSFX("machine-blocked.WAV");
+                }
+            }
             entityFactory.createHit(dPos.x, dPos.y);
         }
 
@@ -249,13 +257,15 @@ public class CombatSystem extends EntitySystem {
                 // Spawn floating text above the attacker (isCounter = true)
                 spawnFloatingText(ctrDmg, aPos.x, aPos.y, true);
 
-                // Defend SFX — infantry vs machine
-                String defenderKey = dStats.unitTypeKey;
-                if (defenderKey.equalsIgnoreCase("RECRUIT") || defenderKey.equalsIgnoreCase("RANGER")
-                        || defenderKey.equalsIgnoreCase("SNIPER")) {
-                    AudioManager.getInstance().playSFX("man-blocked.WAV");
-                } else {
-                    AudioManager.getInstance().playSFX("machine-blocked.WAV");
+                // Defend SFX — only when counterattack is cancelled out
+                if (ctrDmg == 0) {
+                    String defenderKey = dStats.unitTypeKey;
+                    if (defenderKey.equalsIgnoreCase("RECRUIT") || defenderKey.equalsIgnoreCase("RANGER")
+                            || defenderKey.equalsIgnoreCase("SNIPER")) {
+                        AudioManager.getInstance().playSFX("man-blocked.WAV");
+                    } else {
+                        AudioManager.getInstance().playSFX("machine-blocked.WAV");
+                    }
                 }
 
                 if (aStats.currentHP <= 0) {
