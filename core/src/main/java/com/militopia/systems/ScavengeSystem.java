@@ -8,6 +8,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.data.GameState;
 import com.militopia.factories.EntityFactory;
+import com.militopia.config.UnitType;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
 import com.militopia.utils.GameLogger;
@@ -73,12 +74,12 @@ public class ScavengeSystem {
             xpGain = 1000;
             rewardMsg = "Found 1000 XP!";
         } else if (roll <= 60) {
-            factory.createUnit("RECON_DRONE", unitPos.x, unitPos.y, owner, false);
+            factory.createUnit(UnitType.RECON_DRONE, unitPos.x, unitPos.y, owner, false);
             rewardMsg = "Found a Recon Drone!";
         } else if (roll <= 80) {
             int[] spawn = factory.findValidSpawnPoint(unitPos.x, unitPos.y, StatsComponent.MoveType.LAND, map);
             if (spawn != null) {
-                factory.createUnit("SNIPER", spawn[0], spawn[1], owner, false);
+                factory.createUnit(UnitType.SNIPER, spawn[0], spawn[1], owner, false);
                 rewardMsg = "Found a Sniper!";
             } else {
                 fundingGain = 15;
@@ -87,7 +88,7 @@ public class ScavengeSystem {
         } else {
             int[] spawn = factory.findValidSpawnPoint(unitPos.x, unitPos.y, StatsComponent.MoveType.SEA, map);
             if (spawn != null) {
-                factory.createUnit("DESTROYER", spawn[0], spawn[1], owner, false);
+                factory.createUnit(UnitType.DESTROYER, spawn[0], spawn[1], owner, false);
                 rewardMsg = "Found a Destroyer!";
             } else {
                 xpGain = 1000;

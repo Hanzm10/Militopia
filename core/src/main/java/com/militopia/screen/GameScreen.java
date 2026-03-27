@@ -18,6 +18,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
+import com.militopia.config.UnitType;
 import com.militopia.controller.GameInputController;
 import com.militopia.systems.*;
 import com.militopia.data.AnimalData;
@@ -174,10 +175,10 @@ public class GameScreen implements Screen {
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 String key = (u.unitTypeKey != null) ? u.unitTypeKey : u.type;
-                if (key == null)
-                    key = "RECRUIT";
+                UnitType ut = UnitType.fromKey(key);
+                if (ut == null) ut = UnitType.RECRUIT;
 
-                unitFactory.createUnit(key, u.x, u.y, u.owner, u.hasActed);
+                unitFactory.createUnit(ut, u.x, u.y, u.owner, u.hasActed);
 
                 // Restore HP and moved flag
                 Entity freshUnit = findUnitAt(u.x, u.y);
@@ -440,7 +441,9 @@ public class GameScreen implements Screen {
 
         // 5. Recreate unit entities from snapshot
         for (UnitSnapshot us : snap.units) {
-            unitFactory.createUnit(us.unitTypeKey, us.x, us.y, us.owner, us.hasActed);
+            UnitType ut = UnitType.fromKey(us.unitTypeKey);
+            if (ut == null) ut = UnitType.RECRUIT;
+            unitFactory.createUnit(ut, us.x, us.y, us.owner, us.hasActed);
             ImmutableArray<Entity> freshUnits = engine.getEntitiesFor(
                     Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
             for (Entity e : freshUnits) {

@@ -342,7 +342,7 @@ public class GameInputController extends InputAdapter {
         StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
 
         if (unitStats.owner != screen.getCurrentPlayer()) {
-            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitTypeKey);
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
             GameLogger.log(GameLogger.INPUT, unitStats.owner,
                     "Enemy unit inspected: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY)
                             + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
@@ -354,7 +354,7 @@ public class GameInputController extends InputAdapter {
         if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
             GameLogger.log(GameLogger.INPUT,
                     "Unit exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
-            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitTypeKey);
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
             gameHUD.showTileInfo("Unit Exhausted (" + unitStats.name + ")", info.region);
             return;
         }
@@ -364,7 +364,7 @@ public class GameInputController extends InputAdapter {
                 + " at " + GameLogger.pos(gridX, gridY)
                 + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
         showRangeMarkers(gridX, gridY);
-        UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitTypeKey);
+        UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
         gameHUD.showUnitInfo(foundUnit, info.name, info.region, unitStats.currentHP, unitStats.maxHP);
 
         if (foundAnimal != null) {

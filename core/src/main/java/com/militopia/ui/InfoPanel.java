@@ -214,13 +214,13 @@ public class InfoPanel {
         final GameState state = screen.getGameState();
         Set<String> unlocked = BaseLevelConfig.getUnlockedForLevel(bs.level, false);
 
-        String[] allUnits = {
-                "RECRUIT", "RANGER", "SNIPER", "TANK", "RECON_DRONE",
-                "SUICIDE_DRONE", "APACHE", "GUNBOAT", "DESTROYER", "CARRIER"
+        UnitType[] allUnits = {
+                UnitType.RECRUIT, UnitType.RANGER, UnitType.SNIPER, UnitType.TANK, UnitType.RECON_DRONE,
+                UnitType.SUICIDE_DRONE, UnitType.APACHE, UnitType.GUNBOAT, UnitType.DESTROYER, UnitType.CARRIER
         };
 
-        for (final String unit : allUnits) {
-            if (!unlocked.contains(unit))
+        for (final UnitType unit : allUnits) {
+            if (!unlocked.contains(unit.name()))
                 continue;
             StatsComponent.MoveType moveType = factory.getUnitMoveType(unit);
             // In a BASE, we only show non-SEA units. PORTS (later) will show SEA units.
@@ -228,7 +228,7 @@ public class InfoPanel {
                 continue;
 
             UnitFactory.UiInfo info = factory.getUnitUi(unit);
-            final int cost = factory.getUnitCost(unit);
+            final int cost = UnitFactory.getUnitCost(unit);
 
             SummonButton.addTo(abilityTable, info.region, info.name + " (" + cost + ")", game, assets,
                     new ClickListener() {
@@ -237,7 +237,7 @@ public class InfoPanel {
                             int funds = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
                             if (funds < cost) {
                                 GameLogger.log(GameLogger.SUMMON, bs.owner,
-                                        "Attempted " + unit + " — insufficient funds ("
+                                        "Attempted " + unit.name() + " — insufficient funds ("
                                                 + funds + "<" + cost + ")");
                                 return;
                             }
@@ -250,7 +250,7 @@ public class InfoPanel {
                                     tx, ty, moveType, screen.getGameMap());
                             if (spawn == null) {
                                 GameLogger.log(GameLogger.SUMMON, bs.owner,
-                                        "Attempted " + unit + " — no valid spawn point found");
+                                        "Attempted " + unit.name() + " — no valid spawn point found");
                                 return;
                             }
                             if (bs.owner == 1)
@@ -261,7 +261,7 @@ public class InfoPanel {
                             factory.createUnit(unit, spawn[0], spawn[1], bs.owner, true);
                             int remaining = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
                             GameLogger.log(GameLogger.SUMMON, bs.owner,
-                                    "Summoned " + unit + " at " + GameLogger.pos(spawn[0], spawn[1])
+                                    "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
                                             + " | cost=" + cost + " | funds remaining=" + remaining);
                             screen.gameHUD.updateFunding(remaining, bs.income);
                             hideTileInfo();
