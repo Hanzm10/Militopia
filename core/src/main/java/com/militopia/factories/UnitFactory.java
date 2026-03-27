@@ -469,10 +469,6 @@ public class UnitFactory {
                 return 25;
             case "SUBMARINE":
                 return 0;
-            case "TITAN":
-            case "WRAITH":
-            case "DREADNOUGHT":
-                return 25;
             default:
                 return 0;
         }
