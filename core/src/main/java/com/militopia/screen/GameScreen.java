@@ -129,13 +129,13 @@ public class GameScreen implements Screen {
         }
 
         if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
-            Gdx.app.log("GameScreen", "Loading " + loadedState.animals.size() + " saved animals.");
+            GameLogger.logScreen("Loading " + loadedState.animals.size() + " saved animals.");
             for (AnimalData a : loadedState.animals) {
                 MapGenerator.ObjectType type = MapGenerator.ObjectType.valueOf(a.type);
                 unitFactory.createObjectEntity(a.x, a.y, type, gameState);
             }
         } else {
-            Gdx.app.log("GameScreen", "Generating new animals for initial bases.");
+            GameLogger.logScreen("Generating new animals for initial bases.");
             for (GridPoint2 pos : initialBases) {
                 unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
             }
@@ -228,7 +228,7 @@ public class GameScreen implements Screen {
 
         // --- NEW: Handle Finished Games on Load ---
         if (gameState.isGameOver) {
-            Gdx.app.log("GameScreen", "Loading a finished game. Showing Game Over popup.");
+            GameLogger.logScreen("Loading a finished game. Showing Game Over popup.");
             gameHUD.showGameOverPopup(gameState.winnerID);
             winConditionSystem.setPlaying(false);
         }
@@ -749,8 +749,7 @@ public class GameScreen implements Screen {
         }
 
         sb.append("========================================\n");
-        // Changing tag to "GameLog" for cleaner filtering if desired
-        Gdx.app.log("GameLog", sb.toString());
+        GameLogger.logScreen(sb.toString());
     }
 
     private void drawFadeOverlay() {

@@ -15,6 +15,7 @@ import com.militopia.components.JumpLandingComponent;
 import com.militopia.factories.EntityFactory;
 import com.militopia.managers.AudioManager;
 import com.militopia.map.MapGenerator;
+import com.militopia.config.CombatConstants;
 import com.militopia.utils.GameLogger;
 
 /**
@@ -95,8 +96,8 @@ public class CombatSystem extends EntitySystem {
         anim.type = AnimationComponent.Type.JUMP;
         anim.jumpStartOffX = -dIsoX;
         anim.jumpStartOffY = -dIsoY;
-        anim.arcHeight = 50f;
-        anim.duration = 0.7f;
+        anim.arcHeight = CombatConstants.JUMP_ARC_HEIGHT;
+        anim.duration = CombatConstants.JUMP_DURATION;
         anim.stateTime = 0;
 
         // Attach landing payload
@@ -121,12 +122,14 @@ public class CombatSystem extends EntitySystem {
             return;
 
         GameLogger.log(GameLogger.ABILITY, aStats.owner,
-                "Nuke detonates at " + GameLogger.pos(tx, ty) + " | radius=1 | dmg=15");
-        triggerExplosion(tx, ty, 1, 15, "NUKE");
+                "Nuke detonates at " + GameLogger.pos(tx, ty)
+                        + " | radius=" + CombatConstants.NUKE_RADIUS
+                        + " | dmg=" + CombatConstants.NUKE_DAMAGE);
+        triggerExplosion(tx, ty, CombatConstants.NUKE_RADIUS, CombatConstants.NUKE_DAMAGE, "NUKE");
 
         aStats.hasActed = true;
         aStats.hasMoved = true;
-        aAbilities.nukeCooldown = 3;
+        aAbilities.nukeCooldown = CombatConstants.NUKE_COOLDOWN_TURNS;
     }
 
     /**
@@ -181,15 +184,15 @@ public class CombatSystem extends EntitySystem {
         boolean maxRange = (dist == aStats.attackRange);
         int defTerrainBonus = terrainDefBonus(dPos.x, dPos.y);
 
-        // DESTROYER: Shore Bombardment (+5 vs Land)
-        int shoreBonus = (aStats.unitTypeKey.equals("DESTROYER") && dStats.moveType == StatsComponent.MoveType.LAND) ? 5
-                : 0;
+        // DESTROYER: Shore Bombardment
+        int shoreBonus = (aStats.unitTypeKey.equals("DESTROYER") && dStats.moveType == StatsComponent.MoveType.LAND)
+                ? CombatConstants.SHORE_BOMBARDMENT_BONUS : 0;
 
         AbilitiesComponent dAbilities = defender.getComponent(AbilitiesComponent.class);
-        int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? 3 : 0;
+        int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
 
         int dmg = Math.max(0, (aStats.attack + shoreBonus) - (dStats.defense + digInBonus) - defTerrainBonus
-                - (maxRange && aStats.attackRange > 1 ? 1 : 0));
+                - (maxRange && aStats.attackRange > 1 ? CombatConstants.MAX_RANGE_ATTACK_PENALTY : 0));
 
         boolean isKill = (dmg >= dStats.currentHP);
         boolean isRecruitMelee = aStats.unitTypeKey.equalsIgnoreCase("RECRUIT") && aStats.attackRange <= 1;
@@ -215,10 +218,10 @@ public class CombatSystem extends EntitySystem {
         if (aStats.attackRange > 1) {
             FacingComponent facing = attacker.getComponent(FacingComponent.class);
             TextureComponent tex = attacker.getComponent(TextureComponent.class);
-            float muzzleOffsetX = 3.5f; // Default Right
-            float muzzleOffsetY = -2.5f; // Lift near gun tip
+            float muzzleOffsetX = CombatConstants.MUZZLE_OFFSET_X_RIGHT;
+            float muzzleOffsetY = CombatConstants.MUZZLE_OFFSET_Y;
             if (facing != null && tex != null && tex.region == facing.leftRegion) {
-                muzzleOffsetX = -3.5f; // Facing Left
+                muzzleOffsetX = CombatConstants.MUZZLE_OFFSET_X_LEFT;
             }
             entityFactory.createMuzzleFlash(aPos.x, aPos.y, muzzleOffsetX, muzzleOffsetY);
         }
@@ -309,7 +312,7 @@ public class CombatSystem extends EntitySystem {
                 int atkTerrainBonus = terrainDefBonus(aPos.x, aPos.y);
 
                 int ctrDmg = Math.max(0, dStats.attack - aStats.defense - atkTerrainBonus
-                        - (counterMaxRange && dStats.attackRange > 1 ? 1 : 0));
+                        - (counterMaxRange && dStats.attackRange > 1 ? CombatConstants.MAX_RANGE_ATTACK_PENALTY : 0));
                 aStats.currentHP -= ctrDmg;
 
                 // LOG: counterattack result
@@ -398,10 +401,10 @@ public class CombatSystem extends EntitySystem {
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
 
         if (terrain == MapGenerator.TerrainType.MOUNTAIN) {
-            return 3;
+            return CombatConstants.TERRAIN_BONUS_MOUNTAIN;
         }
         if (obj == MapGenerator.ObjectType.TREE) {
-            return 1;
+            return CombatConstants.TERRAIN_BONUS_TREE;
         }
         return 0;
     }
@@ -542,7 +545,7 @@ public class CombatSystem extends EntitySystem {
 
             int defBonus = terrainDefBonus(p.x, p.y);
             AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
-            int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? 3 : 0;
+            int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
             int dmg = Math.max(0, aStats.attack - (s.defense + digInBonus) - defBonus);
             s.currentHP -= dmg;
             spawnFloatingText(dmg, p.x, p.y, false);
@@ -573,7 +576,7 @@ public class CombatSystem extends EntitySystem {
                 }
                 int defBonus = terrainDefBonus(p.x, p.y);
                 AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
-                int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? 3 : 0;
+                int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
 
                 int dmg = Math.max(0, aStats.attack - (s.defense + digInBonus) - defBonus);
                 s.currentHP -= dmg;
@@ -619,14 +622,14 @@ public class CombatSystem extends EntitySystem {
 
         if (s.attackRange <= 1) {
             anim.type = AnimationComponent.Type.LUNGE;
-            anim.targetX = dx * 1.5f;
-            anim.targetY = dy * 1.5f;
-            anim.duration = 0.4f;
+            anim.targetX = dx * CombatConstants.LUNGE_MELEE_DISTANCE;
+            anim.targetY = dy * CombatConstants.LUNGE_MELEE_DISTANCE;
+            anim.duration = CombatConstants.LUNGE_MELEE_DURATION;
         } else {
             anim.type = AnimationComponent.Type.LUNGE; // Simple pop for ranged
-            anim.targetX = dx * -0.1f;
-            anim.targetY = dy * -0.1f;
-            anim.duration = 0.15f;
+            anim.targetX = dx * CombatConstants.LUNGE_RANGED_RECOIL;
+            anim.targetY = dy * CombatConstants.LUNGE_RANGED_RECOIL;
+            anim.duration = CombatConstants.LUNGE_RANGED_DURATION;
         }
         anim.stateTime = 0;
     }
