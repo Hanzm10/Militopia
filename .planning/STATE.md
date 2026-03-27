@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-24T11:39:17.460Z"
+last_updated: "2026-03-27T02:19:37.312Z"
 progress:
   total_phases: 11
-  completed_phases: 2
-  total_plans: 10
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 11
+  completed_plans: 8
 ---
 
 # Project State
@@ -18,12 +18,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** A tactically deep, heterogeneous unit combat system on a procedurally generated isometric map.
-**Current focus:** Phase 08 — polish-ux
+**Current focus:** Phase 04 — unit-roster-combat
 
 ## Current Position
 
-Phase: 08 (polish-ux) — EXECUTING
-Plan: 1 of 3
+Phase: 04 (unit-roster-combat) — EXECUTING
+Plan: 1 of 1
 
 ## Last Session Summary
 
@@ -49,6 +49,7 @@ Plan: 1 of 3
 
 - **Centralized GSD**: Moved all planning files to `.planning/` for Antigravity compatibility.
 - **Log Isolation**: Created `logs/` to prevent root-level clutter from build artifacts.
+- [Phase 04]: Made getUnitCost static to allow unit tests without AssetManager dependency
 
 ### Approaches Tried
 
