@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-27T02:34:03.353Z"
+status: Ready to execute
+last_updated: "2026-03-27T02:45:34.191Z"
 progress:
   total_phases: 11
   completed_phases: 4
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -18,12 +18,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** A tactically deep, heterogeneous unit combat system on a procedurally generated isometric map.
-**Current focus:** Phase 06 — win-loss-conditions
+**Current focus:** Phase 08 — polish-ux
 
 ## Current Position
 
-Phase: 06 (win-loss-conditions) — EXECUTING
-Plan: 2 of 2
+Phase: 08 (polish-ux) — EXECUTING
+Plan: 2 of 3
 
 ## Last Session Summary
 
@@ -51,6 +51,7 @@ Plan: 2 of 2
 - **Log Isolation**: Created `logs/` to prevent root-level clutter from build artifacts.
 - [Phase 04]: Made getUnitCost static to allow unit tests without AssetManager dependency
 - [Phase 06]: Used Mockito MockedConstruction for headless libGDX Scene2D UI testing
+- [Phase 08-polish-ux]: Used LUNGE/PROJECTILE/HIT_FLASH Type enum instead of IDLE/MOVE/ATTACK State enum for event-driven combat animations
 
 ### Approaches Tried
 
