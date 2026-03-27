@@ -189,6 +189,11 @@ public class UnitFactory {
                 new TextureRegion(assets.get(AssetManager.SUBMARINE_DISPLAY))
         });
 
+        // Super Units — reuse existing textures until custom assets are added
+        unitRegions.put("TITAN", unitRegions.get("JUGGERNAUT"));
+        unitRegions.put("WRAITH", unitRegions.get("B2"));
+        unitRegions.put("DREADNOUGHT", unitRegions.get("SUBMARINE"));
+
         // Structures
         structRegions.put("MUNITION_FACTORY", new TextureRegion(assets.get(AssetManager.MUNITION_FACTORY)));
         structRegions.put("PORT", new TextureRegion(assets.get(AssetManager.PORT)));
@@ -295,8 +300,8 @@ public class UnitFactory {
                 hp = 50;
                 atk = 12;
                 def = 6;
-                move = 3;
-                rng = 1;
+                move = 4;
+                rng = 4;
                 vis = 3;
                 cost = 0;
                 moveType = StatsComponent.MoveType.LAND;
@@ -381,6 +386,36 @@ public class UnitFactory {
                 cost = 0;
                 moveType = StatsComponent.MoveType.SEA;
                 break;
+            case "TITAN":
+                hp = 60;
+                atk = 20;
+                def = 10;
+                move = 2;
+                rng = 2;
+                vis = 3;
+                cost = 25;
+                moveType = StatsComponent.MoveType.LAND;
+                break;
+            case "WRAITH":
+                hp = 30;
+                atk = 25;
+                def = 3;
+                move = 4;
+                rng = 3;
+                vis = 4;
+                cost = 25;
+                moveType = StatsComponent.MoveType.AIR;
+                break;
+            case "DREADNOUGHT":
+                hp = 70;
+                atk = 20;
+                def = 8;
+                move = 2;
+                rng = 4;
+                vis = 3;
+                cost = 25;
+                moveType = StatsComponent.MoveType.SEA;
+                break;
         }
 
         // Use Unit Constructor (No Income Parameter)
@@ -395,7 +430,7 @@ public class UnitFactory {
             abilities.fuel = 5;
             abilities.fuelMax = 5;
         }
-        if (unitType.equals("SUBMARINE")) {
+        if (unitType.equals("SUBMARINE") || unitType.equals("B2")) {
             abilities.isCloaked = true;
         }
 
@@ -434,6 +469,10 @@ public class UnitFactory {
                 return 25;
             case "SUBMARINE":
                 return 0;
+            case "TITAN":
+            case "WRAITH":
+            case "DREADNOUGHT":
+                return 25;
             default:
                 return 0;
         }
@@ -458,7 +497,14 @@ public class UnitFactory {
             case "DESTROYER":
             case "CARRIER":
             case "SUBMARINE":
+            case "DREADNOUGHT":
                 return StatsComponent.MoveType.SEA;
+
+            case "TITAN":
+                return StatsComponent.MoveType.LAND;
+
+            case "WRAITH":
+                return StatsComponent.MoveType.AIR;
 
             default:
                 return StatsComponent.MoveType.LAND;
@@ -499,7 +545,8 @@ public class UnitFactory {
                 if (s.income > 0) {
                     structSnaps.add(new StructureSnapshot(
                             p.x, p.y, s.owner, s.level,
-                            s.currentBaseXP, s.income, s.name, s.baseOrdinal));
+                            s.currentBaseXP, s.income, s.name, s.baseOrdinal,
+                            s.chosenSuperUnit));
                 }
             }
         }
@@ -696,9 +743,39 @@ public class UnitFactory {
             if (hud != null) {
                 hud.showLevelUpPopup(stats.owner, stats.name, stats.level, data.fundingBonus, data.unlockedUnits,
                         data.unlockedStructures, this);
+                // At level 5+, trigger super unit choice if not yet chosen for this base
+                if (stats.level >= 5 && stats.chosenSuperUnit == null) {
+                    hud.showSuperUnitChoicePopup(baseEntity, state, this);
+                }
             }
             GameLogger.log(GameLogger.ECONOMY, stats.owner,
                     stats.name + " leveled up to Level " + stats.level + "!");
+        }
+    }
+
+    /**
+     * Records the player's super unit choice on the base and spawns one immediately.
+     * Called from SuperUnitChoicePopup when the player picks a super unit.
+     */
+    public void chooseSuperUnit(Entity baseEntity, String superUnitType,
+            GameState state, MapGenerator.GameMap map) {
+        StatsComponent stats = baseEntity.getComponent(StatsComponent.class);
+        GridPositionComponent pos = baseEntity.getComponent(GridPositionComponent.class);
+        if (stats == null || pos == null) return;
+
+        stats.chosenSuperUnit = superUnitType;
+
+        // Spawn one immediately adjacent to the base
+        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superUnitType), map);
+        if (spawn != null) {
+            createUnit(superUnitType, spawn[0], spawn[1], stats.owner, false);
+            GameLogger.log(GameLogger.SUMMON, stats.owner,
+                    stats.name + " chose super unit: " + superUnitType
+                            + " — spawned at " + GameLogger.pos(spawn[0], spawn[1]));
+        } else {
+            GameLogger.log(GameLogger.SUMMON, stats.owner,
+                    stats.name + " chose super unit: " + superUnitType
+                            + " — no valid spawn point near base, available via summon menu");
         }
     }
 

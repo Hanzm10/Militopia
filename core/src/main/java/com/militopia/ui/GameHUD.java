@@ -55,6 +55,7 @@ public class GameHUD {
     private InfoPanel infoPanel;
     private SlideMenu slideMenu;
     private LevelUpPopup levelUpPopup;
+    private SuperUnitChoicePopup superUnitChoicePopup;
     private GameOverPopup gameOverPopup;
 
     private GameScreen screen;
@@ -64,11 +65,12 @@ public class GameHUD {
     private AssetManager assets;
     private MilitopiaGame game;
 
-    // Right panel: collapsible snapshot history overlay
+    // Right panel: turn history overlay (shown only when enabled from settings)
     private Table snapshotPanel;
     private Table snapshotList;
+    private Table snapshotRedoList;
     private TurnHistoryManager turnHistory;
-    private boolean snapshotPanelExpanded = true;
+    private boolean snapshotPanelVisible = false;
 
     public GameHUD(MilitopiaGame game) {
         this.game = game;
@@ -109,11 +111,12 @@ public class GameHUD {
                 screen.getGameMap());
 
         topBar = new HudTopBar(game, assets);
-        bottomBar = new HudBottomBar(game, assets, screen, stage, inputController);
+        bottomBar = new HudBottomBar(game, assets, screen, stage, inputController, this);
         infoPanel = new InfoPanel(game, assets, stage, bottomBar);
         slideMenu = new SlideMenu(game, assets, stage, bottomBar, infoPanel,
                 screen, inputController, unitFactory, scavengeSystem, placementSystem);
         levelUpPopup = new LevelUpPopup(game, assets, stage, inputController, bottomBar);
+        superUnitChoicePopup = new SuperUnitChoicePopup(game, assets, stage, inputController, bottomBar);
         gameOverPopup = new GameOverPopup(game, screen, stage, inputController, bottomBar);
 
         // Expose summonMenu for callers that still reference gameHUD.summonMenu
@@ -138,36 +141,48 @@ public class GameHUD {
     }
 
     /**
-     * Builds the collapsible right-side snapshot history panel and adds it to the stage.
-     * The panel shows up to 10 "Action {N}" labels describing undo history depth,
-     * plus a dedicated Undo button that mirrors the Ctrl+Z hotkey.
+     * Builds the right-side turn history panel (full screen height).
+     * Hidden by default — shown only when toggled on from the settings overlay.
      */
     private void buildSnapshotPanel(final GameScreen screen) {
-        // Outer container — anchored to right edge of the screen
         snapshotPanel = new Table();
         snapshotPanel.setFillParent(true);
 
-        // Inner card holding the header toggle and action list
         Table card = new Table();
-        card.setBackground(game.skin.newDrawable("white", new Color(0f, 0f, 0f, 0.6f)));
+        card.setBackground(game.skin.newDrawable("white", new Color(0f, 0f, 0f, 0.75f)));
 
-        // Header row: toggle button + title
-        final TextButton toggleBtn = new TextButton("▶ History", game.skin);
-        toggleBtn.getLabel().setFontScale(0.55f);
-        toggleBtn.pad(4, 8, 4, 8);
+        Label title = new Label("Turn History", game.skin);
+        title.setFontScale(0.6f);
+        title.setColor(Color.WHITE);
+        title.setAlignment(Align.center);
 
-        // Snapshot action list (rendered inside a ScrollPane for overflow safety)
+        // Redo section
+        Label redoLabel = new Label("↪ Redo", game.skin);
+        redoLabel.setFontScale(0.5f);
+        redoLabel.setColor(Color.CYAN);
+
+        snapshotRedoList = new Table();
+        snapshotRedoList.top().left();
+        ScrollPane redoScrollPane = new ScrollPane(snapshotRedoList, game.skin);
+        redoScrollPane.setScrollingDisabled(true, false);
+        redoScrollPane.setFadeScrollBars(true);
+
+        // Undo section
+        Label undoLabel = new Label("↩ Undo", game.skin);
+        undoLabel.setFontScale(0.5f);
+        undoLabel.setColor(Color.LIGHT_GRAY);
+
         snapshotList = new Table();
         snapshotList.top().left();
-        ScrollPane scrollPane = new ScrollPane(snapshotList, game.skin);
-        scrollPane.setScrollingDisabled(true, false);
-        scrollPane.setFadeScrollBars(true);
+        ScrollPane undoScrollPane = new ScrollPane(snapshotList, game.skin);
+        undoScrollPane.setScrollingDisabled(true, false);
+        undoScrollPane.setFadeScrollBars(true);
 
-        // Undo button — always visible, mirrors Ctrl+Z
-        TextButton undoBtn = new TextButton("↩ Undo", game.skin);
-        undoBtn.getLabel().setFontScale(0.55f);
+        // Buttons
+        final TextButton undoBtn = new TextButton("↩ Undo", game.skin);
+        undoBtn.getLabel().setFontScale(0.6f);
         undoBtn.getLabel().setColor(Color.YELLOW);
-        undoBtn.pad(6, 14, 6, 14);
+        undoBtn.pad(6, 8, 6, 8);
         undoBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -176,49 +191,107 @@ public class GameHUD {
             }
         });
 
-        toggleBtn.addListener(new ClickListener() {
+        final TextButton redoBtn = new TextButton("↪ Redo", game.skin);
+        redoBtn.getLabel().setFontScale(0.6f);
+        redoBtn.getLabel().setColor(Color.CYAN);
+        redoBtn.pad(6, 8, 6, 8);
+        redoBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                snapshotPanelExpanded = !snapshotPanelExpanded;
-                snapshotList.setVisible(snapshotPanelExpanded);
-                toggleBtn.setText(snapshotPanelExpanded ? "▼ History" : "▶ History");
+                screen.redoTurn();
+                refreshSnapshotPanel();
             }
         });
 
-        card.add(toggleBtn).right().pad(4).row();
-        card.add(scrollPane).width(110).height(180).pad(4).row();
-        card.add(undoBtn).pad(4);
+        Table btnRow = new Table();
+        btnRow.add(undoBtn).growX().pad(4);
+        btnRow.add(redoBtn).growX().pad(4);
 
-        // Anchor card to top-right with some margin
-        snapshotPanel.top().right();
-        snapshotPanel.add(card).top().right().padTop(60).padRight(8);
+        card.add(title).growX().padTop(8).padBottom(4).row();
+        card.add(redoLabel).left().padLeft(6).padTop(4).row();
+        card.add(redoScrollPane).growX().growY().pad(4).row();
+        card.add(undoLabel).left().padLeft(6).padTop(4).row();
+        card.add(undoScrollPane).growX().growY().pad(4).row();
+        card.add(btnRow).growX().padBottom(8);
 
+        snapshotPanel.right();
+        snapshotPanel.add(card).right().growY().width(130);
+
+        snapshotPanel.setVisible(false);
         stage.addActor(snapshotPanel);
         refreshSnapshotPanel();
     }
 
     /**
-     * Refreshes the snapshot list labels to reflect current TurnHistoryManager state.
-     * Shows up to 10 labels ("Action {N}" format). Call after any undo or action.
+     * Toggles the snapshot panel on/off. Called from the settings overlay.
+     * Returns the new visible state.
+     */
+    public boolean toggleSnapshotPanel() {
+        snapshotPanelVisible = !snapshotPanelVisible;
+        if (snapshotPanel != null) {
+            snapshotPanel.setVisible(snapshotPanelVisible);
+        }
+        return snapshotPanelVisible;
+    }
+
+    /**
+     * Refreshes both undo and redo lists. Call after any undo/redo or turn transition.
      */
     public void refreshSnapshotPanel() {
-        if (snapshotList == null) return;
-        snapshotList.clear();
+        if (snapshotList == null || snapshotRedoList == null) return;
 
-        int count = (turnHistory != null) ? Math.min(turnHistory.size(), 10) : 0;
-        for (int i = count; i >= 1; i--) {
-            Label lbl = new Label("Action " + i, game.skin);
-            lbl.setFontScale(0.5f);
-            lbl.setColor(Color.LIGHT_GRAY);
-            lbl.setAlignment(Align.left);
-            snapshotList.add(lbl).left().padLeft(4).padBottom(2).row();
+        // --- Undo list ---
+        snapshotList.clear();
+        java.util.List<com.militopia.data.TurnSnapshot> undoSnaps =
+                (turnHistory != null) ? turnHistory.getSnapshots() : java.util.Collections.emptyList();
+
+        if (undoSnaps.isEmpty()) {
+            Label empty = new Label("No history", game.skin);
+            empty.setFontScale(0.45f);
+            empty.setColor(Color.DARK_GRAY);
+            snapshotList.add(empty).left().padLeft(6);
+        } else {
+            for (int i = 0; i < undoSnaps.size(); i++) {
+                com.militopia.data.TurnSnapshot snap = undoSnaps.get(i);
+                final int index = i;
+                TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
+                btn.getLabel().setFontScale(0.55f);
+                btn.getLabel().setColor(Color.LIGHT_GRAY);
+                btn.addListener(new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        screen.undoToSnapshot(index);
+                    }
+                });
+                snapshotList.add(btn).growX().padLeft(4).padRight(4).padBottom(2).row();
+            }
         }
 
-        if (count == 0) {
-            Label emptyLbl = new Label("No history", game.skin);
-            emptyLbl.setFontScale(0.45f);
-            emptyLbl.setColor(Color.DARK_GRAY);
-            snapshotList.add(emptyLbl).left().padLeft(4);
+        // --- Redo list ---
+        snapshotRedoList.clear();
+        java.util.List<com.militopia.data.TurnSnapshot> redoSnaps =
+                (turnHistory != null) ? turnHistory.getRedoSnapshots() : java.util.Collections.emptyList();
+
+        if (redoSnaps.isEmpty()) {
+            Label empty = new Label("Nothing to redo", game.skin);
+            empty.setFontScale(0.45f);
+            empty.setColor(Color.DARK_GRAY);
+            snapshotRedoList.add(empty).left().padLeft(6);
+        } else {
+            for (int i = 0; i < redoSnaps.size(); i++) {
+                com.militopia.data.TurnSnapshot snap = redoSnaps.get(i);
+                final int index = i;
+                TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
+                btn.getLabel().setFontScale(0.55f);
+                btn.getLabel().setColor(Color.CYAN);
+                btn.addListener(new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        screen.redoToSnapshot(index);
+                    }
+                });
+                snapshotRedoList.add(btn).growX().padLeft(4).padRight(4).padBottom(2).row();
+            }
         }
     }
 
@@ -361,6 +434,14 @@ public class GameHUD {
     /** Returns true if the level-up popup is currently on screen. */
     public boolean isLevelUpPopupVisible() {
         return levelUpPopup.isVisible();
+    }
+
+    /**
+     * Shows the super unit choice popup when a base reaches level 5+.
+     * The player must pick one of three super units — no dismiss.
+     */
+    public void showSuperUnitChoicePopup(Entity baseEntity, GameState state, UnitFactory factory) {
+        superUnitChoicePopup.show(baseEntity, state, factory, screen.getGameMap());
     }
 
     // -------------------------------------------------------------------------

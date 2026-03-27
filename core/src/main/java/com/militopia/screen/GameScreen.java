@@ -351,12 +351,40 @@ public class GameScreen implements Screen {
      */
     public void undoTurn() {
         TurnSnapshot snap = turnHistory.undo();
-        if (snap == null)
-            return;
-
+        if (snap == null) return;
         GameLogger.log(GameLogger.INPUT,
-                "Undo triggered — reverting to turn " + snap.turn + " | player=" + snap.currentPlayer);
+                "Undo — reverting to P" + snap.currentPlayer + " T" + snap.turn);
+        restoreSnapshot(snap);
+    }
 
+    /** Jumps to the snapshot at the given index (0 = most recent) in the undo stack. */
+    public void undoToSnapshot(int index) {
+        TurnSnapshot snap = turnHistory.undoToIndex(index);
+        if (snap == null) return;
+        GameLogger.log(GameLogger.INPUT,
+                "Jump to P" + snap.currentPlayer + " T" + snap.turn);
+        restoreSnapshot(snap);
+    }
+
+    /** Steps forward one turn (redo). */
+    public void redoTurn() {
+        TurnSnapshot snap = turnHistory.redo();
+        if (snap == null) return;
+        GameLogger.log(GameLogger.INPUT,
+                "Redo — forward to P" + snap.currentPlayer + " T" + snap.turn);
+        restoreSnapshot(snap);
+    }
+
+    /** Jumps to the snapshot at the given index (0 = next step forward) in the redo stack. */
+    public void redoToSnapshot(int index) {
+        TurnSnapshot snap = turnHistory.redoToIndex(index);
+        if (snap == null) return;
+        GameLogger.log(GameLogger.INPUT,
+                "Redo jump to P" + snap.currentPlayer + " T" + snap.turn);
+        restoreSnapshot(snap);
+    }
+
+    private void restoreSnapshot(TurnSnapshot snap) {
         // 1. Remove all UNIT entities from the engine
         List<Entity> toRemove = new ArrayList<>();
         ImmutableArray<Entity> all = engine.getEntitiesFor(
@@ -384,14 +412,13 @@ public class GameScreen implements Screen {
             System.arraycopy(snap.mapObjects[x], 0, gameMap.objects[x], 0, gameMap.height);
         }
 
-        // 4. Restore structures in-place (update owner, level, XP, income, name)
+        // 4. Restore structures in-place
         ImmutableArray<Entity> objects = engine.getEntitiesFor(
                 Family.all(GridPositionComponent.class, TypeComponent.class, StatsComponent.class).get());
         for (StructureSnapshot ss : snap.structures) {
             for (Entity e : objects) {
                 TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.OBJECT)
-                    continue;
+                if (t.type != TypeComponent.Type.OBJECT) continue;
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
                 if (pos.x == ss.x && pos.y == ss.y) {
                     com.militopia.data.StructureData sd = new com.militopia.data.StructureData();
@@ -405,6 +432,7 @@ public class GameScreen implements Screen {
                     StatsComponent s = e.getComponent(StatsComponent.class);
                     s.level = ss.level;
                     s.income = ss.income;
+                    s.chosenSuperUnit = ss.chosenSuperUnit;
                     break;
                 }
             }
@@ -413,13 +441,11 @@ public class GameScreen implements Screen {
         // 5. Recreate unit entities from snapshot
         for (UnitSnapshot us : snap.units) {
             unitFactory.createUnit(us.unitTypeKey, us.x, us.y, us.owner, us.hasActed);
-            // Find the newly created entity and restore its HP + hasMoved
             ImmutableArray<Entity> freshUnits = engine.getEntitiesFor(
                     Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
             for (Entity e : freshUnits) {
                 TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.UNIT)
-                    continue;
+                if (t.type != TypeComponent.Type.UNIT) continue;
                 GridPositionComponent p = e.getComponent(GridPositionComponent.class);
                 StatsComponent s = e.getComponent(StatsComponent.class);
                 if (p.x == us.x && p.y == us.y && s.owner == us.owner) {
@@ -431,7 +457,7 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 6. Refresh fog, HUD, camera
+        // 6. Refresh fog, HUD
         fogSystem.setPlayer(gameState.currentPlayer);
         fogSystem.update(0);
         unitRenderSystem.setPlayer(gameState.currentPlayer);
@@ -443,12 +469,9 @@ public class GameScreen implements Screen {
         gameHUD.hideTileInfo();
         inputController.clearMarkersPublic();
 
-        // 7. Refresh snapshot panel so the right-side overlay reflects updated history depth
+        // 7. Re-push restored state (preserves redo stack) and refresh panel
+        turnHistory.pushRestore(unitFactory.captureSnapshot(engine, gameState, gameMap));
         gameHUD.refreshSnapshotPanel();
-
-        // Re-push so we can undo again if needed (the restored state is now the
-        // "current" turn start)
-        turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
     }
 
     public int calculateBaseXPGain(Entity base) {

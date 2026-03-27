@@ -326,6 +326,66 @@ public class SlideMenu {
                     });
         }
 
+        // Super unit — only shown if this base has a chosen super unit
+        String chosenSuperUnit = null;
+        int bx = inputController.getLastClickedX();
+        int by = inputController.getLastClickedY();
+        if (bx != -1 && by != -1) {
+            Entity baseEnt = unitFactory.getEntityAt(bx, by, 1);
+            if (baseEnt != null) {
+                StatsComponent baseStats = baseEnt.getComponent(StatsComponent.class);
+                if (baseStats != null) chosenSuperUnit = baseStats.chosenSuperUnit;
+            }
+        }
+        if (chosenSuperUnit != null) {
+            final String superUnit = chosenSuperUnit;
+            StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(superUnit);
+            boolean show = producerType.equals("PORT")
+                    ? moveType == StatsComponent.MoveType.SEA
+                    : moveType == StatsComponent.MoveType.LAND || moveType == StatsComponent.MoveType.AIR;
+            if (show) {
+                UnitFactory.UiInfo info = unitFactory.getUnitUi(superUnit);
+                final int cost = unitFactory.getUnitCost(superUnit);
+                SummonButton.addTo(content, info.region, "★ " + info.name + " (" + cost + ")", game, assets,
+                        new ClickListener() {
+                            @Override
+                            public void clicked(InputEvent event, float x, float y) {
+                                int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                                if (funds < cost) {
+                                    GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
+                                            "Attempted " + superUnit + " — insufficient funds ("
+                                                    + funds + "<" + cost + ")");
+                                    return;
+                                }
+                                int tx = inputController.getLastClickedX();
+                                int ty = inputController.getLastClickedY();
+                                if (tx == -1 || ty == -1) return;
+
+                                int[] spawn = unitFactory.findValidSpawnPoint(
+                                        tx, ty, unitFactory.getUnitMoveType(superUnit), gameScreen.getGameMap());
+                                if (spawn == null) {
+                                    GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
+                                            "Attempted " + superUnit + " — no valid spawn point found");
+                                    return;
+                                }
+                                if (currentBaseOwner == 1) state.p1Funding -= cost;
+                                else state.p2Funding -= cost;
+
+                                unitFactory.createUnit(superUnit, spawn[0], spawn[1], currentBaseOwner, true);
+                                int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                                GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
+                                        "Summoned " + superUnit + " at " + GameLogger.pos(spawn[0], spawn[1])
+                                                + " | cost=" + cost + " | funds remaining=" + remaining);
+
+                                int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+                                gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                                hide();
+                                inputController.resetLastClicked();
+                            }
+                        });
+            }
+        }
+
         // Cancel button
         com.badlogic.gdx.scenes.scene2d.ui.TextButton closeBtn = new com.badlogic.gdx.scenes.scene2d.ui.TextButton(
                 "Cancel", game.skin);

@@ -52,9 +52,9 @@ public class BaseLevelConfig {
                 new String[] { "TANK", "APACHE", "CARRIER" },
                 new String[] { "SOLAR", "JAMMER" }));
 
-        // Level 5
+        // Level 5 — super unit is chosen via popup, not listed as a normal unlock
         levels.put(5, new LevelData(5, 10125, 3, 10, GameConfig.BORDER_RADIUS + 1,
-                new String[] { "SUPER_UNIT" },
+                new String[] {},
                 new String[] { "NUCLEAR" }));
     }
 
@@ -69,7 +69,7 @@ public class BaseLevelConfig {
                 prevMaxXP *= 1.5f;
             }
             return new LevelData(level, prevMaxXP, 3, 10, GameConfig.BORDER_RADIUS + 1,
-                    new String[] { "SUPER_UNIT" },
+                    new String[] {},
                     new String[] {});
         }
         return levels.get(1);

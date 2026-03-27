@@ -37,6 +37,9 @@ public class StatsComponent implements Component {
     public int parentBaseX = -1; // X coordinate of the base this structure belongs to
     public int parentBaseY = -1; // Y coordinate of the base this structure belongs to
 
+    // Super Unit (base only) — null until player chooses at level 5+
+    public String chosenSuperUnit = null;
+
     /**
      * UNIT CONSTRUCTOR: Matches your specific list (Income is auto-set to 0).
      */

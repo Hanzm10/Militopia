@@ -13,10 +13,11 @@ public class StructureSnapshot {
     public final int income;
     public final String name;
     public final String baseOrdinal;
+    public final String chosenSuperUnit;
 
     public StructureSnapshot(int x, int y, int owner, int level,
             float currentBaseXP, int income,
-            String name, String baseOrdinal) {
+            String name, String baseOrdinal, String chosenSuperUnit) {
         this.x = x;
         this.y = y;
         this.owner = owner;
@@ -25,5 +26,6 @@ public class StructureSnapshot {
         this.income = income;
         this.name = name;
         this.baseOrdinal = baseOrdinal;
+        this.chosenSuperUnit = chosenSuperUnit;
     }
 }
