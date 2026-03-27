@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-last_updated: "2026-03-27T02:45:34.191Z"
+last_updated: "2026-03-27T02:53:03.958Z"
 progress:
   total_phases: 11
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 08 (polish-ux) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Last Session Summary
 
@@ -52,6 +52,7 @@ Plan: 2 of 3
 - [Phase 04]: Made getUnitCost static to allow unit tests without AssetManager dependency
 - [Phase 06]: Used Mockito MockedConstruction for headless libGDX Scene2D UI testing
 - [Phase 08-polish-ux]: Used LUNGE/PROJECTILE/HIT_FLASH Type enum instead of IDLE/MOVE/ATTACK State enum for event-driven combat animations
+- [Phase 08]: Pre-action snapshot (not post-action) enables Ctrl+Z to rewind to exactly before each discrete action
 
 ### Approaches Tried
 
