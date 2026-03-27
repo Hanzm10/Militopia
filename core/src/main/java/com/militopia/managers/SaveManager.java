@@ -18,14 +18,15 @@ import com.militopia.map.MapGenerator;
 
 public class SaveManager {
 
-    public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
-
-        // 1. Clear old data lists
+    /**
+     * Collects current engine state into the GameState data object.
+     * Package-private for testability — call saveGame() in production.
+     */
+    void collectState(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
         state.units.clear();
         state.structures.clear();
         state.animals.clear();
 
-        // 2. Extract Data from Engine
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
 
         for (Entity e : entities) {
@@ -34,21 +35,18 @@ public class SaveManager {
             StatsComponent stats = e.getComponent(StatsComponent.class);
 
             if (type.type == TypeComponent.Type.UNIT) {
-                // Save Unit
                 String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
                 state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
                         stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
-                // --- FIX: DETECT ANIMALS VIA NAME TAG (Layer 2) ---
+                // --- DETECT ANIMALS VIA NAME TAG ---
                 if (stats != null && stats.name != null && stats.name.startsWith("ANIMAL_")) {
                     String animalType = stats.name.replace("ANIMAL_", "");
                     state.animals.add(new AnimalData(pos.x, pos.y, animalType));
                 }
-                // --- DETECT STRUCTURES (Layer 1) ---
+                // --- DETECT STRUCTURES ---
                 else if (stats != null && stats.owner != 0) {
-                    // Save any object with an owner as a structure (Bases, captured Towns,
-                    // Derricks, etc.)
                     state.structures.add(new StructureData(
                             pos.x, pos.y, stats.owner, stats.level,
                             stats.currentBaseXP, stats.name, stats.baseOrdinal,
@@ -66,10 +64,12 @@ public class SaveManager {
             }
         }
 
-        // 3. Save Map Objects
         state.mapObjects = map.objects;
+    }
 
-        // 4. Write to JSON File
+    public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
+        collectState(state, engine, map);
+
         Json json = new Json();
         String jsonText = json.toJson(state);
 
