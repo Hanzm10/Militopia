@@ -136,8 +136,6 @@ public class UnitRenderSystem extends EntitySystem {
                             || obj == MapGenerator.ObjectType.RUINS) {
                         isStealth = true;
                     }
-                } else if (stats.unitTypeKey.equals("WRAITH")) {
-                    isStealth = true;
                 }
 
                 // If unit has already acted/attacked, it is revealed

@@ -395,7 +395,7 @@ public class UnitFactory {
             abilities.fuel = 5;
             abilities.fuelMax = 5;
         }
-        if (unitType.equals("WRAITH") || unitType.equals("SUBMARINE")) {
+        if (unitType.equals("SUBMARINE")) {
             abilities.isCloaked = true;
         }
 
