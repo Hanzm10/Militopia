@@ -19,7 +19,7 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 - [x] **Phase 5: Specialized Structures** - Construction system and building logic
 - [x] **Phase 6: Win / Loss Conditions** - Win conditions and game over state
 - [x] **Phase 7: Exploration & Persistence** - Ruins mechanics, Oil extraction, and move persistence
-- [/] **Phase 8: Polish & UX** - UI overhaul, unit animations, text popups, and sound effects (Wave 1 Complete)
+- [/] **Phase 8: Polish & UX** - UI overhaul, unit animations, text popups, and sound effects (Gap Closure)
 - [ ] **Phase 9: Advanced Mechanics** - Railways infrastructure
 
 ## Phase Details
@@ -85,7 +85,7 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
   1. Build menu allows placing structures within base territory.
   2. Ports enable Sea unit summoning on Water tiles.
   3. Hospitals and Solar Arrays provide per-turn bonuses.
-**Plans**: 
+**Plans**:
   - 05-01: Parent-Base Linking & Placement
   - 05-02: Port Interaction & Naval Spawning
   - 05-03: Per-Turn Economy Bonuses
@@ -106,7 +106,7 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
   1. Units entering Ruins trigger randomized rewards (+FP, +XP, or unit spawns).
   2. Oil Derricks can only be constructed on "Oil Reservoir" tiles.
   3. Movement state is preserved upon game save/exit mid-turn.
-**Plans**: 
+**Plans**:
   - 07-01: Ruins Mechanics & Random Rewards
   - 07-02: Oil Resource Constraints
   - 07-03: Turn State Persistence
@@ -123,7 +123,12 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
   6. Floating text popups appear above bases when gaining income, funding, or XP.
   7. Action undo allows canceling moves before committing.
   8. Units with an attack range of 1 automatically advance into the defender's tile upon a lethal attack.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [x] 08-01-PLAN.md — UI overhaul with PNG assets and sliding info panel
+- [x] 08-02-PLAN.md — Combat animations, audio infrastructure, and action undo
+- [x] 08-03-PLAN.md — UI logic verification
+- [ ] 08-04-PLAN.md — Gap closure: defend SFX, BGM wiring, missing audio files
 
 ### Phase 9: Advanced Mechanics
 **Goal**: Implement advanced mobility and infrastructure.
@@ -144,5 +149,5 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 | 5. Specialized Structures | 4/4 | Complete | 2026-03-23 |
 | 6. Win / Loss | 2/2 | Complete   | 2026-03-27 |
 | 7. Exploration | 1/1 | Complete | 2026-03-24 |
-| 8. Polish & UX | 3/3 | Complete   | 2026-03-27 |
+| 8. Polish & UX | 3/4 | Gap Closure | 2026-03-27 |
 | 9. Adv. Mechanics | 0/1 | Planned | - |
