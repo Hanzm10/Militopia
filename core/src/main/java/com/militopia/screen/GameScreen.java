@@ -208,7 +208,7 @@ public class GameScreen implements Screen {
         inputController = new GameInputController(
                 this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
 
-        gameHUD.build(this, inputController, unitFactory, gameState);
+        gameHUD.build(this, inputController, unitFactory, gameState, turnHistory);
         gameHUD.updateTurn(gameState.turnCount);
         gameHUD.updateXP(gameState.p1XP);
 
@@ -441,6 +441,9 @@ public class GameScreen implements Screen {
         gameHUD.updateXP((gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP);
         gameHUD.hideTileInfo();
         inputController.clearMarkersPublic();
+
+        // 7. Refresh snapshot panel so the right-side overlay reflects updated history depth
+        gameHUD.refreshSnapshotPanel();
 
         // Re-push so we can undo again if needed (the restored state is now the
         // "current" turn start)

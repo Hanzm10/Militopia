@@ -1,12 +1,21 @@
 package com.militopia.ui;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.TurnHistoryManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.systems.ScavengeSystem;
@@ -55,6 +64,12 @@ public class GameHUD {
     private AssetManager assets;
     private MilitopiaGame game;
 
+    // Right panel: collapsible snapshot history overlay
+    private Table snapshotPanel;
+    private Table snapshotList;
+    private TurnHistoryManager turnHistory;
+    private boolean snapshotPanelExpanded = true;
+
     public GameHUD(MilitopiaGame game) {
         this.game = game;
         this.assets = game.assets;
@@ -69,10 +84,23 @@ public class GameHUD {
             final GameInputController inputController,
             final UnitFactory unitFactory,
             final GameState state) {
+        build(screen, inputController, unitFactory, state, null);
+    }
+
+    /**
+     * Builds all components and wires them to the Stage.
+     * Pass a {@link TurnHistoryManager} to enable the right-panel snapshot overlay.
+     */
+    public void build(final GameScreen screen,
+            final GameInputController inputController,
+            final UnitFactory unitFactory,
+            final GameState state,
+            final TurnHistoryManager history) {
 
         this.screen = screen;
         this.inputController = inputController;
         this.unitFactory = unitFactory;
+        this.turnHistory = history;
 
         // 1. Create components
         ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, screen.getEntityFactory(),
@@ -92,18 +120,106 @@ public class GameHUD {
         summonMenu = slideMenu.menuTable;
 
         // 2. Assemble root table
-        com.badlogic.gdx.scenes.scene2d.ui.Table rootTable = new com.badlogic.gdx.scenes.scene2d.ui.Table();
+        Table rootTable = new Table();
         rootTable.setFillParent(true);
         rootTable.add(topBar.getActor()).growX().top().row();
         rootTable.add().expandY().row();
         rootTable.add(bottomBar.getActor()).growX().bottom();
         stage.addActor(rootTable);
 
-        // 3. Prime the top bar with the initial state
+        // 3. Build right-panel snapshot overlay (mounted as a stage overlay, not in rootTable)
+        buildSnapshotPanel(screen);
+
+        // 4. Prime the top bar with the initial state
         updateTurn(state.turnCount);
         updateXP(state.p1XP);
         int startIncome = screen.calculateIncome(1);
         updateFunding(state.p1Funding, startIncome);
+    }
+
+    /**
+     * Builds the collapsible right-side snapshot history panel and adds it to the stage.
+     * The panel shows up to 10 "Action {N}" labels describing undo history depth,
+     * plus a dedicated Undo button that mirrors the Ctrl+Z hotkey.
+     */
+    private void buildSnapshotPanel(final GameScreen screen) {
+        // Outer container — anchored to right edge of the screen
+        snapshotPanel = new Table();
+        snapshotPanel.setFillParent(true);
+
+        // Inner card holding the header toggle and action list
+        Table card = new Table();
+        card.setBackground(game.skin.newDrawable("white", new Color(0f, 0f, 0f, 0.6f)));
+
+        // Header row: toggle button + title
+        final TextButton toggleBtn = new TextButton("▶ History", game.skin);
+        toggleBtn.getLabel().setFontScale(0.55f);
+        toggleBtn.pad(4, 8, 4, 8);
+
+        // Snapshot action list (rendered inside a ScrollPane for overflow safety)
+        snapshotList = new Table();
+        snapshotList.top().left();
+        ScrollPane scrollPane = new ScrollPane(snapshotList, game.skin);
+        scrollPane.setScrollingDisabled(true, false);
+        scrollPane.setFadeScrollBars(true);
+
+        // Undo button — always visible, mirrors Ctrl+Z
+        TextButton undoBtn = new TextButton("↩ Undo", game.skin);
+        undoBtn.getLabel().setFontScale(0.55f);
+        undoBtn.getLabel().setColor(Color.YELLOW);
+        undoBtn.pad(6, 14, 6, 14);
+        undoBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                screen.undoTurn();
+                refreshSnapshotPanel();
+            }
+        });
+
+        toggleBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                snapshotPanelExpanded = !snapshotPanelExpanded;
+                snapshotList.setVisible(snapshotPanelExpanded);
+                toggleBtn.setText(snapshotPanelExpanded ? "▼ History" : "▶ History");
+            }
+        });
+
+        card.add(toggleBtn).right().pad(4).row();
+        card.add(scrollPane).width(110).height(180).pad(4).row();
+        card.add(undoBtn).pad(4);
+
+        // Anchor card to top-right with some margin
+        snapshotPanel.top().right();
+        snapshotPanel.add(card).top().right().padTop(60).padRight(8);
+
+        stage.addActor(snapshotPanel);
+        refreshSnapshotPanel();
+    }
+
+    /**
+     * Refreshes the snapshot list labels to reflect current TurnHistoryManager state.
+     * Shows up to 10 labels ("Action {N}" format). Call after any undo or action.
+     */
+    public void refreshSnapshotPanel() {
+        if (snapshotList == null) return;
+        snapshotList.clear();
+
+        int count = (turnHistory != null) ? Math.min(turnHistory.size(), 10) : 0;
+        for (int i = count; i >= 1; i--) {
+            Label lbl = new Label("Action " + i, game.skin);
+            lbl.setFontScale(0.5f);
+            lbl.setColor(Color.LIGHT_GRAY);
+            lbl.setAlignment(Align.left);
+            snapshotList.add(lbl).left().padLeft(4).padBottom(2).row();
+        }
+
+        if (count == 0) {
+            Label emptyLbl = new Label("No history", game.skin);
+            emptyLbl.setFontScale(0.45f);
+            emptyLbl.setColor(Color.DARK_GRAY);
+            snapshotList.add(emptyLbl).left().padLeft(4);
+        }
     }
 
     // -------------------------------------------------------------------------

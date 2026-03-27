@@ -851,5 +851,6 @@ public class GameInputController extends InputAdapter {
 
     private void snapshot() {
         screen.getTurnHistory().push(unitFactory.captureSnapshot(engine, screen.getGameState(), gameMap));
+        gameHUD.refreshSnapshotPanel();
     }
 }
