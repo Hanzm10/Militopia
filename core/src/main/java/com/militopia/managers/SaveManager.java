@@ -35,7 +35,8 @@ public class SaveManager {
 
             if (type.type == TypeComponent.Type.UNIT) {
                 // Save Unit
-                state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, stats.unitTypeKey,
+                String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
+                state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
                         stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 

@@ -422,15 +422,16 @@ public class UnitFactory {
         StatsComponent stats = new StatsComponent(toNiceName(unitType), hp, atk, def, move, rng, vis, cost, moveType,
                 owner);
         stats.unitTypeKey = unitType; // store raw key for snapshot restoration
+        stats.unitType = com.militopia.config.UnitType.fromKey(unitType); // enum equivalent
         stats.hasActed = isSummoned;
 
         // --- Post-processing for specific abilities ---
         AbilitiesComponent abilities = entity.getComponent(AbilitiesComponent.class);
-        if (unitType.equals("APACHE")) {
+        if (stats.unitType == com.militopia.config.UnitType.APACHE) {
             abilities.fuel = 5;
             abilities.fuelMax = 5;
         }
-        if (unitType.equals("SUBMARINE") || unitType.equals("B2")) {
+        if (stats.unitType == com.militopia.config.UnitType.SUBMARINE || stats.unitType == com.militopia.config.UnitType.B2) {
             abilities.isCloaked = true;
         }
 

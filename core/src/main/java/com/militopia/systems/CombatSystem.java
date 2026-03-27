@@ -16,6 +16,7 @@ import com.militopia.factories.EntityFactory;
 import com.militopia.managers.AudioManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.config.CombatConstants;
+import com.militopia.config.UnitType;
 import com.militopia.utils.GameLogger;
 
 /**
@@ -164,13 +165,13 @@ public class CombatSystem extends EntitySystem {
         }
 
         // JUGGERNAUT: Jump Attack (routed from resolveAttack as a fallback)
-        if (aStats.unitTypeKey.equals("JUGGERNAUT")) {
+        if (aStats.unitType == UnitType.JUGGERNAUT) {
             resolveJumperAttack(attacker, defender, dPos.x, dPos.y);
             return;
         }
 
         // RECON DRONE: High Altitude (Immune to Range-1 land attacks)
-        if (dStats.unitTypeKey.equals("RECON_DRONE") && aStats.moveType == StatsComponent.MoveType.LAND
+        if (dStats.unitType == UnitType.RECON_DRONE && aStats.moveType == StatsComponent.MoveType.LAND
                 && aStats.attackRange <= 1) {
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     aStats.name + " attacks " + dStats.name + " | BLOCKED (High Altitude immunity)");
@@ -185,7 +186,7 @@ public class CombatSystem extends EntitySystem {
         int defTerrainBonus = terrainDefBonus(dPos.x, dPos.y);
 
         // DESTROYER: Shore Bombardment
-        int shoreBonus = (aStats.unitTypeKey.equals("DESTROYER") && dStats.moveType == StatsComponent.MoveType.LAND)
+        int shoreBonus = (aStats.unitType == UnitType.DESTROYER && dStats.moveType == StatsComponent.MoveType.LAND)
                 ? CombatConstants.SHORE_BOMBARDMENT_BONUS : 0;
 
         AbilitiesComponent dAbilities = defender.getComponent(AbilitiesComponent.class);
@@ -195,21 +196,21 @@ public class CombatSystem extends EntitySystem {
                 - (maxRange && aStats.attackRange > 1 ? CombatConstants.MAX_RANGE_ATTACK_PENALTY : 0));
 
         boolean isKill = (dmg >= dStats.currentHP);
-        boolean isRecruitMelee = aStats.unitTypeKey.equalsIgnoreCase("RECRUIT") && aStats.attackRange <= 1;
+        boolean isRecruitMelee = aStats.unitType == UnitType.RECRUIT && aStats.attackRange <= 1;
 
         if (!(isKill && isRecruitMelee)) {
             triggerAttackAnimation(attacker, defender);
         }
 
         // Custom attack sprites (Enemy only)
-        String unitKey = aStats.unitTypeKey;
+        UnitType unitType = aStats.unitType;
         if (dStats.owner != aStats.owner && dStats.owner != 0) {
-            if (unitKey.equalsIgnoreCase("RECRUIT") && aStats.attackRange <= 1) {
+            if (unitType == UnitType.RECRUIT && aStats.attackRange <= 1) {
                 entityFactory.createRecruitAttack(dPos.x, dPos.y);
-            } else if (unitKey.equalsIgnoreCase("TANK") || unitKey.equalsIgnoreCase("SUICIDE_DRONE")) {
+            } else if (unitType == UnitType.TANK || unitType == UnitType.SUICIDE_DRONE) {
                 entityFactory.createTankAttack(dPos.x, dPos.y);
-            } else if (unitKey.equalsIgnoreCase("JUGGERNAUT") || unitKey.equalsIgnoreCase("B2")
-                    || unitKey.equalsIgnoreCase("SUBMARINE")) {
+            } else if (unitType == UnitType.JUGGERNAUT || unitType == UnitType.B2
+                    || unitType == UnitType.SUBMARINE) {
                 entityFactory.createNuclearAttack(dPos.x, dPos.y);
             }
         }
@@ -227,21 +228,21 @@ public class CombatSystem extends EntitySystem {
         }
 
         // Play Attack SFX
-        if (unitKey.equalsIgnoreCase("JUGGERNAUT") || unitKey.equalsIgnoreCase("B2")
-                || unitKey.equalsIgnoreCase("SUBMARINE")) {
+        if (unitType == UnitType.JUGGERNAUT || unitType == UnitType.B2
+                || unitType == UnitType.SUBMARINE) {
             AudioManager.getInstance().playSFX("explode.wav");
-        } else if (unitKey.equalsIgnoreCase("RANGER")) {
+        } else if (unitType == UnitType.RANGER) {
             boolean isManTarget = dStats.moveType == StatsComponent.MoveType.LAND
-                    && !dStats.unitTypeKey.equalsIgnoreCase("JUGGERNAUT")
-                    && !dStats.unitTypeKey.equalsIgnoreCase("TANK");
+                    && dStats.unitType != UnitType.JUGGERNAUT
+                    && dStats.unitType != UnitType.TANK;
             if (!(isKill && isManTarget)) {
                 AudioManager.getInstance().playSFX("ranger-ak47.WAV");
             }
-        } else if (unitKey.equalsIgnoreCase("RECRUIT")) {
+        } else if (unitType == UnitType.RECRUIT) {
             AudioManager.getInstance().playSFX("recruit-knife.WAV");
-        } else if (unitKey.equalsIgnoreCase("SNIPER")) {
+        } else if (unitType == UnitType.SNIPER) {
             AudioManager.getInstance().playSFX("sniper-awp.WAV");
-        } else if (unitKey.equalsIgnoreCase("TANK")) {
+        } else if (unitType == UnitType.TANK) {
             AudioManager.getInstance().playSFX("tank-fire.WAV");
         } else {
             if (aStats.attackRange > 1) {
@@ -287,9 +288,9 @@ public class CombatSystem extends EntitySystem {
             return;
         } else {
             if (dmg == 0) {
-                String defKey = dStats.unitTypeKey;
-                if (defKey.equalsIgnoreCase("RECRUIT") || defKey.equalsIgnoreCase("RANGER")
-                        || defKey.equalsIgnoreCase("SNIPER")) {
+                UnitType defType = dStats.unitType;
+                if (defType == UnitType.RECRUIT || defType == UnitType.RANGER
+                        || defType == UnitType.SNIPER) {
                     AudioManager.getInstance().playSFX("man-blocked.WAV");
                 } else {
                     AudioManager.getInstance().playSFX("machine-blocked.WAV");
@@ -300,7 +301,7 @@ public class CombatSystem extends EntitySystem {
 
         // --- 3. Counterattack (range-gated) ---
         // RECON DRONE: High Altitude (Immune to Range-1 Land attacks)
-        boolean isHighAltitude = aStats.unitTypeKey.equals("RECON_DRONE");
+        boolean isHighAltitude = aStats.unitType == UnitType.RECON_DRONE;
         boolean isLandAttacker = dStats.moveType == StatsComponent.MoveType.LAND;
 
         int counterDist = chebyshev(dPos.x, dPos.y, aPos.x, aPos.y);
@@ -327,9 +328,9 @@ public class CombatSystem extends EntitySystem {
 
                 // Defend SFX — only when counterattack is cancelled out
                 if (ctrDmg == 0) {
-                    String defenderKey = dStats.unitTypeKey;
-                    if (defenderKey.equalsIgnoreCase("RECRUIT") || defenderKey.equalsIgnoreCase("RANGER")
-                            || defenderKey.equalsIgnoreCase("SNIPER")) {
+                    UnitType defenderType = dStats.unitType;
+                    if (defenderType == UnitType.RECRUIT || defenderType == UnitType.RANGER
+                            || defenderType == UnitType.SNIPER) {
                         AudioManager.getInstance().playSFX("man-blocked.WAV");
                     } else {
                         AudioManager.getInstance().playSFX("machine-blocked.WAV");
@@ -366,7 +367,7 @@ public class CombatSystem extends EntitySystem {
             AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
             GridPositionComponent p = e.getComponent(GridPositionComponent.class);
 
-            if (s.owner != mStats.owner && s.unitTypeKey.equals("RANGER") && a.isOverwatchActive) {
+            if (s.owner != mStats.owner && s.unitType == UnitType.RANGER && a.isOverwatchActive) {
                 int dist = chebyshev(p.x, p.y, targetX, targetY);
                 if (dist <= s.attackRange) {
                     GameLogger.log(GameLogger.ABILITY, s.owner,
@@ -419,8 +420,8 @@ public class CombatSystem extends EntitySystem {
 
         // Play Death SFX
         if (stats.moveType == StatsComponent.MoveType.LAND &&
-                !stats.unitTypeKey.equalsIgnoreCase("JUGGERNAUT") &&
-                !stats.unitTypeKey.equalsIgnoreCase("TANK")) {
+                stats.unitType != UnitType.JUGGERNAUT &&
+                stats.unitType != UnitType.TANK) {
             AudioManager.getInstance().playSFX("man-finished.WAV");
         } else {
             AudioManager.getInstance().playSFX("machine-finished.WAV");
@@ -482,12 +483,12 @@ public class CombatSystem extends EntitySystem {
         aStats.hasMoved = true;
 
         // TANK: Blitz (Move again if attack kills target)
-        if (targetDied && aStats.unitTypeKey.equals("TANK")) {
+        if (targetDied && aStats.unitType == UnitType.TANK) {
             aStats.hasMoved = false;
         }
 
         // GUNBOAT: Skirmish (Move 1 tile after attacking)
-        if (aStats.unitTypeKey.equals("GUNBOAT")) {
+        if (aStats.unitType == UnitType.GUNBOAT) {
             AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);
             if (aAbilities != null) {
                 aStats.hasMoved = false;
@@ -496,7 +497,7 @@ public class CombatSystem extends EntitySystem {
         }
 
         // SUICIDE DRONE: Kamikaze
-        if (aStats.unitTypeKey.equals("SUICIDE_DRONE")) {
+        if (aStats.unitType == UnitType.SUICIDE_DRONE) {
             flagDeath(attacker);
         }
     }

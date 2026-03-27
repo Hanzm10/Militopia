@@ -1,6 +1,7 @@
 package com.militopia.components;
 
 import com.badlogic.ashley.core.Component;
+import com.militopia.config.UnitType;
 
 public class StatsComponent implements Component {
 
@@ -20,6 +21,7 @@ public class StatsComponent implements Component {
 
     public String name;
     public String unitTypeKey = ""; // Factory key used by UnitFactory — e.g. "RECRUIT", "TANK"
+    public UnitType unitType = null; // Enum equivalent of unitTypeKey — set by UnitFactory alongside unitTypeKey
     public MoveType moveType;
     public int owner;
     public boolean hasActed = false;

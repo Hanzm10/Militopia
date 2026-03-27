@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
 import com.militopia.config.GameConfig;
+import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
@@ -198,7 +199,7 @@ public class GameInputController extends InputAdapter {
                         enemy = targetUnit;
                     }
                 }
-                if (aStats != null && aStats.unitTypeKey.equals("JUGGERNAUT")) {
+                if (aStats != null && aStats.unitType == UnitType.JUGGERNAUT) {
                     performJump(selectedUnitEntity, enemy, gridX, gridY);
                     return true;
                 }
@@ -220,7 +221,7 @@ public class GameInputController extends InputAdapter {
                             && tStats.owner != screen.getCurrentPlayer()) {
                         int dist = chebyshev(aPos.x, aPos.y, gridX, gridY);
                         if (dist <= aStats.attackRange) {
-                            if (aStats.unitTypeKey.equals("JUGGERNAUT")) {
+                            if (aStats.unitType == UnitType.JUGGERNAUT) {
                                 performJump(selectedUnitEntity, directTarget, gridX, gridY);
                             } else {
                                 performAttack(selectedUnitEntity, directTarget);
@@ -786,7 +787,7 @@ public class GameInputController extends InputAdapter {
                         continue; // skip own units
                 }
                 // Juggernaut can jump to any tile (empty or enemy); others need an actual enemy
-                boolean isJuggernaut = stats != null && stats.unitTypeKey.equals("JUGGERNAUT");
+                boolean isJuggernaut = stats != null && stats.unitType == UnitType.JUGGERNAUT;
                 if (tileUnit == null && !isJuggernaut)
                     continue;
                 entityFactory.createAttackMarker(tx, ty);
