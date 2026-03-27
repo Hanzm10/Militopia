@@ -53,4 +53,4 @@ The game uses libGDX with Ashley ECS for high-performance entity management. The
 | Damage Formula | ATK - DEF + terrain - range penalty | ✓ Good |
 
 ---
-*Last updated: 2026-02-23 after project migration to GSD*
+*Last updated: 2026-03-27 — Phase 06 complete (win/loss conditions: WinConditionSystem, GameOverPopup, full test coverage)*
