@@ -801,6 +801,8 @@ public class UnitFactory {
         stats.currentBaseXP = data.currentBaseXP;
         stats.name = data.baseName;
         stats.baseOrdinal = data.baseOrdinal;
+        stats.xpGain = data.xpGain;
+        stats.chosenSuperUnit = data.chosenSuperUnit;
 
         boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
 

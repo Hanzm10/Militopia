@@ -51,14 +51,16 @@ public class SaveManager {
                     // Derricks, etc.)
                     state.structures.add(new StructureData(
                             pos.x, pos.y, stats.owner, stats.level,
-                            stats.currentBaseXP, stats.name, stats.baseOrdinal));
+                            stats.currentBaseXP, stats.name, stats.baseOrdinal,
+                            stats.xpGain, stats.chosenSuperUnit));
                 } else if (stats != null) {
                     // Check for neutral Towns
                     MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
                     if (objType == MapGenerator.ObjectType.TOWN) {
                         state.structures.add(new StructureData(
                                 pos.x, pos.y, stats.owner, stats.level,
-                                stats.currentBaseXP, stats.name, stats.baseOrdinal));
+                                stats.currentBaseXP, stats.name, stats.baseOrdinal,
+                                stats.xpGain, stats.chosenSuperUnit));
                     }
                 }
             }
