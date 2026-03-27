@@ -294,6 +294,7 @@ public class GameInputController extends InputAdapter {
 
     /** Delegates to CombatSystem, then cleans up selection state. */
     private void performAttack(Entity attacker, Entity defender) {
+        snapshot(); // Capture pre-attack state so Ctrl+Z can rewind to before this attack
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
         combatSystem.resolveAttack(attacker, defender);
         // Snap HP in the HUD if the attacker survived (still selectable next turn)
@@ -303,7 +304,6 @@ public class GameInputController extends InputAdapter {
         clearMarkers();
         selectedUnitEntity = null;
         gameHUD.hideTileInfo();
-        snapshot();
     }
 
     /** Chebyshev distance for range checks. */
@@ -460,6 +460,7 @@ public class GameInputController extends InputAdapter {
     // -------------------------------------------------------------------------
 
     public void performHunt(Entity animal, Entity hunter) {
+        snapshot(); // Capture pre-hunt state so Ctrl+Z can rewind to before this hunt
         StatsComponent hunterStats = hunter.getComponent(StatsComponent.class);
         GameState state = screen.getGameState();
         GameLogger.log(GameLogger.CAPTURE, hunterStats.owner,
@@ -482,7 +483,6 @@ public class GameInputController extends InputAdapter {
         gameHUD.updateFunding((hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
         gameHUD.hideSummonMenu();
         deselect();
-        snapshot();
     }
 
     // -------------------------------------------------------------------------
@@ -499,6 +499,7 @@ public class GameInputController extends InputAdapter {
         String posStr = (pos != null) ? GameLogger.pos(pos.x, pos.y) : "(?,?)";
 
         if (abilityKey.equals("DIG_IN")) {
+            snapshot(); // Capture pre-ability state so Ctrl+Z can rewind to before this action
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "DIG IN: " + stats.name + " digs in at " + posStr);
             abilities.isDiggingIn = true;
@@ -508,7 +509,6 @@ public class GameInputController extends InputAdapter {
             // Visual feedback could be added here (e.g., spawn floating text "DUG IN")
             gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
             deselect();
-            snapshot();
         } else if (abilityKey.equals("LAUNCH_NUKE")) {
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "LAUNCH NUKE: " + stats.name + " at " + posStr + " — awaiting target tile");
@@ -518,6 +518,7 @@ public class GameInputController extends InputAdapter {
             // Highlight area or show range markers if needed
             gameHUD.hideTileInfo();
         } else if (abilityKey.equals("OVERWATCH")) {
+            snapshot(); // Capture pre-ability state so Ctrl+Z can rewind to before this action
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "OVERWATCH: " + stats.name + " goes into overwatch at " + posStr);
             abilities.isOverwatchActive = true;
@@ -525,11 +526,11 @@ public class GameInputController extends InputAdapter {
             stats.hasMoved = true;
             gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
             deselect();
-            snapshot();
         }
     }
 
     private void executeTargetingAbility(int tx, int ty) {
+        snapshot(); // Capture pre-nuke state so Ctrl+Z can rewind to before this action
         if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
             StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
             String name = tStats != null ? tStats.name : "?";
@@ -542,7 +543,6 @@ public class GameInputController extends InputAdapter {
         targetingAbilityKey = null;
         targetingUnit = null;
         deselect();
-        snapshot();
     }
 
     // -------------------------------------------------------------------------
@@ -680,6 +680,7 @@ public class GameInputController extends InputAdapter {
     }
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
+        snapshot(); // Capture pre-move state so Ctrl+Z can rewind to before this move
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         if (pos == null)
             return;
@@ -715,7 +716,6 @@ public class GameInputController extends InputAdapter {
         gameHUD.hideTileInfo();
         clearMarkers();
         selectedUnitEntity = null;
-        snapshot();
     }
 
     /**

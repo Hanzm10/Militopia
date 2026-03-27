@@ -43,6 +43,11 @@ public class TurnHistoryManager {
         return !stack.isEmpty();
     }
 
+    /** Returns the number of snapshots currently in the history stack. */
+    public int size() {
+        return stack.size();
+    }
+
     /** Clears all history (e.g. on new game). */
     public void clear() {
         stack.clear();
