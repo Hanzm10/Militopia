@@ -30,15 +30,18 @@ public class HudBottomBar {
     private final MilitopiaGame game;
     private final AssetManager assets;
     private final GameInputController inputController;
+    private final GameHUD gameHud;
 
     private Table bottomContainer;
     private Table settingsOverlay;
 
     public HudBottomBar(MilitopiaGame game, AssetManager assets,
-            final GameScreen screen, Stage stage, GameInputController inputController) {
+            final GameScreen screen, Stage stage, GameInputController inputController,
+            GameHUD gameHud) {
         this.game = game;
         this.assets = assets;
         this.inputController = inputController;
+        this.gameHud = gameHud;
 
         buildBottomBar(screen, stage);
         buildSettingsOverlay(screen, stage);
@@ -163,6 +166,16 @@ public class HudBottomBar {
             }
         });
 
+        final TextButton undoRedoBtn = new TextButton("Undo/Redo: OFF", game.skin);
+        undoRedoBtn.addListener(new HoverListener());
+        undoRedoBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                boolean enabled = gameHud.toggleSnapshotPanel();
+                undoRedoBtn.setText("Undo/Redo: " + (enabled ? "ON" : "OFF"));
+            }
+        });
+
         TextButton resumeBtn = new TextButton("Resume", game.skin);
         resumeBtn.addListener(new HoverListener());
         resumeBtn.addListener(new ClickListener() {
@@ -176,9 +189,10 @@ public class HudBottomBar {
 
         menuBox.add(title).pad(20).row();
         menuBox.add(fogBtn).size(200, 50).pad(10).row();
+        menuBox.add(undoRedoBtn).size(200, 50).pad(10).row();
         menuBox.add(saveExitBtn).size(200, 50).pad(10).row();
         menuBox.add(resumeBtn).size(200, 50).pad(10);
-        settingsOverlay.add(menuBox).size(300, 300);
+        settingsOverlay.add(menuBox).size(300, 360);
         stage.addActor(settingsOverlay);
     }
 

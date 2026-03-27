@@ -9,7 +9,8 @@ public class AnimationComponent implements Component {
         NONE,
         LUNGE,      // Melee attack movement
         PROJECTILE, // Ranged attack movement
-        HIT_FLASH   // Visual feedback on hit
+        HIT_FLASH,  // Visual feedback on hit
+        JUMP        // Juggernaut leap attack
     }
 
     public Type type = Type.NONE;
@@ -22,6 +23,10 @@ public class AnimationComponent implements Component {
     
     public Interpolation interpolation = Interpolation.linear;
     
+    // For JUMP animation
+    public float jumpStartOffX, jumpStartOffY; // visual offset at start (negative of travel delta)
+    public float arcHeight = 50f;              // peak height in world pixels
+
     // For frame-based animations (placeholder support)
     public boolean isFrameBased = false;
     public String animationKey;

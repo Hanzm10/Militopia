@@ -186,23 +186,30 @@ public class GameInputController extends InputAdapter {
                 return true;
             }
 
-            // --- ATTACK: click on a red attack-marker tile (must have an enemy unit) ---
+            // --- ATTACK: click on a red attack-marker tile ---
             Entity clickedAttackMarker = getEntityAt(gridX, gridY, TypeComponent.Type.ATTACK_MARKER);
             if (clickedAttackMarker != null && selectedUnitEntity != null) {
+                StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
                 Entity targetUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                Entity enemy = null;
                 if (targetUnit != null) {
                     StatsComponent tStats = targetUnit.getComponent(StatsComponent.class);
                     if (tStats != null && tStats.owner != screen.getCurrentPlayer()) {
-                        performAttack(selectedUnitEntity, targetUnit);
-                        return true;
+                        enemy = targetUnit;
                     }
                 }
-                // Clicked an attack marker on an empty tile — do nothing extra
+                if (aStats != null && aStats.unitTypeKey.equals("JUGGERNAUT")) {
+                    performJump(selectedUnitEntity, enemy, gridX, gridY);
+                    return true;
+                }
+                if (enemy != null) {
+                    performAttack(selectedUnitEntity, enemy);
+                    return true;
+                }
                 return true;
             }
 
-            // --- ATTACK: directly click enemy unit tile within range (no marker needed)
-            // ---
+            // --- ATTACK: directly click enemy unit tile within range (no marker needed) ---
             if (selectedUnitEntity != null) {
                 Entity directTarget = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (directTarget != null) {
@@ -213,7 +220,11 @@ public class GameInputController extends InputAdapter {
                             && tStats.owner != screen.getCurrentPlayer()) {
                         int dist = chebyshev(aPos.x, aPos.y, gridX, gridY);
                         if (dist <= aStats.attackRange) {
-                            performAttack(selectedUnitEntity, directTarget);
+                            if (aStats.unitTypeKey.equals("JUGGERNAUT")) {
+                                performJump(selectedUnitEntity, directTarget, gridX, gridY);
+                            } else {
+                                performAttack(selectedUnitEntity, directTarget);
+                            }
                             return true;
                         }
                     }
@@ -294,10 +305,21 @@ public class GameInputController extends InputAdapter {
 
     /** Delegates to CombatSystem, then cleans up selection state. */
     private void performAttack(Entity attacker, Entity defender) {
-        snapshot(); // Capture pre-attack state so Ctrl+Z can rewind to before this attack
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
         combatSystem.resolveAttack(attacker, defender);
         // Snap HP in the HUD if the attacker survived (still selectable next turn)
+        if (aStats != null && aStats.currentHP > 0) {
+            gameHUD.snapHP(aStats.currentHP, aStats.maxHP);
+        }
+        clearMarkers();
+        selectedUnitEntity = null;
+        gameHUD.hideTileInfo();
+    }
+
+    /** Triggers a Juggernaut jump to the target tile. Target may be null for empty-tile jumps. */
+    private void performJump(Entity attacker, Entity target, int tx, int ty) {
+        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        combatSystem.resolveJumperAttack(attacker, target, tx, ty);
         if (aStats != null && aStats.currentHP > 0) {
             gameHUD.snapHP(aStats.currentHP, aStats.maxHP);
         }
@@ -460,7 +482,6 @@ public class GameInputController extends InputAdapter {
     // -------------------------------------------------------------------------
 
     public void performHunt(Entity animal, Entity hunter) {
-        snapshot(); // Capture pre-hunt state so Ctrl+Z can rewind to before this hunt
         StatsComponent hunterStats = hunter.getComponent(StatsComponent.class);
         GameState state = screen.getGameState();
         GameLogger.log(GameLogger.CAPTURE, hunterStats.owner,
@@ -499,7 +520,6 @@ public class GameInputController extends InputAdapter {
         String posStr = (pos != null) ? GameLogger.pos(pos.x, pos.y) : "(?,?)";
 
         if (abilityKey.equals("DIG_IN")) {
-            snapshot(); // Capture pre-ability state so Ctrl+Z can rewind to before this action
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "DIG IN: " + stats.name + " digs in at " + posStr);
             abilities.isDiggingIn = true;
@@ -518,7 +538,6 @@ public class GameInputController extends InputAdapter {
             // Highlight area or show range markers if needed
             gameHUD.hideTileInfo();
         } else if (abilityKey.equals("OVERWATCH")) {
-            snapshot(); // Capture pre-ability state so Ctrl+Z can rewind to before this action
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "OVERWATCH: " + stats.name + " goes into overwatch at " + posStr);
             abilities.isOverwatchActive = true;
@@ -530,7 +549,6 @@ public class GameInputController extends InputAdapter {
     }
 
     private void executeTargetingAbility(int tx, int ty) {
-        snapshot(); // Capture pre-nuke state so Ctrl+Z can rewind to before this action
         if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
             StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
             String name = tStats != null ? tStats.name : "?";
@@ -680,7 +698,6 @@ public class GameInputController extends InputAdapter {
     }
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
-        snapshot(); // Capture pre-move state so Ctrl+Z can rewind to before this move
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         if (pos == null)
             return;
@@ -711,6 +728,7 @@ public class GameInputController extends InputAdapter {
         AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
         if (abilities != null) {
             abilities.isDiggingIn = false;
+            abilities.pendingSkirmishMove = false;
         }
         gameHUD.hideSummonMenu();
         gameHUD.hideTileInfo();
@@ -727,6 +745,12 @@ public class GameInputController extends InputAdapter {
         int moveRange = (stats != null) ? stats.move : 3;
         int atkRange = (stats != null) ? stats.attackRange : 1;
         StatsComponent.MoveType moveType = (stats != null) ? stats.moveType : StatsComponent.MoveType.LAND;
+
+        // GUNBOAT: Skirmish — cap move to 1 tile after attacking
+        AbilitiesComponent selectedAbilities = selectedUnitEntity.getComponent(AbilitiesComponent.class);
+        if (selectedAbilities != null && selectedAbilities.pendingSkirmishMove) {
+            moveRange = 1;
+        }
 
         // --- Blue move markers ---
         if (!stats.hasMoved) {
@@ -761,8 +785,9 @@ public class GameInputController extends InputAdapter {
                     if (ts != null && ts.owner == screen.getCurrentPlayer())
                         continue; // skip own units
                 }
-                // For clean UX: only show red marker where there is an actual enemy
-                if (tileUnit == null)
+                // Juggernaut can jump to any tile (empty or enemy); others need an actual enemy
+                boolean isJuggernaut = stats != null && stats.unitTypeKey.equals("JUGGERNAUT");
+                if (tileUnit == null && !isJuggernaut)
                     continue;
                 entityFactory.createAttackMarker(tx, ty);
             }
@@ -849,8 +874,4 @@ public class GameInputController extends InputAdapter {
         return null;
     }
 
-    private void snapshot() {
-        screen.getTurnHistory().push(unitFactory.captureSnapshot(engine, screen.getGameState(), gameMap));
-        gameHUD.refreshSnapshotPanel();
-    }
 }

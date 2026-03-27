@@ -49,11 +49,30 @@ public class InfoPanel {
     private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
     private Label tileInfoLabel;
     private Label hpLabel;
+    private Label abilityDescLabel;
     private Table abilityTable;
     private ScrollPane abilityScroll;
     private Table statsTable;
     private Table infoStack;
     private Label atkLabel, defLabel, rngLabel, movLabel, visLabel;
+
+    private static final java.util.Map<String, String> ABILITY_DESC;
+    static {
+        ABILITY_DESC = new java.util.HashMap<String, String>();
+        ABILITY_DESC.put("RECRUIT",      "Dig In: +3 Def for 1 turn");
+        ABILITY_DESC.put("RANGER",       "Overwatch: Auto-attacks enemy entering range");
+        ABILITY_DESC.put("SNIPER",       "Camouflage: Invisible in Forest/Ruins");
+        ABILITY_DESC.put("TANK",         "Blitz: Move again on lethal kill");
+        ABILITY_DESC.put("JUGGERNAUT",   "Suppressing Fire: Hits all 8 adjacent tiles");
+        ABILITY_DESC.put("RECON_DRONE",  "High Altitude: Immune to melee land attacks");
+        ABILITY_DESC.put("SUICIDE_DRONE","Kamikaze: Dies after attacking");
+        ABILITY_DESC.put("APACHE",       "Fuel Gauge: Crashes after 5 turns unfueled");
+        ABILITY_DESC.put("B2",           "Stealth Cloak: Invisible until it attacks");
+        ABILITY_DESC.put("GUNBOAT",      "Skirmish: Move 1 tile after attacking");
+        ABILITY_DESC.put("DESTROYER",    "Shore Bombardment: +5 dmg vs Land units");
+        ABILITY_DESC.put("CARRIER",      "Mobile Airfield: Heals+refuels adjacent air");
+        ABILITY_DESC.put("SUBMARINE",    "Deep Dive: Cloaked; Nuke on 3-turn cooldown");
+    }
 
     // Base specific labels
     private Label levelLabel, xpLabel, incomeLabel, rewardsLabel;
@@ -86,6 +105,10 @@ public class InfoPanel {
             hpLabel.setVisible(false);
             infoStack.getCell(hpLabel).height(0);
         }
+        if (abilityDescLabel != null) {
+            abilityDescLabel.setVisible(false);
+            infoStack.getCell(abilityDescLabel).height(0);
+        }
         if (statsTable != null)
             statsTable.setVisible(false);
 
@@ -111,6 +134,10 @@ public class InfoPanel {
         if (hpLabel != null) {
             hpLabel.setVisible(false);
             infoStack.getCell(hpLabel).height(0);
+        }
+        if (abilityDescLabel != null) {
+            abilityDescLabel.setVisible(false);
+            infoStack.getCell(abilityDescLabel).height(0);
         }
 
         StatsComponent stats = base.getComponent(StatsComponent.class);
@@ -274,6 +301,19 @@ public class InfoPanel {
             statsTable.setVisible(false);
         }
 
+        // Ability description
+        if (abilityDescLabel != null && stats != null) {
+            String desc = ABILITY_DESC.get(stats.unitTypeKey);
+            if (desc != null) {
+                abilityDescLabel.setText(desc);
+                abilityDescLabel.setVisible(true);
+                infoStack.getCell(abilityDescLabel).height(14);
+            } else {
+                abilityDescLabel.setVisible(false);
+                infoStack.getCell(abilityDescLabel).height(0);
+            }
+        }
+
         GameLogger.log(GameLogger.UI, "InfoPanel: Show Unit Info | " + name + " | HP: " + currentHP + "/" + maxHP);
         // Ability buttons for the active player's own units
         AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
@@ -365,6 +405,11 @@ public class InfoPanel {
         hpLabel.setFontScale(0.65f);
         hpLabel.setVisible(false);
         infoStack.add(hpLabel).left().height(0).row();
+
+        abilityDescLabel = new Label("", game.skin, "default-font", new Color(0.6f, 0.85f, 1f, 1f));
+        abilityDescLabel.setFontScale(0.55f);
+        abilityDescLabel.setVisible(false);
+        infoStack.add(abilityDescLabel).left().height(0).row();
 
         // Stats grid
         statsTable = new Table();

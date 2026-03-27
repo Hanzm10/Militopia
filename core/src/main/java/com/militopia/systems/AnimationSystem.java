@@ -6,6 +6,7 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.math.Interpolation;
 import com.militopia.components.AnimationComponent;
 import com.militopia.components.GridPositionComponent;
+import com.militopia.components.JumpLandingComponent;
 
 public class AnimationSystem extends IteratingSystem {
 
@@ -25,9 +26,12 @@ public class AnimationSystem extends IteratingSystem {
         anim.stateTime += deltaTime;
 
         if (anim.stateTime >= anim.duration) {
-            // End of animation
             pos.visualOffsetX = 0;
             pos.visualOffsetY = 0;
+            if (anim.type == AnimationComponent.Type.JUMP) {
+                JumpLandingComponent jlc = entity.getComponent(JumpLandingComponent.class);
+                if (jlc != null) jlc.landed = true;
+            }
             anim.type = AnimationComponent.Type.NONE;
             return;
         }
@@ -45,7 +49,9 @@ public class AnimationSystem extends IteratingSystem {
                 break;
             case HIT_FLASH:
                 // Hit flash is handled by RenderSystem (batch color tinting)
-                // but we could handle logic here if needed.
+                break;
+            case JUMP:
+                updateJump(anim, pos, progress);
                 break;
         }
     }
@@ -63,5 +69,13 @@ public class AnimationSystem extends IteratingSystem {
         float t = anim.interpolation.apply(progress);
         pos.visualOffsetX = (anim.targetX - anim.startX) * t;
         pos.visualOffsetY = (anim.targetY - anim.startY) * t;
+    }
+
+    private void updateJump(AnimationComponent anim, GridPositionComponent pos, float progress) {
+        // Linear XY travel from source to destination + parabolic arc
+        // jumpStartOff is the negative of the travel delta (so at progress=0 we appear at source)
+        pos.visualOffsetX = anim.jumpStartOffX * (1 - progress);
+        pos.visualOffsetY = anim.jumpStartOffY * (1 - progress)
+                + anim.arcHeight * (float) Math.sin(progress * Math.PI);
     }
 }

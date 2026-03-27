@@ -11,6 +11,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.militopia.components.*;
 import com.militopia.components.AbilitiesComponent;
+import com.militopia.components.JumpLandingComponent;
 import com.militopia.factories.EntityFactory;
 import com.militopia.managers.AudioManager;
 import com.militopia.map.MapGenerator;
@@ -45,6 +46,73 @@ public class CombatSystem extends EntitySystem {
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
+
+    @Override
+    public void update(float deltaTime) {
+        com.badlogic.gdx.utils.Array<Entity> toProcess = new com.badlogic.gdx.utils.Array<>();
+        ImmutableArray<Entity> candidates = engine.getEntitiesFor(
+                Family.all(JumpLandingComponent.class, GridPositionComponent.class, StatsComponent.class).get());
+        for (Entity e : candidates) {
+            if (e.getComponent(JumpLandingComponent.class).landed) toProcess.add(e);
+        }
+        for (Entity e : toProcess) {
+            JumpLandingComponent jlc = e.getComponent(JumpLandingComponent.class);
+            processJumpLanding(e, jlc);
+            e.remove(JumpLandingComponent.class);
+        }
+    }
+
+    /**
+     * Sets up the Juggernaut jump attack animation and deferred landing.
+     * Grid position is moved immediately; visual offset animates the leap.
+     *
+     * @param attacker     The Juggernaut entity.
+     * @param primaryTarget The unit at the target tile, or null for an empty tile jump.
+     * @param targetX      Landing tile X.
+     * @param targetY      Landing tile Y.
+     */
+    public void resolveJumperAttack(Entity attacker, Entity primaryTarget, int targetX, int targetY) {
+        GridPositionComponent aPos = attacker.getComponent(GridPositionComponent.class);
+        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        if (aPos == null || aStats == null) return;
+
+        // Compute world-space delta BEFORE moving the grid position
+        float dIsoX = (targetX - aPos.x - (targetY - aPos.y))
+                * (com.militopia.config.GameConfig.TILE_WIDTH / 2.0f);
+        float dIsoY = (targetX - aPos.x + targetY - aPos.y)
+                * (com.militopia.config.GameConfig.TILE_HEIGHT / 2.0f);
+
+        // Move grid position to landing tile immediately
+        aPos.x = targetX;
+        aPos.y = targetY;
+
+        // Set up JUMP animation (visual starts at source, arrives at destination)
+        AnimationComponent anim = attacker.getComponent(AnimationComponent.class);
+        if (anim == null) {
+            anim = new AnimationComponent();
+            attacker.add(anim);
+        }
+        anim.type = AnimationComponent.Type.JUMP;
+        anim.jumpStartOffX = -dIsoX;
+        anim.jumpStartOffY = -dIsoY;
+        anim.arcHeight = 50f;
+        anim.duration = 0.7f;
+        anim.stateTime = 0;
+
+        // Attach landing payload
+        JumpLandingComponent jlc = new JumpLandingComponent();
+        jlc.primaryTarget = primaryTarget;
+        attacker.add(jlc);
+
+        String targetDesc = (primaryTarget != null)
+                ? primaryTarget.getComponent(StatsComponent.class).name
+                : "empty tile";
+        GameLogger.log(GameLogger.ABILITY, aStats.owner,
+                "Juggernaut JUMP: " + aStats.name + " → " + GameLogger.pos(targetX, targetY)
+                        + " | target=" + targetDesc);
+
+        exhaustAttacker(attacker, aStats, primaryTarget != null);
+    }
 
     public void launchNuke(Entity attacker, int tx, int ty) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
@@ -92,12 +160,9 @@ public class CombatSystem extends EntitySystem {
             return;
         }
 
-        // JUGGERNAUT: Suppressing Fire (AoE)
+        // JUGGERNAUT: Jump Attack (routed from resolveAttack as a fallback)
         if (aStats.unitTypeKey.equals("JUGGERNAUT")) {
-            GameLogger.log(GameLogger.ABILITY, aStats.owner,
-                    "Suppressing Fire by " + aStats.name + " at " + GameLogger.pos(aPos.x, aPos.y));
-            resolveSuppressingFire(attacker, aPos);
-            exhaustAttacker(attacker, aStats, false);
+            resolveJumperAttack(attacker, defender, dPos.x, dPos.y);
             return;
         }
 
@@ -418,14 +483,75 @@ public class CombatSystem extends EntitySystem {
             aStats.hasMoved = false;
         }
 
-        // GUNBOAT: Skirmish (+1 move point after attacking)
+        // GUNBOAT: Skirmish (Move 1 tile after attacking)
         if (aStats.unitTypeKey.equals("GUNBOAT")) {
-            aStats.hasMoved = false; // Allow moving 1 more space (effectively)
+            AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);
+            if (aAbilities != null) {
+                aStats.hasMoved = false;
+                aAbilities.pendingSkirmishMove = true;
+            }
         }
 
         // SUICIDE DRONE: Kamikaze
         if (aStats.unitTypeKey.equals("SUICIDE_DRONE")) {
             flagDeath(attacker);
+        }
+    }
+
+    private void processJumpLanding(Entity jumper, JumpLandingComponent jlc) {
+        GridPositionComponent landPos = jumper.getComponent(GridPositionComponent.class);
+        StatsComponent aStats = jumper.getComponent(StatsComponent.class);
+        if (landPos == null || aStats == null) return;
+
+        // 1. Instantly kill primary target
+        if (jlc.primaryTarget != null) {
+            StatsComponent tStats = jlc.primaryTarget.getComponent(StatsComponent.class);
+            if (tStats != null && tStats.currentHP > 0) {
+                tStats.currentHP = 0;
+                entityFactory.createExplosion(landPos.x, landPos.y);
+                flagDeath(jlc.primaryTarget);
+            }
+        }
+
+        // 2. AoE damage to adjacent enemies on landing
+        resolveJumpLandingAoE(jumper, landPos.x, landPos.y, jlc.primaryTarget);
+
+        // 3. Nuclear sprite exactly on landing
+        entityFactory.createNuclearAttack(landPos.x, landPos.y);
+
+        // 4. SFX on landing
+        AudioManager.getInstance().playSFX("explode.wav");
+
+        GameLogger.log(GameLogger.ABILITY, aStats.owner,
+                "Juggernaut LANDED at " + GameLogger.pos(landPos.x, landPos.y));
+    }
+
+    private void resolveJumpLandingAoE(Entity jumper, int cx, int cy, Entity skipTarget) {
+        StatsComponent aStats = jumper.getComponent(StatsComponent.class);
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class, StatsComponent.class).get());
+
+        for (Entity e : entities) {
+            if (e == jumper || e == skipTarget) continue;
+            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (p == null || s == null) continue;
+            if (s.owner == aStats.owner) continue;
+            if (chebyshev(cx, cy, p.x, p.y) > 1) continue;
+            if (s.name.contains("Oil Derrick") || s.name.contains("Nuclear Plant")) continue;
+
+            int defBonus = terrainDefBonus(p.x, p.y);
+            AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
+            int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? 3 : 0;
+            int dmg = Math.max(0, aStats.attack - (s.defense + digInBonus) - defBonus);
+            s.currentHP -= dmg;
+            spawnFloatingText(dmg, p.x, p.y, false);
+            if (s.currentHP <= 0) {
+                s.currentHP = 0;
+                if (e.getComponent(DeathAnimComponent.class) == null) {
+                    flagDeath(e);
+                }
+            }
         }
     }
 
