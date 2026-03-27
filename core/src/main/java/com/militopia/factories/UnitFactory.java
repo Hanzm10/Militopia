@@ -403,7 +403,7 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
-    public int getUnitCost(String unitType) {
+    public static int getUnitCost(String unitType) {
         // Must match cost in createUnit
         switch (unitType) {
             case "RECRUIT":
