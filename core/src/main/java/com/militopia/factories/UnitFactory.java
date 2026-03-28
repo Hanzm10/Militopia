@@ -333,7 +333,7 @@ public class UnitFactory {
                         s.currentHP, s.hasActed, s.hasMoved, s.moveType));
 
             } else if (type.type == TypeComponent.Type.OBJECT && s.owner >= 0
-                    && (s.income > 0 || s.maxBaseXP > 0 || !s.name.startsWith("ANIMAL_"))) {
+                    && (s.income > 0 || s.maxBaseXP > 0 || e.getComponent(AnimalComponent.class) == null)) {
                 // Only snapshot income-generating structures: bases (income >= 2) and towns
                 // (income = 1)
                 // Exclude decorative objects (trees, ruins, oil, etc.) — they don't need
@@ -502,6 +502,7 @@ public class UnitFactory {
             animalStats.name = "ANIMAL_" + type.name();
             animalStats.unitTypeKey = type.name();
             entity.add(animalStats);
+            entity.add(new AnimalComponent(type.name()));
         } else if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
             int owner = (type == MapGenerator.ObjectType.BASE_P1) ? 1 : 2;
             state.p1BaseCount += (owner == 1 ? 1 : 0);

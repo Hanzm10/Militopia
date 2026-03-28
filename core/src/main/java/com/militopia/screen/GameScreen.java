@@ -133,7 +133,13 @@ public class GameScreen implements Screen {
         if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
             GameLogger.logScreen("Loading " + loadedState.animals.size() + " saved animals.");
             for (AnimalData a : loadedState.animals) {
-                MapGenerator.ObjectType type = MapGenerator.ObjectType.valueOf(a.type);
+                MapGenerator.ObjectType type;
+                try {
+                    type = MapGenerator.ObjectType.valueOf(a.type);
+                } catch (IllegalArgumentException ex) {
+                    GameLogger.logScreen("Unknown animal type in save: " + a.type + " — skipping");
+                    continue;
+                }
                 unitFactory.createObjectEntity(a.x, a.y, type, gameState);
             }
         } else {

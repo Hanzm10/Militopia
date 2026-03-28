@@ -6,6 +6,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.UnitType;
+import com.militopia.components.AnimalComponent;
 import com.militopia.data.AnimalData;
 import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
@@ -80,6 +81,7 @@ public class SaveManagerTest {
         StatsComponent stats = new StatsComponent("ANIMAL_" + animalType, 5, 0, 0, 0, 0, 0, 0,
                 StatsComponent.MoveType.LAND, 0);
         e.add(stats);
+        e.add(new AnimalComponent(animalType));
         engine.addEntity(e);
         return e;
     }

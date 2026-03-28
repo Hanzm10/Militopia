@@ -2,9 +2,6 @@ package com.militopia.config;
 
 public class GameConfig {
     // Grid Settings
-    // width & height of map(by tiles)
-    public static final int MAP_WIDTH = 16;
-    public static final int MAP_HEIGHT = 16;
     // size of tiles
     public static final int TILE_WIDTH = 16;
     public static final int TILE_HEIGHT = 10;

@@ -11,6 +11,7 @@ import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
 import com.militopia.data.UnitData;
 import com.militopia.data.AnimalData;
+import com.militopia.components.AnimalComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
@@ -41,10 +42,10 @@ public class SaveManager {
                         stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
-                // --- DETECT ANIMALS VIA NAME TAG ---
-                if (stats != null && stats.name != null && stats.name.startsWith("ANIMAL_")) {
-                    String animalType = stats.name.replace("ANIMAL_", "");
-                    state.animals.add(new AnimalData(pos.x, pos.y, animalType));
+                // --- DETECT ANIMALS VIA COMPONENT TAG ---
+                AnimalComponent animal = e.getComponent(AnimalComponent.class);
+                if (animal != null) {
+                    state.animals.add(new AnimalData(pos.x, pos.y, animal.animalType));
                 }
                 // --- DETECT STRUCTURES ---
                 else if (stats != null && stats.owner != 0) {

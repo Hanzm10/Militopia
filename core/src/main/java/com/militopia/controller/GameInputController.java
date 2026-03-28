@@ -265,7 +265,7 @@ public class GameInputController extends InputAdapter {
                         foundUnit = e;
                     } else if (type.type == TypeComponent.Type.OBJECT) {
                         StatsComponent s = e.getComponent(StatsComponent.class);
-                        if (pos.zIndex == 2 || (s != null && s.name.startsWith("ANIMAL_"))) {
+                        if (pos.zIndex == 2 || e.getComponent(AnimalComponent.class) != null) {
                             foundAnimal = e;
                         } else {
                             foundStructure = e;

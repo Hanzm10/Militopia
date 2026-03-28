@@ -548,17 +548,29 @@ public class CombatSystem extends EntitySystem {
     }
 
     private void resolveJumpLandingAoE(Entity jumper, int cx, int cy, Entity skipTarget) {
-        StatsComponent aStats = jumper.getComponent(StatsComponent.class);
+        applyAttackBasedAoE(jumper, cx, cy, 1, skipTarget);
+    }
+
+    /**
+     * Applies attacker-stat-based AoE damage to all enemies within chebyshev {@code radius} of
+     * ({@code cx}, {@code cy}). Skips the attacker, any additional {@code skipEntities}, friendly
+     * units, and indestructible structures (Oil Derrick, Nuclear Plant).
+     */
+    private void applyAttackBasedAoE(Entity attacker, int cx, int cy, int radius, Entity... skipEntities) {
+        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
         ImmutableArray<Entity> entities = engine.getEntitiesFor(
                 Family.all(GridPositionComponent.class, StatsComponent.class).get());
 
         for (Entity e : entities) {
-            if (e == jumper || e == skipTarget) continue;
-            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+            if (e == attacker) continue;
+            boolean skipped = false;
+            for (Entity skip : skipEntities) { if (e == skip) { skipped = true; break; } }
+            if (skipped) continue;
+
             StatsComponent s = e.getComponent(StatsComponent.class);
-            if (p == null || s == null) continue;
+            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
             if (s.owner == aStats.owner) continue;
-            if (chebyshev(cx, cy, p.x, p.y) > 1) continue;
+            if (chebyshev(cx, cy, p.x, p.y) > radius) continue;
             StructureType sType = StructureType.fromDisplayName(s.name);
             if (sType == StructureType.OIL_DERRICK || sType == StructureType.NUCLEAR_PLANT) continue;
 
@@ -570,41 +582,7 @@ public class CombatSystem extends EntitySystem {
             spawnFloatingText(dmg, p.x, p.y, false);
             if (s.currentHP <= 0) {
                 s.currentHP = 0;
-                if (e.getComponent(DeathAnimComponent.class) == null) {
-                    flagDeath(e);
-                }
-            }
-        }
-    }
-
-    private void resolveSuppressingFire(Entity attacker, GridPositionComponent aPos) {
-        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
-        ImmutableArray<Entity> entities = engine
-                .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
-
-        for (Entity e : entities) {
-            if (e == attacker)
-                continue;
-            GridPositionComponent p = e.getComponent(GridPositionComponent.class);
-            StatsComponent s = e.getComponent(StatsComponent.class);
-
-            if (s.owner != aStats.owner && chebyshev(aPos.x, aPos.y, p.x, p.y) <= 1) {
-                // Skip if indestructible building
-                StructureType ssType = StructureType.fromDisplayName(s.name);
-                if (ssType == StructureType.OIL_DERRICK || ssType == StructureType.NUCLEAR_PLANT) {
-                    continue;
-                }
-                int defBonus = terrainDefBonus(p.x, p.y);
-                AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
-                int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
-
-                int dmg = Math.max(0, aStats.attack - (s.defense + digInBonus) - defBonus);
-                s.currentHP -= dmg;
-                spawnFloatingText(dmg, p.x, p.y, false);
-                if (s.currentHP <= 0) {
-                    s.currentHP = 0;
-                    flagDeath(e);
-                }
+                if (e.getComponent(DeathAnimComponent.class) == null) flagDeath(e);
             }
         }
     }
