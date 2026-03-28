@@ -1,117 +1,56 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-27T13:58:05.469Z",
-  "phase": "tech-debt",
-  "phase_name": "Tech Debt Refactor (ad-hoc)",
-  "phase_dir": ".planning",
-  "plan": null,
+  "timestamp": "2026-03-28T02:11:24.230Z",
+  "phase": "08",
+  "phase_name": "polish-ux",
+  "phase_dir": ".planning/phases/08-polish-ux",
+  "plan": "04",
   "task": null,
   "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Phase A: Create CombatConstants.java",
-      "status": "done",
-      "commit": "ee6c4bf"
-    },
-    {
-      "id": 2,
-      "name": "Phase A: Replace magic numbers in CombatSystem.java",
-      "status": "done",
-      "commit": "ee6c4bf"
-    },
-    {
-      "id": 3,
-      "name": "Phase A: Replace Gdx.app.log / System.out.println with GameLogger",
-      "status": "done",
-      "commit": "ee6c4bf"
-    },
-    {
-      "id": 4,
-      "name": "Phase A: Remove duplicate gdx-freetype dependency in core/build.gradle",
-      "status": "done",
-      "commit": "ee6c4bf"
-    }
+    {"id": 1, "name": "Tech debt audit — Phase 1 quick wins", "status": "done", "commit": "9d237d0"},
+    {"id": 2, "name": "StructureType enum + replace 11 magic string checks across 9 files", "status": "done", "commit": "9d237d0"},
+    {"id": 3, "name": "SaveManager System.out.println → GameLogger", "status": "done", "commit": "d302478"},
+    {"id": 4, "name": "Javadoc on createUnit, checkAndApplyLevelUp, captureStructure", "status": "done", "commit": "1ffeb35"},
+    {"id": 5, "name": "Inline comments on arc formula (AnimationSystem) and damage calc (CombatSystem)", "status": "done", "commit": "e400c0e"},
+    {"id": 6, "name": "Javadoc on remaining 20 public methods across UnitFactory, CombatSystem, SaveManager", "status": "done", "commit": "7c39537"},
+    {"id": 7, "name": "AnimalType enum replaces fragile string contains checks in GameInputController + UnitFactory", "status": "done", "commit": "e91080a"}
   ],
   "remaining_tasks": [
-    {
-      "id": 5,
-      "name": "Phase B: Create UnitType enum (16 unit types)",
-      "status": "not_started"
-    },
-    {
-      "id": 6,
-      "name": "Phase B: Add unitType field to StatsComponent alongside unitTypeKey (dual-field migration)",
-      "status": "not_started"
-    },
-    {
-      "id": 7,
-      "name": "Phase B: Migrate string comparisons in CombatSystem.java (21 comparisons)",
-      "status": "not_started"
-    },
-    {
-      "id": 8,
-      "name": "Phase B: Migrate string comparisons in UnitFactory.java (21 switch cases)",
-      "status": "not_started"
-    },
-    {
-      "id": 9,
-      "name": "Phase B: Migrate string comparisons in GameInputController.java (3 comparisons)",
-      "status": "not_started"
-    },
-    {
-      "id": 10,
-      "name": "Phase B: Migrate string comparisons in InfoPanel.java (3 comparisons)",
-      "status": "not_started"
-    },
-    {
-      "id": 11,
-      "name": "Phase B: Migrate string comparisons in AbilityStatusSystem.java (3 comparisons)",
-      "status": "not_started"
-    },
-    {
-      "id": 12,
-      "name": "Phase B: Migrate string comparisons in UnitRenderSystem.java (1 comparison)",
-      "status": "not_started"
-    },
-    {
-      "id": 13,
-      "name": "Phase B: Update SaveManager serialization (unitTypeKey -> UnitType.name() / valueOf)",
-      "status": "not_started"
-    },
-    {
-      "id": 14,
-      "name": "Phase B: Remove unitTypeKey field from StatsComponent once all references gone",
-      "status": "not_started"
-    }
+    {"id": 8, "name": "Execute 08-04-PLAN.md — defend SFX, BGM wiring, fallback audio files", "status": "not_started"},
+    {"id": 9, "name": "Tech debt #1: Tests for CombatSystem, UnitFactory, GameInputController", "status": "not_started"},
+    {"id": 10, "name": "Tech debt #3: UnitFactory god class extraction (TextureRegistry, LevelUpSystem, CaptureSystem)", "status": "not_started"},
+    {"id": 11, "name": "Tech debt #4: Business logic out of GameInputController (summon, scavenge)", "status": "not_started"},
+    {"id": 12, "name": "Tech debt #5: Business logic out of GameScreen (capture, solar array)", "status": "not_started"},
+    {"id": 13, "name": "Tech debt #9: Unit stats to data-driven JSON config", "status": "not_started"}
   ],
   "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Run ./gradlew build to verify Phase B compiles clean after each file migration",
-      "context": "Build cannot be run from Claude's environment due to Gradle loopback connection issue on this machine",
+      "action": "Run ./gradlew build to verify all tech debt refactors compile clean",
+      "context": "6 commits of refactoring (new enums, replaced string checks, added imports) — build verification recommended before Phase 9",
       "blocking": false
     }
   ],
   "decisions": [
     {
-      "decision": "Keep unitTypeKey String field alongside new UnitType enum field during migration (dual-field approach)",
-      "rationale": "Allows file-by-file migration without breaking the build at any intermediate step. Remove unitTypeKey only after all 44 string comparisons are eliminated.",
+      "decision": "StructureType enum placed in com.militopia.config package (alongside GameConfig, CombatConstants)",
+      "rationale": "Consistent with existing config pattern; parallel to UnitType which is in com.militopia.enums",
       "phase": "tech-debt"
     },
     {
-      "decision": "CombatConstants placed in com.militopia.config package (alongside GameConfig)",
-      "rationale": "GameConfig already exists there for TILE_WIDTH/HEIGHT constants — natural home for combat tuning values.",
+      "decision": "AnimalType enum placed in com.militopia.enums package",
+      "rationale": "Parallel to UnitType enum, same pattern",
       "phase": "tech-debt"
     },
     {
-      "decision": "AbilityTest failures are pre-existing (entityFactory null NPE), not caused by Phase A",
-      "rationale": "Verified by git stash — same 3 tests fail on clean main branch.",
+      "decision": "Tech debt items 4, 5, 9 deferred — require build verification to safely extract live game logic",
+      "rationale": "Moving logic between classes without ability to run game risks silent behavior changes",
       "phase": "tech-debt"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Start Phase B: Read StatsComponent.java and SaveManager.java first to understand serialization, then create UnitType.java enum, then add unitType field to StatsComponent",
-  "context_notes": "This is an ad-hoc tech debt refactor session outside the normal GSD phase structure. The tech debt audit was generated fresh this session — see conversation history for the full prioritized report. Phase B is token-heavy because UnitFactory.java is 1291 lines and needs to be read in full. 16 unique unit types: RECRUIT, RANGER, SNIPER, TANK, JUGGERNAUT, RECON_DRONE, SUICIDE_DRONE, APACHE, B2, GUNBOAT, DESTROYER, CARRIER, SUBMARINE, TITAN, WRAITH, DREADNOUGHT."
+  "next_action": "Run ./gradlew build to verify tech debt commits, then /gsd:execute-phase 08 to close 08-04 (audio gaps)",
+  "context_notes": "This session was an ad-hoc tech debt session. 6/10 tech debt items closed. The 4 remaining open items (tests, UnitFactory extraction, controller logic, data-driven stats) are medium-to-high effort and need build verification. Phase 08 has one plan remaining: 08-04 (defend SFX, BGM, fallback audio files). After 08-04, Phase 9 (Railways) begins."
 }
