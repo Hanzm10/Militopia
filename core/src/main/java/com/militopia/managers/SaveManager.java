@@ -15,6 +15,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.map.MapGenerator;
+import com.militopia.utils.GameLogger;
 
 public class SaveManager {
 
@@ -76,6 +77,6 @@ public class SaveManager {
         FileHandle file = Gdx.files.local("saves/" + state.saveName + ".json");
         file.writeString(jsonText, false);
 
-        System.out.println("Game Saved: " + file.path());
+        GameLogger.logScreen("Game Saved: " + file.path());
     }
 }
