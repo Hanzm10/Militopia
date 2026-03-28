@@ -133,6 +133,10 @@ public class GameScreen implements Screen {
         if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
             GameLogger.logScreen("Loading " + loadedState.animals.size() + " saved animals.");
             for (AnimalData a : loadedState.animals) {
+                if (a.type == null) {
+                    GameLogger.logScreen("Null animal type in save — skipping");
+                    continue;
+                }
                 MapGenerator.ObjectType type;
                 try {
                     type = MapGenerator.ObjectType.valueOf(a.type);

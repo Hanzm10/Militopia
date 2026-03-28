@@ -165,7 +165,7 @@ public class SaveManagerTest {
     }
 
     @Test
-    public void testAnimalDetectedByNamePrefix() {
+    public void testAnimalDetectedByComponent() {
         addAnimal(4, 5, "WOLF");
         saveManager.collectState(state, engine, map);
 

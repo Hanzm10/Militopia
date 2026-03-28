@@ -194,7 +194,6 @@ public class FogSystemTest {
 
         // Remove all entities and update again — fog should reset
         engine.removeAllEntities();
-        // Re-add the system since removeAllEntities doesn't remove systems
         fogSystem.update(0f);
 
         assertFalse(gameMap.visibleTiles[5][5], "Fog should reset each update when no units are present");
