@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
+import com.militopia.config.CombatConstants;
 import com.militopia.config.GameConfig;
 import com.militopia.config.StructureType;
 import com.militopia.config.UnitType;
@@ -195,7 +196,10 @@ public class UnitRenderSystem extends EntitySystem {
 
         // Bounce animation
         float animY = 0;
-        if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
+        if (move != null && move.jumpArcHeight > 0) {
+            float progress = Math.min(move.time / move.duration, 1.0f);
+            animY = (float) Math.sin(progress * Math.PI) * move.jumpArcHeight;
+        } else if (move == null && pos.x == bouncingX && pos.y == bouncingY) {
             float progress = bounceTimer / GameConfig.BOUNCE_DURATION;
             animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
         }
@@ -205,6 +209,10 @@ public class UnitRenderSystem extends EntitySystem {
         float verticalOff = isMarker || isAttackMarker ? 5f : 10f;
 
         // --- Colour tinting ---
+        AbilitiesComponent unitAbilities = e.getComponent(AbilitiesComponent.class);
+        boolean invincible = (unitAbilities != null && unitAbilities.isInvincible);
+        float tintAlpha = invincible ? CombatConstants.INVINCIBLE_TINT_ALPHA : 1.0f;
+
         if (isAttackMarker) {
             // New enemy marker (draw with original colours)
             batch.setColor(Color.WHITE);
@@ -213,17 +221,17 @@ public class UnitRenderSystem extends EntitySystem {
         } else if (typeC.type == TypeComponent.Type.UNIT) {
             if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
                 if (stats.owner == 1)
-                    batch.setColor(0.3f, 0.3f, 0.6f, 1.0f);
+                    batch.setColor(0.3f, 0.3f, 0.6f, tintAlpha);
                 else if (stats.owner == 2)
-                    batch.setColor(0.6f, 0.3f, 0.3f, 1.0f);
+                    batch.setColor(0.6f, 0.3f, 0.3f, tintAlpha);
                 else
-                    batch.setColor(Color.DARK_GRAY);
+                    batch.setColor(0.3f, 0.3f, 0.3f, tintAlpha);
             } else if (stats != null && stats.owner == 2) {
-                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
+                batch.setColor(1.0f, 0.6f, 0.6f, tintAlpha);
             } else if (stats != null && stats.owner == 1) {
-                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
+                batch.setColor(0.6f, 0.6f, 1.0f, tintAlpha);
             } else {
-                batch.setColor(Color.WHITE);
+                batch.setColor(1f, 1f, 1f, tintAlpha);
             }
         } else {
             batch.setColor(Color.WHITE);

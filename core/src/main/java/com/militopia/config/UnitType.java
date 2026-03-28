@@ -16,11 +16,7 @@ public enum UnitType {
     GUNBOAT,
     DESTROYER,
     CARRIER,
-    SUBMARINE,
-    // Super units (unlocked at base level 5)
-    TITAN,
-    WRAITH,
-    DREADNOUGHT;
+    SUBMARINE;
 
     /** Returns the UnitType for the given key string, or null if not found. */
     public static UnitType fromKey(String key) {

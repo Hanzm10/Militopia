@@ -13,6 +13,7 @@ public class AbilitiesComponent implements Component {
     public boolean isOverwatchActive = false; // Ranger (must be manually activated)
     public boolean isCloaked = false; // Sniper / Wraith / Submarine / B2
     public boolean pendingSkirmishMove = false; // Gunboat: 1-tile move after attacking
+    public boolean isInvincible = false; // Unit is invincible (immune to damage) — renders at half opacity
 
     // --- Resources / Cooldowns ---
     public int fuel = -1; // Apache (-1 = N/A)

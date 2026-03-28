@@ -423,6 +423,9 @@ public class CombatSystem extends EntitySystem {
         if (obj == MapGenerator.ObjectType.TREE) {
             return CombatConstants.TERRAIN_BONUS_TREE;
         }
+        if (obj != null && obj.name().startsWith("BASE_")) {
+            return CombatConstants.TERRAIN_BONUS_BASE;
+        }
         return 0;
     }
 
@@ -567,12 +570,13 @@ public class CombatSystem extends EntitySystem {
             for (Entity skip : skipEntities) { if (e == skip) { skipped = true; break; } }
             if (skipped) continue;
 
+            TypeComponent typeC = e.getComponent(TypeComponent.class);
+            if (typeC == null || typeC.type != TypeComponent.Type.UNIT) continue;
+
             StatsComponent s = e.getComponent(StatsComponent.class);
             GridPositionComponent p = e.getComponent(GridPositionComponent.class);
             if (s.owner == aStats.owner) continue;
             if (chebyshev(cx, cy, p.x, p.y) > radius) continue;
-            StructureType sType = StructureType.fromDisplayName(s.name);
-            if (sType == StructureType.OIL_DERRICK || sType == StructureType.NUCLEAR_PLANT) continue;
 
             int defBonus = terrainDefBonus(p.x, p.y);
             AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);

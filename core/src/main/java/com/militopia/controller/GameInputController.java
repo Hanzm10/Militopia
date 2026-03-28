@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
 import com.militopia.config.AnimalType;
+import com.militopia.config.CombatConstants;
 import com.militopia.config.GameConfig;
 import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
@@ -326,6 +327,12 @@ public class GameInputController extends InputAdapter {
     /** Triggers a Juggernaut jump to the target tile. Target may be null for empty-tile jumps. */
     private void performJump(Entity attacker, Entity target, int tx, int ty) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        // Block jump onto a friendly unit tile
+        Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
+        if (tileUnit != null) {
+            StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
+            if (ts != null && ts.owner == screen.getCurrentPlayer()) return;
+        }
         combatSystem.resolveJumperAttack(attacker, target, tx, ty);
         if (aStats != null && aStats.currentHP > 0) {
             gameHUD.snapHP(aStats.currentHP, aStats.maxHP);
@@ -488,11 +495,11 @@ public class GameInputController extends InputAdapter {
                         animal.getComponent(GridPositionComponent.class) != null
                                 ? animal.getComponent(GridPositionComponent.class).y
                                 : -1)
-                        + " | +1 funding");
+                        + " | +" + CombatConstants.ANIMAL_HUNT_FUNDING + " funding");
         if (hunterStats.owner == 1)
-            state.p1Funding += 1;
+            state.p1Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
         else
-            state.p2Funding += 1;
+            state.p2Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
         engine.removeEntity(animal);
         hunterStats.hasActed = true;
         hunterStats.hasMoved = true;
@@ -645,7 +652,7 @@ public class GameInputController extends InputAdapter {
     }
 
     private boolean hasAdjacentLand(int x, int y) {
-        int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 } };
+        int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
         for (int[] d : dirs) {
             int nx = x + d[0], ny = y + d[1];
             if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) {
@@ -776,7 +783,9 @@ public class GameInputController extends InputAdapter {
         }
 
         // --- Blue move markers ---
-        if (!stats.hasMoved) {
+        // Juggernaut always jumps — skip flood fill so red attack markers aren't shadowed
+        boolean isJuggernautSelected = stats.unitType == UnitType.JUGGERNAUT;
+        if (!stats.hasMoved && !isJuggernautSelected) {
             int[][] visitedMoves = new int[gameMap.width][gameMap.height];
             for (int[] row : visitedMoves)
                 java.util.Arrays.fill(row, -1);

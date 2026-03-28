@@ -39,6 +39,9 @@ public class LevelUpPopup {
     /** Full-screen dark modal — also acts as the input blocker. */
     private Table popupTable;
 
+    /** Queued popups shown one at a time; each entry re-calls show logic. */
+    private final java.util.Queue<Runnable> pendingPopups = new java.util.LinkedList<>();
+
     public LevelUpPopup(MilitopiaGame game, AssetManager assets, Stage stage,
             GameInputController inputController, HudBottomBar bottomBar) {
         this.game = game;
@@ -61,6 +64,16 @@ public class LevelUpPopup {
      * adding to stage so the input block is effective on the very first frame.
      */
     public void show(int owner, String baseName, int newLevel, int bonusFunds,
+            String[] units, String[] structs, UnitFactory factory) {
+        if (isVisible()) {
+            // Another popup is on screen — queue this one for after dismiss.
+            pendingPopups.add(() -> showImmediate(owner, baseName, newLevel, bonusFunds, units, structs, factory));
+            return;
+        }
+        showImmediate(owner, baseName, newLevel, bonusFunds, units, structs, factory);
+    }
+
+    private void showImmediate(int owner, String baseName, int newLevel, int bonusFunds,
             String[] units, String[] structs, UnitFactory factory) {
         buildPopup(owner, baseName, newLevel, bonusFunds, units, structs, factory);
 
@@ -167,9 +180,15 @@ public class LevelUpPopup {
     private void dismiss() {
         if (popupTable != null)
             popupTable.remove();
-        // Restore map and HUD interactivity.
-        inputController.setInputEnabled(true);
-        bottomBar.setBlocked(false);
+        popupTable = null;
+        // If another level-up is queued, show it; otherwise restore interactivity.
+        Runnable next = pendingPopups.poll();
+        if (next != null) {
+            next.run();
+        } else {
+            inputController.setInputEnabled(true);
+            bottomBar.setBlocked(false);
+        }
     }
 
     private Table createBubble(String text, TextureRegion icon) {

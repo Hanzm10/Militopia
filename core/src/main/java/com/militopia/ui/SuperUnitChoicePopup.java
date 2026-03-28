@@ -27,11 +27,11 @@ import com.militopia.utils.HoverListener;
  */
 public class SuperUnitChoicePopup {
 
-    private static final String[] SUPER_UNITS = { "TITAN", "WRAITH", "DREADNOUGHT" };
+    private static final String[] SUPER_UNITS = { "JUGGERNAUT", "B2", "SUBMARINE" };
     private static final String[] FLAVOR = {
-            "Heavy Land Titan\nMax HP · High DEF · Slow",
-            "Stealth Air Wraith\nHigh ATK · Fast · High Vision",
-            "Sea Dreadnought\nMax HP · Long Range · High DEF"
+            "Land Juggernaut\nJumps to any tile · AoE on landing · Range 4",
+            "Stealth Bomber\nCloaked until attacks · Explosive damage · Range 3",
+            "Deep Diver\nCloaked · Nuke on 3-turn cooldown · Range 4"
     };
 
     private final Stage stage;

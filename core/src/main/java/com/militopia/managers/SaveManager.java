@@ -49,10 +49,13 @@ public class SaveManager {
                 }
                 // --- DETECT STRUCTURES ---
                 else if (stats != null && stats.owner != 0) {
-                    state.structures.add(new StructureData(
+                    StructureData sd = new StructureData(
                             pos.x, pos.y, stats.owner, stats.level,
                             stats.currentBaseXP, stats.name, stats.baseOrdinal,
-                            stats.xpGain, stats.chosenSuperUnit));
+                            stats.xpGain, stats.chosenSuperUnit);
+                    sd.parentBaseX = stats.parentBaseX;
+                    sd.parentBaseY = stats.parentBaseY;
+                    state.structures.add(sd);
                 } else if (stats != null) {
                     // Check for neutral Towns
                     MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];

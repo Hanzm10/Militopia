@@ -193,9 +193,6 @@ public class UnitFactory {
         });
 
         // Super Units — reuse existing textures until custom assets are added
-        unitRegions.put("TITAN", unitRegions.get("JUGGERNAUT"));
-        unitRegions.put("WRAITH", unitRegions.get("B2"));
-        unitRegions.put("DREADNOUGHT", unitRegions.get("SUBMARINE"));
 
         // Structures
         structRegions.put("MUNITION_FACTORY", new TextureRegion(assets.get(AssetManager.MUNITION_FACTORY)));
@@ -281,6 +278,9 @@ public class UnitFactory {
         }
         if (stats.unitType == UnitType.SUBMARINE || stats.unitType == UnitType.B2) {
             abilities.isCloaked = true;
+        }
+        if (stats.unitType == UnitType.RECON_DRONE) {
+            abilities.isInvincible = true; // High Altitude: immune to melee land attacks
         }
 
         entity.add(stats);

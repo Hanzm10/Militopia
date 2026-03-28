@@ -210,7 +210,16 @@ public class GameScreen implements Screen {
         if (loadedState.structures != null) {
             for (com.militopia.data.StructureData s : loadedState.structures) {
                 Entity e = findEntityAt(s.x, s.y);
-                if (e != null) {
+                if (e == null) {
+                    // Built structure (Solar, Hospital, Jammer, etc.) — not in gameMap.objects
+                    // so no entity was created during map init. Recreate it now.
+                    com.militopia.config.StructureType st =
+                            com.militopia.config.StructureType.fromDisplayName(s.baseName);
+                    if (st != null && st != com.militopia.config.StructureType.BASE) {
+                        unitFactory.createStructure(st.name(), s.x, s.y, s.owner,
+                                s.parentBaseX, s.parentBaseY);
+                    }
+                } else {
                     unitFactory.updateStructureFromSave(e, s, gameMap);
                 }
             }
@@ -257,7 +266,9 @@ public class GameScreen implements Screen {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             if (pos.x == x && pos.y == y) {
                 TypeComponent type = e.getComponent(TypeComponent.class);
-                if (type != null && type.type == TypeComponent.Type.OBJECT) {
+                if (type != null && type.type == TypeComponent.Type.OBJECT
+                        && pos.zIndex != 2
+                        && e.getComponent(com.militopia.components.AnimalComponent.class) == null) {
                     return e;
                 }
             }
@@ -437,14 +448,15 @@ public class GameScreen implements Screen {
                     sd.x = ss.x;
                     sd.y = ss.y;
                     sd.owner = ss.owner;
+                    sd.level = ss.level;
                     sd.currentBaseXP = ss.currentBaseXP;
                     sd.baseName = ss.name;
                     sd.baseOrdinal = ss.baseOrdinal;
+                    sd.chosenSuperUnit = ss.chosenSuperUnit;
                     unitFactory.updateStructureFromSave(e, sd, gameMap);
-                    StatsComponent s = e.getComponent(StatsComponent.class);
-                    s.level = ss.level;
-                    s.income = ss.income;
-                    s.chosenSuperUnit = ss.chosenSuperUnit;
+                    // Override income with snapshotted value — updateStructureFromSave
+                    // recalculates from BaseLevelConfig which doesn't know built-structure rates.
+                    e.getComponent(StatsComponent.class).income = ss.income;
                     break;
                 }
             }

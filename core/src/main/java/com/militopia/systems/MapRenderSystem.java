@@ -104,15 +104,22 @@ public class MapRenderSystem extends EntitySystem {
 
         boolean isVisible = gameMap.visibleTiles[x][y];
 
-        if (fogEnabled && !isVisible) {
+        boolean isFog = fogEnabled && !isVisible;
+        if (isFog) {
             regionToDraw = unitFactory.fogRegion;
         } else {
             regionToDraw = unitFactory.getTextureForTerrain(gameMap.terrain[x][y].ordinal());
         }
 
         if (regionToDraw != null) {
-            batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH,
+            float fogLift = isFog ? 5f : 0f;
+            batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY + fogLift, GameConfig.DRAW_WIDTH,
                     GameConfig.DRAW_HEIGHT);
+            // Second fog layer at the original (non-lifted) position for depth
+            if (isFog) {
+                batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH,
+                        GameConfig.DRAW_HEIGHT);
+            }
         }
 
         if (x == selectedX && y == selectedY && regionToDraw != null) {

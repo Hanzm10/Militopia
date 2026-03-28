@@ -10,6 +10,8 @@ public class StructureData {
     public String baseOrdinal;
     public int xpGain;
     public String chosenSuperUnit;
+    public int parentBaseX = -1;
+    public int parentBaseY = -1;
 
     // Default constructor for JSON
     public StructureData() {

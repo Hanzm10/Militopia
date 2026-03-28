@@ -221,9 +221,12 @@ public class StructureEconomySystem extends EntitySystem {
         GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
         if (pos != null && StructureType.fromDisplayName(stats.name) == StructureType.SOLAR) {
             // SOLAR ARRAY: +1 income for each adjacent friendly structure
+            // Use index-based loop to avoid nested-iterator crash when called from
+            // inside another for-each over the same family (e.g. calculateGroupedBaseIncome).
             ImmutableArray<Entity> entities = getEngine().getEntitiesFor(
                     Family.all(GridPositionComponent.class, StatsComponent.class).get());
-            for (Entity other : entities) {
+            for (int i = 0; i < entities.size(); i++) {
+                Entity other = entities.get(i);
                 if (other == entity) continue;
                 StatsComponent oStats = other.getComponent(StatsComponent.class);
                 GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
