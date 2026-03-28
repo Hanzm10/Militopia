@@ -532,10 +532,10 @@ public class CombatSystem extends EntitySystem {
             StatsComponent tStats = jlc.primaryTarget.getComponent(StatsComponent.class);
             if (tStats != null && tStats.currentHP > 0) {
                 tStats.currentHP = 0;
-                entityFactory.createExplosion(landPos.x, landPos.y);
                 flagDeath(jlc.primaryTarget);
             }
         }
+        entityFactory.createExplosion(landPos.x, landPos.y);
 
         // 2. AoE damage to adjacent enemies on landing
         resolveJumpLandingAoE(jumper, landPos.x, landPos.y, jlc.primaryTarget);

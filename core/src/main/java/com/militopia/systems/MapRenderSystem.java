@@ -29,6 +29,7 @@ public class MapRenderSystem extends EntitySystem {
     private int selectedX, selectedY;
     private int bouncingX, bouncingY;
     private float bounceTimer;
+    private int clickedX = -1, clickedY = -1;
 
     private boolean fogEnabled = true;
 
@@ -46,12 +47,14 @@ public class MapRenderSystem extends EntitySystem {
         this.priority = 0;
     }
 
-    public void updateState(int selX, int selY, int bX, int bY, float bTimer) {
+    public void updateState(int selX, int selY, int bX, int bY, float bTimer, int cX, int cY) {
         this.selectedX = selX;
         this.selectedY = selY;
         this.bouncingX = bX;
         this.bouncingY = bY;
         this.bounceTimer = bTimer;
+        this.clickedX = cX;
+        this.clickedY = cY;
     }
 
     public void setFogEnabled(boolean enabled) {
@@ -151,7 +154,42 @@ public class MapRenderSystem extends EntitySystem {
                 }
             }
         }
+        renderSelectionIndicator();
         shapeRenderer.end();
+    }
+
+    private void renderSelectionIndicator() {
+        if (clickedX < 0 || clickedY < 0 || clickedX >= gameMap.width || clickedY >= gameMap.height) return;
+
+        float[] coords = getIsoCoords(clickedX, clickedY);
+        float isoX = coords[0];
+        float isoY = coords[1];
+        float animY = coords[2];
+
+        float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+        float drawX = isoX - xOffset;
+        float centerX = drawX + (GameConfig.DRAW_WIDTH / 2f);
+        float surfaceLift = 10f;
+        float centerY = isoY + surfaceLift + animY;
+        float halfW = GameConfig.TILE_WIDTH / 2.0f;
+        float halfH = GameConfig.TILE_HEIGHT / 2.0f;
+
+        float topX = centerX,          topY = centerY + halfH;
+        float rightX = centerX + halfW, rightY = centerY;
+        float botX = centerX,           botY = centerY - halfH;
+        float leftX = centerX - halfW,  leftY = centerY;
+
+        float jointSize = GameConfig.SELECTION_LINE_THICKNESS / 2f;
+
+        shapeRenderer.setColor(1f, 1f, 1f, GameConfig.SELECTION_ALPHA);
+        shapeRenderer.rectLine(topX, topY, rightX, rightY, GameConfig.SELECTION_LINE_THICKNESS);
+        shapeRenderer.rectLine(rightX, rightY, botX, botY, GameConfig.SELECTION_LINE_THICKNESS);
+        shapeRenderer.rectLine(botX, botY, leftX, leftY, GameConfig.SELECTION_LINE_THICKNESS);
+        shapeRenderer.rectLine(leftX, leftY, topX, topY, GameConfig.SELECTION_LINE_THICKNESS);
+        shapeRenderer.circle(topX, topY, jointSize);
+        shapeRenderer.circle(rightX, rightY, jointSize);
+        shapeRenderer.circle(botX, botY, jointSize);
+        shapeRenderer.circle(leftX, leftY, jointSize);
     }
 
     private float[] getIsoCoords(int x, int y) {

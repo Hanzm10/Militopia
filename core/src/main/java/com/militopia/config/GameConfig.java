@@ -41,4 +41,13 @@ public class GameConfig {
     public static final float UI_WIDTH = 300f;
 
     public static final boolean TESTING_MODE = false;
+
+    // Shadow
+    public static final float SHADOW_ALPHA = 1f;
+    public static final float SHADOW_OFFSET_X = 0f;
+    public static final float SHADOW_OFFSET_Y = 7.5f;
+
+    // Selection Indicator
+    public static final float SELECTION_LINE_THICKNESS = 0.8f;
+    public static final float SELECTION_ALPHA = 1f;
 }

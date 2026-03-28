@@ -327,6 +327,9 @@ public class GameInputController extends InputAdapter {
     /** Triggers a Juggernaut jump to the target tile. Target may be null for empty-tile jumps. */
     private void performJump(Entity attacker, Entity target, int tx, int ty) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        // Block jump onto water terrain
+        MapGenerator.TerrainType terrain = gameMap.terrain[tx][ty];
+        if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER) return;
         // Block jump onto a friendly unit tile
         Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
         if (tileUnit != null) {

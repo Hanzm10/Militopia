@@ -59,182 +59,101 @@ public class UnitFactory {
     private final TextureRegion deerRegion;
     private final TextureRegion zebraRegion;
 
-    private final TextureRegion horseDisplayRegion;
-    private final TextureRegion fishDisplayRegion;
-    private final TextureRegion deerDisplayRegion;
-    private final TextureRegion zebraDisplayRegion;
-
     public UnitFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
         this.assets = assets;
 
         // --- MANUAL LOADING: Base Levels ---
-        baseRegions.put("lvl1_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL1_BLUE)));
-        baseRegions.put("lvl1_red", new TextureRegion(assets.get(AssetManager.BASE_LVL1_RED)));
+        // BASE_A = red (player 2), BASE_B = blue (player 1)
+        baseRegions.put("lvl1_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_1)));
+        baseRegions.put("lvl1_red",   new TextureRegion(assets.get(AssetManager.BASE_A_1)));
 
-        baseRegions.put("lvl2_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL2_BLUE)));
-        baseRegions.put("lvl2_red", new TextureRegion(assets.get(AssetManager.BASE_LVL2_RED)));
+        baseRegions.put("lvl2_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_2)));
+        baseRegions.put("lvl2_red",   new TextureRegion(assets.get(AssetManager.BASE_A_2)));
 
-        baseRegions.put("lvl3_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL3_BLUE)));
-        baseRegions.put("lvl3_red", new TextureRegion(assets.get(AssetManager.BASE_LVL3_RED)));
+        baseRegions.put("lvl3_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_3)));
+        baseRegions.put("lvl3_red",   new TextureRegion(assets.get(AssetManager.BASE_A_3)));
 
-        baseRegions.put("lvl4_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL4_BLUE)));
-        baseRegions.put("lvl4_red", new TextureRegion(assets.get(AssetManager.BASE_LVL4_RED)));
+        baseRegions.put("lvl4_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_4)));
+        baseRegions.put("lvl4_red",   new TextureRegion(assets.get(AssetManager.BASE_A_4)));
 
-        baseRegions.put("lvl5_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL5_BLUE)));
-        baseRegions.put("lvl5_red", new TextureRegion(assets.get(AssetManager.BASE_LVL5_RED)));
+        baseRegions.put("lvl5_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_5)));
+        baseRegions.put("lvl5_red",   new TextureRegion(assets.get(AssetManager.BASE_A_5)));
 
-        baseRegions.put("lvl6_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL6_BLUE)));
-        baseRegions.put("lvl6_red", new TextureRegion(assets.get(AssetManager.BASE_LVL6_RED)));
+        baseRegions.put("lvl6_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_6)));
+        baseRegions.put("lvl6_red",   new TextureRegion(assets.get(AssetManager.BASE_A_6)));
 
-        baseRegions.put("lvl7_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL7_BLUE)));
-        baseRegions.put("lvl7_red", new TextureRegion(assets.get(AssetManager.BASE_LVL7_RED)));
+        baseRegions.put("lvl7_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_7)));
+        baseRegions.put("lvl7_red",   new TextureRegion(assets.get(AssetManager.BASE_A_7)));
 
-        baseRegions.put("lvl8_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL8_BLUE)));
-        baseRegions.put("lvl8_red", new TextureRegion(assets.get(AssetManager.BASE_LVL8_RED)));
+        baseRegions.put("lvl8_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_8)));
+        baseRegions.put("lvl8_red",   new TextureRegion(assets.get(AssetManager.BASE_A_8)));
 
-        baseRegions.put("lvl9_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL9_BLUE)));
-        baseRegions.put("lvl9_red", new TextureRegion(assets.get(AssetManager.BASE_LVL9_RED)));
+        baseRegions.put("lvl9_blue",  new TextureRegion(assets.get(AssetManager.BASE_B_9)));
+        baseRegions.put("lvl9_red",   new TextureRegion(assets.get(AssetManager.BASE_A_9)));
 
-        baseRegions.put("lvl10_blue", new TextureRegion(assets.get(AssetManager.BASE_LVL10_BLUE)));
-        baseRegions.put("lvl10_red", new TextureRegion(assets.get(AssetManager.BASE_LVL10_RED)));
+        baseRegions.put("lvl10_blue", new TextureRegion(assets.get(AssetManager.BASE_B_10)));
+        baseRegions.put("lvl10_red",  new TextureRegion(assets.get(AssetManager.BASE_A_10)));
 
-        // UNITS
-        // --- MANUAL LOADING: Units ---
-        // Recruit
-        unitRegions.put("RECRUIT", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.RECRUIT_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.RECRUIT_LEFT)),
-                new TextureRegion(assets.get(AssetManager.RECRUIT_DISPLAY))
-        });
-
-        // Ranger
-        unitRegions.put("RANGER", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.RANGER_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.RANGER_LEFT)),
-                new TextureRegion(assets.get(AssetManager.RANGER_DISPLAY))
-        });
-
-        // Tank
-        unitRegions.put("TANK", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.TANK_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.TANK_LEFT)),
-                new TextureRegion(assets.get(AssetManager.TANK_DISPLAY))
-        });
-
-        // Sniper
-        unitRegions.put("SNIPER", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.SNIPER_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.SNIPER_LEFT)),
-                new TextureRegion(assets.get(AssetManager.SNIPER_DISPLAY))
-        });
-
-        // Recon Drone
-        unitRegions.put("RECON_DRONE", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.RECON_DRONE_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.RECON_DRONE_LEFT)),
-                new TextureRegion(assets.get(AssetManager.RECON_DRONE_DISPLAY))
-        });
-
-        // Suicide Drone
-        unitRegions.put("SUICIDE_DRONE", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_LEFT)),
-                new TextureRegion(assets.get(AssetManager.SUICIDE_DRONE_DISPLAY))
-        });
-
-        // Apache
-        unitRegions.put("APACHE", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.APACHE_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.APACHE_LEFT)),
-                new TextureRegion(assets.get(AssetManager.APACHE_DISPLAY))
-        });
-
-        // Gunboat
-        unitRegions.put("GUNBOAT", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.GUNBOAT_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.GUNBOAT_LEFT)),
-                new TextureRegion(assets.get(AssetManager.GUNBOAT_DISPLAY))
-        });
-
-        // Destroyer
-        unitRegions.put("DESTROYER", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.DESTROYER_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.DESTROYER_LEFT)),
-                new TextureRegion(assets.get(AssetManager.DESTROYER_DISPLAY))
-        });
-
-        // Carrier
-        unitRegions.put("CARRIER", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.CARRIER_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.CARRIER_LEFT)),
-                new TextureRegion(assets.get(AssetManager.CARRIER_DISPLAY))
-        });
-
-        // Juggernaut
-        unitRegions.put("JUGGERNAUT", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.JUGGERNAUT_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.JUGGERNAUT_LEFT)),
-                new TextureRegion(assets.get(AssetManager.JUGGERNAUT_DISPLAY))
-        });
-
-        // B2 Bomber
-        unitRegions.put("B2", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.B2_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.B2_LEFT)),
-                new TextureRegion(assets.get(AssetManager.B2_DISPLAY))
-        });
-
-        // Submarine
-        unitRegions.put("SUBMARINE", new TextureRegion[] {
-                new TextureRegion(assets.get(AssetManager.SUBMARINE_RIGHT)),
-                new TextureRegion(assets.get(AssetManager.SUBMARINE_LEFT)),
-                new TextureRegion(assets.get(AssetManager.SUBMARINE_DISPLAY))
-        });
-
-        // Super Units — reuse existing textures until custom assets are added
+        // UNITS — [0]=right, [1]=left (flipped copy)
+        putUnit("RECRUIT",       assets.get(AssetManager.RECRUIT));
+        putUnit("RANGER",        assets.get(AssetManager.RANGER));
+        putUnit("TANK",          assets.get(AssetManager.TANK));
+        putUnit("SNIPER",        assets.get(AssetManager.SNIPER));
+        putUnit("RECON_DRONE",   assets.get(AssetManager.RECON_DRONE));
+        putUnit("SUICIDE_DRONE", assets.get(AssetManager.SUICIDE_DRONE));
+        putUnit("APACHE",        assets.get(AssetManager.APACHE));
+        putUnit("GUNBOAT",       assets.get(AssetManager.GUNBOAT));
+        putUnit("DESTROYER",     assets.get(AssetManager.DESTROYER));
+        putUnit("CARRIER",       assets.get(AssetManager.CARRIER));
+        putUnit("JUGGERNAUT",    assets.get(AssetManager.JUGGERNAUT));
+        putUnit("B2",            assets.get(AssetManager.B2));
+        putUnit("SUBMARINE",     assets.get(AssetManager.SUBMARINE));
 
         // Structures
         structRegions.put("MUNITION_FACTORY", new TextureRegion(assets.get(AssetManager.MUNITION_FACTORY)));
-        structRegions.put("PORT", new TextureRegion(assets.get(AssetManager.PORT)));
-        structRegions.put("SOLAR", new TextureRegion(assets.get(AssetManager.SOLAR_ARRAY)));
-        structRegions.put("OIL_DERRICK", new TextureRegion(assets.get(AssetManager.OIL_DERRICK)));
-        structRegions.put("NUCLEAR", new TextureRegion(assets.get(AssetManager.NUCLEAR_PLANT)));
-        structRegions.put("HOSPITAL", new TextureRegion(assets.get(AssetManager.FIELD_HOSPITAL)));
-        structRegions.put("RADAR", new TextureRegion(assets.get(AssetManager.RADAR_STATION)));
-        structRegions.put("JAMMER", new TextureRegion(assets.get(AssetManager.SIGNAL_JAMMER)));
+        structRegions.put("PORT",             new TextureRegion(assets.get(AssetManager.PORT)));
+        structRegions.put("SOLAR",            new TextureRegion(assets.get(AssetManager.SOLAR_ARRAY)));
+        structRegions.put("OIL_DERRICK",      new TextureRegion(assets.get(AssetManager.OIL_DERRICK)));
+        structRegions.put("NUCLEAR",          new TextureRegion(assets.get(AssetManager.NUCLEAR_PLANT)));
+        structRegions.put("HOSPITAL",         new TextureRegion(assets.get(AssetManager.FIELD_HOSPITAL)));
+        structRegions.put("RADAR",            new TextureRegion(assets.get(AssetManager.RADAR_STATION)));
+        structRegions.put("JAMMER",           new TextureRegion(assets.get(AssetManager.SIGNAL_JAMMER)));
 
         // Tiles
-        this.grassRegion = new TextureRegion(assets.get(AssetManager.TILE_GRASS));
-        this.waterRegion = new TextureRegion(assets.get(AssetManager.TILE_WATER));
-        this.deepWaterRegion = new TextureRegion(assets.get(AssetManager.TILE_DEEPWATER));
-        this.sandRegion = new TextureRegion(assets.get(AssetManager.TILE_SAND));
-        this.mountainRegion = new TextureRegion(assets.get(AssetManager.TILE_MOUNTAIN));
+        this.grassRegion      = new TextureRegion(assets.get(AssetManager.TILE_GRASS));
+        this.waterRegion      = new TextureRegion(assets.get(AssetManager.TILE_WATER));
+        this.deepWaterRegion  = new TextureRegion(assets.get(AssetManager.TILE_DEEPWATER));
+        this.sandRegion       = new TextureRegion(assets.get(AssetManager.TILE_SAND));
+        this.mountainRegion   = new TextureRegion(assets.get(AssetManager.TILE_MOUNTAIN));
 
         // Objects
-        this.treeRegion = new TextureRegion(assets.get(AssetManager.OBJ_TREE));
-        this.ruinsRegion = new TextureRegion(assets.get(AssetManager.OBJ_RUINS));
-        this.townRegion = new TextureRegion(assets.get(AssetManager.STRUCT_TOWN));
-        this.oilRegion = new TextureRegion(assets.get(AssetManager.OBJ_OIL));
-        this.cactusRegion = new TextureRegion(assets.get(AssetManager.OBJ_CACTUS));
+        this.treeRegion        = new TextureRegion(assets.get(AssetManager.OBJ_TREE));
+        this.ruinsRegion       = new TextureRegion(assets.get(AssetManager.OBJ_RUINS));
+        this.townRegion        = new TextureRegion(assets.get(AssetManager.STRUCT_TOWN));
+        this.oilRegion         = new TextureRegion(assets.get(AssetManager.OBJ_OIL));
+        this.cactusRegion      = new TextureRegion(assets.get(AssetManager.OBJ_CACTUS));
         this.mountainObjRegion = new TextureRegion(assets.get(AssetManager.OBJ_MOUNTAIN));
-        this.fogRegion = new TextureRegion(assets.get(AssetManager.FOG_OF_WAR));
+        this.fogRegion         = new TextureRegion(assets.get(AssetManager.FOG_OF_WAR));
 
         // Add to map for consistent lookup via getTextureForPopup
-        structRegions.put("TOWN", townRegion);
+        structRegions.put("TOWN",  townRegion);
         structRegions.put("RUINS", ruinsRegion);
-        structRegions.put("OIL", oilRegion);
+        structRegions.put("OIL",   oilRegion);
 
         // Animals
         this.horseRegion = new TextureRegion(assets.get(AssetManager.HORSE));
-        this.fishRegion = new TextureRegion(assets.get(AssetManager.FISH));
-        this.deerRegion = new TextureRegion(assets.get(AssetManager.DEER));
+        this.fishRegion  = new TextureRegion(assets.get(AssetManager.FISH));
+        this.deerRegion  = new TextureRegion(assets.get(AssetManager.DEER));
         this.zebraRegion = new TextureRegion(assets.get(AssetManager.ZEBRA));
+    }
 
-        this.horseDisplayRegion = new TextureRegion(assets.get(AssetManager.HORSE_DISPLAY));
-        this.fishDisplayRegion = new TextureRegion(assets.get(AssetManager.FISH_DISPLAY));
-        this.deerDisplayRegion = new TextureRegion(assets.get(AssetManager.DEER_DISPLAY));
-        this.zebraDisplayRegion = new TextureRegion(assets.get(AssetManager.ZEBRA_DISPLAY));
+    /** Builds a [right, left-flipped] pair from a single texture and stores it. */
+    private void putUnit(String key, com.badlogic.gdx.graphics.Texture tex) {
+        TextureRegion right = new TextureRegion(tex);
+        TextureRegion left  = new TextureRegion(tex);
+        left.flip(true, false);
+        unitRegions.put(key, new TextureRegion[]{ right, left });
     }
 
     /**
@@ -405,7 +324,7 @@ public class UnitFactory {
 
         TextureRegion region = structRegions.get(regionKey);
         if (region == null) {
-            region = horseDisplayRegion; // Fallback
+            region = horseRegion; // Fallback
         }
         Entity entity = engine.createEntity();
         entity.add(new GridPositionComponent(x, y, 1)); // Layer 1
@@ -933,7 +852,7 @@ public class UnitFactory {
      */
     public TextureRegion getTextureForPopup(String key) {
         if (unitRegions.containsKey(key)) {
-            return unitRegions.get(key)[2];
+            return unitRegions.get(key)[0];
         }
         if (structRegions.containsKey(key)) {
             return structRegions.get(key);
@@ -941,7 +860,7 @@ public class UnitFactory {
         if (key.startsWith("BASE_P")) {
             return getHudIcon(MapGenerator.ObjectType.valueOf(key));
         }
-        return horseDisplayRegion;
+        return horseRegion;
     }
 
     /**
@@ -952,8 +871,8 @@ public class UnitFactory {
      */
     public UiInfo getUnitUi(UnitType unitType) {
         TextureRegion[] regs = unitRegions.get(unitType.name());
-        return (regs != null) ? new UiInfo(toNiceName(unitType.name()), regs[2])
-                : new UiInfo("Unknown", unitRegions.get(UnitType.RECRUIT.name())[2]);
+        return (regs != null) ? new UiInfo(toNiceName(unitType.name()), regs[0])
+                : new UiInfo("Unknown", unitRegions.get(UnitType.RECRUIT.name())[0]);
     }
 
     /**
@@ -965,13 +884,13 @@ public class UnitFactory {
     public TextureRegion getHudIcon(MapGenerator.ObjectType type) {
         switch (type) {
             case HORSE:
-                return horseDisplayRegion;
+                return horseRegion;
             case FISH:
-                return fishDisplayRegion;
+                return fishRegion;
             case DEER:
-                return deerDisplayRegion;
+                return deerRegion;
             case ZEBRA:
-                return zebraDisplayRegion;
+                return zebraRegion;
 
             case BASE_P1:
                 return baseRegions.get("lvl1_blue");

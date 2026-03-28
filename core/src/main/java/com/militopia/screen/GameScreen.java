@@ -179,6 +179,7 @@ public class GameScreen implements Screen {
 
         unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
         unitRenderSystem.setPlayer(gameState.currentPlayer);
+        unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
         engine.addSystem(unitRenderSystem);
 
         engine.addSystem(new FloatingTextSystem());
@@ -609,7 +610,8 @@ public class GameScreen implements Screen {
         mapRenderSystem.updateState(
                 inputController.getHoveredX(), inputController.getHoveredY(),
                 inputController.getBouncingX(), inputController.getBouncingY(),
-                inputController.getBounceTimer());
+                inputController.getBounceTimer(),
+                inputController.getLastClickedX(), inputController.getLastClickedY());
 
         unitRenderSystem.updateState(
                 inputController.getHoveredX(), inputController.getHoveredY(),

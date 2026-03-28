@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
 import com.militopia.config.CombatConstants;
+import com.militopia.config.DisplayAssetConfig;
 import com.militopia.config.GameConfig;
 import com.militopia.config.StructureType;
 import com.militopia.config.UnitType;
@@ -40,6 +41,12 @@ public class UnitRenderSystem extends EntitySystem {
     private int selectedX = -1, selectedY = -1;
     private int bouncingX = -1, bouncingY = -1;
     private float bounceTimer = 0;
+
+    private com.badlogic.gdx.graphics.g2d.TextureRegion shadowRegion;
+
+    public void setShadowRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
+        this.shadowRegion = r;
+    }
 
     // Reusable removal list (avoids per-frame allocation accumulation)
     private final Array<Entity> toRemove = new Array<>();
@@ -172,9 +179,11 @@ public class UnitRenderSystem extends EntitySystem {
             }
             float isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f);
             float isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
-            float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
-            float yOff = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
-            batch.draw(tex.region, isoX - xOff, isoY - yOff + 10f, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+            String deathKey = (stats != null) ? stats.unitTypeKey : "";
+            DisplayAssetConfig.AssetData deathCfg = DisplayAssetConfig.get(deathKey);
+            float xOff = (deathCfg.width - GameConfig.TILE_WIDTH) / 2f;
+            float yOff = (deathCfg.height - GameConfig.TILE_HEIGHT) / 2f;
+            batch.draw(tex.region, isoX - xOff + deathCfg.offsetX, isoY - yOff + deathCfg.offsetY, deathCfg.width, deathCfg.height);
             batch.setColor(Color.WHITE);
             return;
         }
@@ -204,9 +213,29 @@ public class UnitRenderSystem extends EntitySystem {
             animY = (float) Math.sin(progress * Math.PI) * GameConfig.BOUNCE_HEIGHT;
         }
 
-        float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
-        float yOffset = (GameConfig.DRAW_HEIGHT - GameConfig.TILE_HEIGHT) / 2f;
-        float verticalOff = isMarker || isAttackMarker ? 5f : 10f;
+        String assetKey = (stats != null) ? stats.unitTypeKey : "";
+        if (stats != null && (assetKey.equals("BASE_P1") || assetKey.equals("BASE_P2"))) {
+            assetKey = "BASE_" + Math.min(stats.level, 10);
+        }
+        DisplayAssetConfig.AssetData cfg = DisplayAssetConfig.get(assetKey);
+        float drawW   = cfg.width;
+        float drawH   = cfg.height;
+        float xOffset = (drawW - GameConfig.TILE_WIDTH) / 2f;
+        float yOffset = (drawH - GameConfig.TILE_HEIGHT) / 2f;
+        float verticalOff = isMarker || isAttackMarker ? 5f : cfg.offsetY;
+
+        // Shadow — drawn on the ground plane beneath units
+        boolean isAnimal = e.getComponent(AnimalComponent.class) != null;
+        if (shadowRegion != null && (typeC.type == TypeComponent.Type.UNIT || isAnimal)) {
+            float shadowW = cfg.shadowW;
+            float shadowH = cfg.shadowH;
+            batch.setColor(0f, 0f, 0f, GameConfig.SHADOW_ALPHA);
+            batch.draw(shadowRegion,
+                    isoX - shadowW / 2f + GameConfig.TILE_WIDTH / 2f + GameConfig.SHADOW_OFFSET_X + cfg.shadowOffsetX,
+                    isoY + GameConfig.SHADOW_OFFSET_Y + cfg.shadowOffsetY + animY,
+                    shadowW, shadowH);
+            batch.setColor(Color.WHITE);
+        }
 
         // --- Colour tinting ---
         AbilitiesComponent unitAbilities = e.getComponent(AbilitiesComponent.class);
@@ -239,9 +268,9 @@ public class UnitRenderSystem extends EntitySystem {
 
         if (tex != null && tex.region != null) {
             batch.draw(tex.region,
-                    isoX - xOffset,
+                    isoX - xOffset + cfg.offsetX,
                     isoY - yOffset + verticalOff + animY,
-                    GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+                    drawW, drawH);
         }
         
         // --- Sprite Animation (Overlay) ---
@@ -270,9 +299,9 @@ public class UnitRenderSystem extends EntitySystem {
             batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
             batch.setColor(0.4f, 0.4f, 0.4f, 1f);
             batch.draw(tex.region,
-                    isoX - xOffset,
+                    isoX - xOffset + cfg.offsetX,
                     isoY - yOffset + verticalOff + animY,
-                    GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+                    drawW, drawH);
             batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
             batch.setColor(Color.WHITE);
         }
