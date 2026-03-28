@@ -622,9 +622,11 @@ public class UnitFactory {
         stats.chosenSuperUnit = superUnitType;
 
         // Spawn one immediately adjacent to the base
-        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superUnitType), map);
+        UnitType superType = UnitType.fromKey(superUnitType);
+        if (superType == null) return;
+        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superType), map);
         if (spawn != null) {
-            createUnit(superUnitType, spawn[0], spawn[1], stats.owner, false);
+            createUnit(superType, spawn[0], spawn[1], stats.owner, false);
             GameLogger.log(GameLogger.SUMMON, stats.owner,
                     stats.name + " chose super unit: " + superUnitType
                             + " — spawned at " + GameLogger.pos(spawn[0], spawn[1]));
