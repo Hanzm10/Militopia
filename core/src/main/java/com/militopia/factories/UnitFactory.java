@@ -12,6 +12,7 @@ import com.militopia.components.*;
 import com.militopia.config.BaseLevelConfig;
 import com.militopia.config.GameConfig;
 import com.militopia.config.StructureType;
+import com.militopia.config.UnitStatConfig;
 import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
 import com.militopia.data.StructureSnapshot;
@@ -262,63 +263,11 @@ public class UnitFactory {
         entity.add(new AbilitiesComponent());
         entity.add(new AnimationComponent());
 
-        // --- MANUAL STATS CONFIGURATION ---
-        int hp = 10, atk = 5, def = 0, move = 3, rng = 1, vis = 3, cost = 3;
-        StatsComponent.MoveType moveType = StatsComponent.MoveType.LAND;
+        UnitStatConfig.UnitStatData statData = UnitStatConfig.get(unitType);
 
-        switch (unitType) {
-            case RECRUIT:
-                hp = 10; atk = 3; def = 1; move = 1; rng = 1; vis = 1; cost = 2;
-                moveType = StatsComponent.MoveType.LAND; break;
-            case RANGER:
-                hp = 12; atk = 5; def = 1; move = 1; rng = 2; vis = 2; cost = 5;
-                moveType = StatsComponent.MoveType.LAND; break;
-            case SNIPER:
-                hp = 8; atk = 15; def = 0; move = 1; rng = 3; vis = 3; cost = 8;
-                moveType = StatsComponent.MoveType.LAND; break;
-            case TANK:
-                hp = 30; atk = 12; def = 5; move = 2; rng = 3; vis = 3; cost = 15;
-                moveType = StatsComponent.MoveType.LAND; break;
-            case JUGGERNAUT:
-                hp = 50; atk = 12; def = 6; move = 4; rng = 4; vis = 3; cost = 0;
-                moveType = StatsComponent.MoveType.LAND; break;
-            case RECON_DRONE:
-                hp = 5; atk = 0; def = 0; move = 3; rng = 0; vis = 3; cost = 4;
-                moveType = StatsComponent.MoveType.AIR; break;
-            case SUICIDE_DRONE:
-                hp = 5; atk = 20; def = 0; move = 2; rng = 1; vis = 2; cost = 7;
-                moveType = StatsComponent.MoveType.AIR; break;
-            case APACHE:
-                hp = 20; atk = 15; def = 2; move = 3; rng = 2; vis = 3; cost = 18;
-                moveType = StatsComponent.MoveType.AIR; break;
-            case B2:
-                hp = 45; atk = 18; def = 3; move = 3; rng = 3; vis = 3; cost = 0;
-                moveType = StatsComponent.MoveType.AIR; break;
-            case GUNBOAT:
-                hp = 10; atk = 5; def = 2; move = 2; rng = 2; vis = 2; cost = 6;
-                moveType = StatsComponent.MoveType.SEA; break;
-            case DESTROYER:
-                hp = 30; atk = 15; def = 3; move = 3; rng = 3; vis = 3; cost = 13;
-                moveType = StatsComponent.MoveType.SEA; break;
-            case CARRIER:
-                hp = 45; atk = 5; def = 4; move = 3; rng = 3; vis = 3; cost = 25;
-                moveType = StatsComponent.MoveType.SEA; break;
-            case SUBMARINE:
-                hp = 40; atk = 25; def = 3; move = 4; rng = 4; vis = 3; cost = 0;
-                moveType = StatsComponent.MoveType.SEA; break;
-            case TITAN:
-                hp = 60; atk = 20; def = 10; move = 2; rng = 2; vis = 3; cost = 25;
-                moveType = StatsComponent.MoveType.LAND; break;
-            case WRAITH:
-                hp = 30; atk = 25; def = 3; move = 4; rng = 3; vis = 4; cost = 25;
-                moveType = StatsComponent.MoveType.AIR; break;
-            case DREADNOUGHT:
-                hp = 70; atk = 20; def = 8; move = 2; rng = 4; vis = 3; cost = 25;
-                moveType = StatsComponent.MoveType.SEA; break;
-        }
-
-        // Use Unit Constructor (No Income Parameter)
-        StatsComponent stats = new StatsComponent(toNiceName(unitType.name()), hp, atk, def, move, rng, vis, cost, moveType,
+        StatsComponent stats = new StatsComponent(toNiceName(unitType.name()),
+                statData.hp, statData.atk, statData.def, statData.move,
+                statData.rng, statData.vis, statData.cost, statData.moveType,
                 owner);
         stats.unitTypeKey = unitType.name(); // store raw key for snapshot restoration
         stats.unitType = unitType;
@@ -345,23 +294,7 @@ public class UnitFactory {
      * @return cost in gold; 0 for super units or unrecognised types
      */
     public static int getUnitCost(UnitType unitType) {
-        // Must match cost in createUnit
-        switch (unitType) {
-            case RECRUIT:      return 2;
-            case RANGER:       return 5;
-            case SNIPER:       return 8;
-            case TANK:         return 15;
-            case RECON_DRONE:  return 4;
-            case SUICIDE_DRONE:return 7;
-            case APACHE:       return 18;
-            case GUNBOAT:      return 6;
-            case DESTROYER:    return 13;
-            case CARRIER:      return 25;
-            case TITAN:
-            case WRAITH:
-            case DREADNOUGHT:  return 25;
-            default:           return 0;
-        }
+        return UnitStatConfig.get(unitType).cost;
     }
 
     /**
@@ -371,22 +304,7 @@ public class UnitFactory {
      * @return the corresponding {@link StatsComponent.MoveType}
      */
     public StatsComponent.MoveType getUnitMoveType(UnitType unitType) {
-        switch (unitType) {
-            case RECON_DRONE:
-            case SUICIDE_DRONE:
-            case APACHE:
-            case B2:
-            case WRAITH:
-                return StatsComponent.MoveType.AIR;
-            case GUNBOAT:
-            case DESTROYER:
-            case CARRIER:
-            case SUBMARINE:
-            case DREADNOUGHT:
-                return StatsComponent.MoveType.SEA;
-            default:
-                return StatsComponent.MoveType.LAND;
-        }
+        return UnitStatConfig.get(unitType).moveType;
     }
 
     // -------------------------------------------------------------------------
