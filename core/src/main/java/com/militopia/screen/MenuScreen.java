@@ -4,18 +4,24 @@ import com.militopia.screen.LoadGameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Cursor;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
-import com.militopia.utils.RenderUtils;
 
 public class MenuScreen implements Screen {
 
@@ -31,13 +37,17 @@ public class MenuScreen implements Screen {
         table.setFillParent(true);
         stage.addActor(table);
 
-        TextButton newGameBtn = new TextButton("New Game", game.skin, "default");
+        TextButton newGameBtn = new TextButton("NEW GAME", game.skin, "militopia-btn");
+        newGameBtn.getLabel().setFontScale(1.4f);
         newGameBtn.addListener(new HoverListener());
-        TextButton lanBtn = new TextButton("Multiplayer", game.skin, "default");
+        TextButton lanBtn = new TextButton("MULTIPLAYER", game.skin, "militopia-btn");
+        lanBtn.getLabel().setFontScale(1.4f);
         lanBtn.addListener(new HoverListener());
-        TextButton resumeBtn = new TextButton("Saved Games", game.skin, "default");
+        TextButton resumeBtn = new TextButton("SAVED GAMES", game.skin, "militopia-btn");
+        resumeBtn.getLabel().setFontScale(1.4f);
         resumeBtn.addListener(new HoverListener());
-        TextButton exitBtn = new TextButton("Exit", game.skin, "default");
+        TextButton exitBtn = new TextButton("EXIT", game.skin, "militopia-btn");
+        exitBtn.getLabel().setFontScale(1.4f);
         exitBtn.addListener(new HoverListener());
 
         newGameBtn.addListener(new ClickListener() {
@@ -72,21 +82,26 @@ public class MenuScreen implements Screen {
             }
         });
 
-        table.add(newGameBtn).fillX().uniformX().pad(10).width(200);
+        // --- TEXT LOGO ---
+        Texture logoTex = game.assets.get(AssetManager.TEXT_LOGO);
+        Image logoImage = new Image(new TextureRegionDrawable(new TextureRegion(logoTex)));
+        logoImage.setScaling(Scaling.fit);
+
+        table.add(logoImage).width(800).height(300).padBottom(30);
         table.row();
-        table.add(lanBtn).fillX().uniformX().pad(10);
+        table.add(newGameBtn).fillX().width(300).pad(10);
         table.row();
-        table.add(resumeBtn).fillX().uniformX().pad(10);
+        table.add(lanBtn).fillX().width(300).pad(10);
         table.row();
-        table.add(exitBtn).fillX().uniformX().pad(10);
+        table.add(resumeBtn).fillX().width(300).pad(10);
+        table.row();
+        table.add(exitBtn).fillX().width(300).pad(10);
     }
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-
-        RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
-
+        ScreenUtils.clear(0, 0, 0, 1);
+        VideoBackgroundManager.getInstance().render(game.batch);
         stage.act();
         stage.draw();
     }
@@ -99,11 +114,15 @@ public class MenuScreen implements Screen {
     @Override
     public void show() {
         GameLogger.logScreen("Main Menu opened");
+        Gdx.input.setInputProcessor(stage);
+        AudioManager.getInstance().playBGM("battle_theme.ogg", true);
+        VideoBackgroundManager.getInstance().play();
     }
 
     @Override
     public void hide() {
         Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
+        VideoBackgroundManager.getInstance().pause();
     }
 
     @Override

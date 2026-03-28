@@ -90,6 +90,8 @@ public class EntityFactory {
         anim.animation = explosionAnim;
         anim.duration = 0.5f;
         anim.autoRemove = true;
+        anim.drawWidth = 9f;
+        anim.drawHeight = 10f;
         e.add(anim);
 
         engine.addEntity(e);
@@ -117,12 +119,12 @@ public class EntityFactory {
 
     public void createTankAttack(int x, int y) {
         // Tank is wider: 24x18
-        createEffect(x, y, tankAttackAnim, 0.8f, 24f, 18f);
+        createEffect(x, y, tankAttackAnim, 0.8f, 24f, 18f, 0f, 5f);
     }
 
     public void createNuclearAttack(int x, int y) {
         // Nuclear (Super Units) is much larger: 40x40
-        createEffect(x, y, nuclearAttackAnim, 0.9f, 40f, 40f);
+        createEffect(x, y, nuclearAttackAnim, 0.9f, 30f, 30f, 0f, 10f);
     }
 
     public void createMuzzleFlash(int x, int y, float offsetX, float offsetY) {

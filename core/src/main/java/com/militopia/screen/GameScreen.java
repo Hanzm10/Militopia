@@ -51,6 +51,7 @@ import com.militopia.net.NetworkMessage;
 import com.badlogic.gdx.utils.Json;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class GameScreen implements Screen {
@@ -245,7 +246,7 @@ public class GameScreen implements Screen {
         structureEconomySystem.setGameHUD(gameHUD);
 
         inputController = new GameInputController(
-                this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
+                this, camera, viewport, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
 
         gameHUD.build(this, inputController, unitFactory, gameState, turnHistory);
         gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
@@ -647,7 +648,7 @@ public class GameScreen implements Screen {
 
         // --- NEW: Consolidated Economy Header ---
         int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
-        String playerLabel = (gameState.currentPlayer == 1) ? "PLAYER 1" : "PLAYER 2";
+        String playerLabel = (gameState.currentPlayer == 1) ? gameState.p1Name.toUpperCase() : gameState.p2Name.toUpperCase();
 
         sb.append("ACTIVE PLAYER : ").append(playerLabel).append("\n");
 
@@ -692,7 +693,7 @@ public class GameScreen implements Screen {
         Collections.sort(p1Logs);
         Collections.sort(p2Logs);
 
-        sb.append("PLAYER 1 BASES:\n");
+        sb.append(gameState.p1Name.toUpperCase()).append(" BASES:\n");
         if (p1Logs.isEmpty()) {
             sb.append("  (No Bases)\n");
         }
@@ -700,7 +701,7 @@ public class GameScreen implements Screen {
             sb.append(s).append("\n");
         }
 
-        sb.append("\nPLAYER 2 BASES:\n");
+        sb.append("\n").append(gameState.p2Name.toUpperCase()).append(" BASES:\n");
         if (p2Logs.isEmpty()) {
             sb.append("  (No Bases)\n");
         }
@@ -735,7 +736,9 @@ public class GameScreen implements Screen {
 
             // Show economy popup ONLY if this is the hardware owner's turn
             if (gameState.currentPlayer == getActiveLocalPlayer()) {
-                gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal);
+                LinkedHashMap<String, Integer> incomeBreakdown = structureEconomySystem.getIncomeBreakdown(gameState.currentPlayer);
+                LinkedHashMap<String, Integer> xpBreakdown = structureEconomySystem.getXPBreakdown(gameState.currentPlayer);
+                gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal, incomeBreakdown, xpBreakdown);
             }
         }
 
@@ -844,7 +847,6 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        AudioManager.getInstance().playBGM("battle_theme.ogg", true);
     }
 
     @Override

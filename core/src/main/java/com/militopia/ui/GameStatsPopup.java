@@ -39,7 +39,7 @@ public class GameStatsPopup {
 
         // Player 1
         Table p1Table = new Table();
-        Label p1Title = new Label("PLAYER 1", game.skin, "default-font", Color.CYAN);
+        Label p1Title = new Label(state.p1Name.toUpperCase(), game.skin, "default-font", Color.CYAN);
         p1Table.add(p1Title).padBottom(10).row();
         p1Table.add(new Label("Funds: $" + state.p1Funding, game.skin, "default-font", Color.WHITE)).row();
         p1Table.add(new Label("Global XP: " + state.p1XP, game.skin, "default-font", Color.WHITE)).row();
@@ -47,7 +47,7 @@ public class GameStatsPopup {
         
         // Player 2
         Table p2Table = new Table();
-        Label p2Title = new Label("PLAYER 2", game.skin, "default-font", Color.RED);
+        Label p2Title = new Label(state.p2Name.toUpperCase(), game.skin, "default-font", Color.RED);
         p2Table.add(p2Title).padBottom(10).row();
         p2Table.add(new Label("Funds: $" + state.p2Funding, game.skin, "default-font", Color.WHITE)).row();
         p2Table.add(new Label("Global XP: " + state.p2XP, game.skin, "default-font", Color.WHITE)).row();
@@ -56,7 +56,7 @@ public class GameStatsPopup {
         modal.add(p1Table).padRight(40);
         modal.add(p2Table).row();
 
-        TextButton closeBtn = new TextButton("Close", game.skin);
+        TextButton closeBtn = new TextButton("Close", game.skin, "militopia-btn");
         closeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -67,7 +67,7 @@ public class GameStatsPopup {
             }
         });
 
-        modal.add(closeBtn).colspan(2).padTop(30).size(150, 40);
+        modal.add(closeBtn).colspan(2).fillX().width(200).padTop(30);
 
         popupTable.add(modal);
         

@@ -64,6 +64,7 @@ public class GameHUD {
     private GameScreen screen;
     private GameInputController inputController;
     private UnitFactory unitFactory;
+    private GameState gameState;
 
     private AssetManager assets;
     private MilitopiaGame game;
@@ -106,6 +107,7 @@ public class GameHUD {
         this.inputController = inputController;
         this.unitFactory = unitFactory;
         this.turnHistory = history;
+        this.gameState = state;
 
         // 1. Create components
         ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, screen.getEntityFactory(),
@@ -456,7 +458,7 @@ public class GameHUD {
     // -------------------------------------------------------------------------
 
     public void showGameOverPopup(int winnerID) {
-        gameOverPopup.show(winnerID);
+        gameOverPopup.show(winnerID, gameState);
     }
 
     // -------------------------------------------------------------------------
@@ -467,8 +469,10 @@ public class GameHUD {
         gameStatsPopup.show(state);
     }
 
-    public void showEconomyPopup(int turnCount, int income, int xpGain, int currentFunds) {
-        economyPopup.show(turnCount, income, xpGain, currentFunds);
+    public void showEconomyPopup(int turnCount, int income, int xpGain, int currentFunds,
+            java.util.LinkedHashMap<String, Integer> incomeBreakdown,
+            java.util.LinkedHashMap<String, Integer> xpBreakdown) {
+        economyPopup.show(turnCount, income, xpGain, currentFunds, incomeBreakdown, xpBreakdown);
     }
 
     public void showDisconnectPopup(String message) {

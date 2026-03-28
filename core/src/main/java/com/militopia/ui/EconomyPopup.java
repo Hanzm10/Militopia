@@ -7,10 +7,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class EconomyPopup {
     private final Stage stage;
@@ -26,7 +29,9 @@ public class EconomyPopup {
         this.bottomBar = bottomBar;
     }
 
-    public void show(int turnCount, int income, int xpGain, int currentFunds) {
+    public void show(int turnCount, int income, int xpGain, int currentFunds,
+                     LinkedHashMap<String, Integer> incomeBreakdown,
+                     LinkedHashMap<String, Integer> xpBreakdown) {
         final Table popupTable = new Table();
         popupTable.setFillParent(true);
         popupTable.setBackground(game.skin.newDrawable("white", new Color(0, 0, 0, 0.85f)));
@@ -39,21 +44,60 @@ public class EconomyPopup {
         title.setFontScale(1.5f);
         modal.add(title).padBottom(20).row();
 
+        // Income section
         Label incomeLbl = new Label("Income Generated: +$" + income, game.skin, "default-font", Color.GREEN);
-        Label xpLbl = new Label("Total XP Gained: +" + xpGain, game.skin, "default-font", Color.CYAN);
+        incomeLbl.setFontScale(1.1f);
+        modal.add(incomeLbl).left().row();
+
+        if (incomeBreakdown != null && !incomeBreakdown.isEmpty()) {
+            Table incomeTable = new Table();
+            for (Map.Entry<String, Integer> entry : incomeBreakdown.entrySet()) {
+                Label nameLbl = new Label(entry.getKey(), game.skin, "default-font", Color.LIGHT_GRAY);
+                nameLbl.setFontScale(0.75f);
+                nameLbl.setAlignment(Align.left);
+                Label amtLbl = new Label("+$" + entry.getValue(), game.skin, "default-font", Color.LIGHT_GRAY);
+                amtLbl.setFontScale(0.75f);
+                amtLbl.setAlignment(Align.right);
+                incomeTable.add(nameLbl).width(140).left().padBottom(2);
+                incomeTable.add(amtLbl).width(140).right().padBottom(2).row();
+            }
+            modal.add(incomeTable).padLeft(16).padBottom(10).left().row();
+        } else {
+            modal.add().padBottom(5).row();
+        }
+
+        // XP section
+        Label xpLbl = new Label("XP Gained: +" + xpGain, game.skin, "default-font", Color.CYAN);
+        xpLbl.setFontScale(1.1f);
+        modal.add(xpLbl).left().row();
+
+        if (xpBreakdown != null && !xpBreakdown.isEmpty()) {
+            Table xpTable = new Table();
+            for (Map.Entry<String, Integer> entry : xpBreakdown.entrySet()) {
+                Label nameLbl = new Label(entry.getKey(), game.skin, "default-font", Color.LIGHT_GRAY);
+                nameLbl.setFontScale(0.75f);
+                nameLbl.setAlignment(Align.left);
+                Label amtLbl = new Label("+" + entry.getValue(), game.skin, "default-font", Color.LIGHT_GRAY);
+                amtLbl.setFontScale(0.75f);
+                amtLbl.setAlignment(Align.right);
+                xpTable.add(nameLbl).width(140).left().padBottom(2);
+                xpTable.add(amtLbl).width(140).right().padBottom(2).row();
+            }
+            modal.add(xpTable).padLeft(16).padBottom(10).left().row();
+        } else {
+            modal.add().padBottom(10).row();
+        }
+
         Label fundsLbl = new Label("Current Funds: $" + currentFunds, game.skin, "default-font", Color.WHITE);
+        modal.add(fundsLbl).left().row();
 
-        modal.add(incomeLbl).padBottom(5).row();
-        modal.add(xpLbl).padBottom(15).row();
-        modal.add(fundsLbl).row();
-
-        TextButton closeBtn = new TextButton("Awesome", game.skin);
+        TextButton closeBtn = new TextButton("Awesome", game.skin, "militopia-btn");
         closeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 popups.remove(popupTable);
                 popupTable.remove();
-                
+
                 // Only unlock UI if no other popups (like level ups) are visible
                 if (popups.isEmpty()) {
                     inputController.setInputEnabled(true);
@@ -62,7 +106,7 @@ public class EconomyPopup {
             }
         });
 
-        modal.add(closeBtn).padTop(25).size(150, 40);
+        modal.add(closeBtn).fillX().width(200).padTop(25);
 
         popupTable.add(modal);
         popups.add(popupTable);

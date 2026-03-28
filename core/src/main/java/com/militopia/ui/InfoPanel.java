@@ -509,9 +509,9 @@ public class InfoPanel {
         movLabel = makeStatLabel("Mov: 0");
         visLabel = makeStatLabel("Vis: 0");
 
-        statsTable.add(atkLabel).width(120).left();
+        statsTable.add(atkLabel).width(120).left().padRight(16);
         statsTable.add(defLabel).width(120).left().row();
-        statsTable.add(rngLabel).width(120).left();
+        statsTable.add(rngLabel).width(120).left().padRight(16);
         statsTable.add(movLabel).width(120).left().row();
         statsTable.add(visLabel).width(120).left();
         statsTable.setVisible(false);

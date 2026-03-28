@@ -83,7 +83,7 @@ public class DisconnectPopup {
         msgLabel.setFontScale(0.8f);
         modal.add(msgLabel).padBottom(40).row();
 
-        TextButton menuBtn = new TextButton("Return to Main Menu", game.skin);
+        TextButton menuBtn = new TextButton("Return to Main Menu", game.skin, "militopia-btn");
         menuBtn.addListener(new HoverListener());
         menuBtn.addListener(new ClickListener() {
             @Override
@@ -92,7 +92,7 @@ public class DisconnectPopup {
                 game.setScreen(new com.militopia.screen.MenuScreen(game));
             }
         });
-        modal.add(menuBtn).size(250, 50);
+        modal.add(menuBtn).fillX().width(280);
 
         popupTable.add(modal);
     }

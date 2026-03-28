@@ -2,12 +2,15 @@ package com.militopia;
 
 import com.militopia.managers.AssetManager;
 import com.militopia.managers.AudioManager;
+import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.screen.MenuScreen;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.NinePatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -35,7 +38,8 @@ public class MilitopiaGame extends Game {
         // 3. Inject Fonts & White Pixel
         skin.add("default-font", assets.getRussoFont()); // Use Russo as default
         skin.add("russo", assets.getRussoFont());
-        skin.add("standard", assets.getFont()); 
+        skin.add("russo-btn", assets.getRussoBtnFont());
+        skin.add("standard", assets.getFont());
 
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.WHITE);
@@ -53,8 +57,10 @@ public class MilitopiaGame extends Game {
         int bw = 200, bh = 50, r = 12;
         Color colorSlateTrans = new Color(0.1f, 0.15f, 0.2f, 0.7f); // 70% opaque
         skin.add("btn-up", new Texture(createRoundedRect(bw, bh, r, colorSlateTrans, colorGold, 2)));
-        skin.add("btn-down", new Texture(createRoundedRect(bw, bh, r, new Color(0.2f, 0.2f, 0.2f, 0.8f), colorGold, 2)));
-        skin.add("btn-over", new Texture(createRoundedRect(bw, bh, r, new Color(0.2f, 0.25f, 0.3f, 0.85f), colorGold, 2)));
+        skin.add("btn-down",
+                new Texture(createRoundedRect(bw, bh, r, new Color(0.2f, 0.2f, 0.2f, 0.8f), colorGold, 2)));
+        skin.add("btn-over",
+                new Texture(createRoundedRect(bw, bh, r, new Color(0.2f, 0.25f, 0.3f, 0.85f), colorGold, 2)));
 
         // 4. Setup Default Styles
         Label.LabelStyle labelStyle = new Label.LabelStyle();
@@ -78,8 +84,29 @@ public class MilitopiaGame extends Game {
         goldStyle.over = skin.getDrawable("btn-over");
         skin.add("gold-round", goldStyle);
 
+        // militopia-button NinePatch style
+        Texture milBtnTex = assets.get(AssetManager.MILITOPIA_BTN);
+        NinePatch milBtnPatch = new NinePatch(milBtnTex, 50, 50, 30, 30);
+        NinePatchDrawable milBtnUp = new NinePatchDrawable(milBtnPatch);
+        milBtnUp.setMinWidth(0);
+        milBtnUp.setMinHeight(80f);
+        milBtnUp.setLeftWidth(60f);
+        milBtnUp.setRightWidth(60f);
+        milBtnUp.setTopHeight(40f);
+        milBtnUp.setBottomHeight(40f);
+        NinePatchDrawable milBtnDown = milBtnUp.tint(new Color(0.65f, 0.65f, 0.65f, 1f));
+        NinePatchDrawable milBtnOver = milBtnUp.tint(new Color(1.15f, 1.10f, 0.85f, 1f));
+
+        TextButton.TextButtonStyle milBtnStyle = new TextButton.TextButtonStyle();
+        milBtnStyle.font = skin.getFont("russo-btn");
+        milBtnStyle.fontColor = Color.WHITE;
+        milBtnStyle.up = milBtnUp;
+        milBtnStyle.down = milBtnDown;
+        milBtnStyle.over = milBtnOver;
+        skin.add("militopia-btn", milBtnStyle);
+
         // Standard Button (Dark Gray Rounded)
-        Color semiTransGray = new Color(0.15f, 0.15f, 0.15f, 0.7f); 
+        Color semiTransGray = new Color(0.15f, 0.15f, 0.15f, 0.7f);
         skin.add("btn-std-up", new Texture(createRoundedRect(bw, bh, r, semiTransGray, Color.GRAY, 1)));
         TextButton.TextButtonStyle stdStyle = new TextButton.TextButtonStyle();
         stdStyle.font = skin.getFont("russo");
@@ -127,9 +154,10 @@ public class MilitopiaGame extends Game {
     }
 
     /** Helper to create a rounded rectangle Pixmap with a border */
-    private Pixmap createRoundedRect(int width, int height, int radius, Color bgColor, Color borderColor, int borderThickness) {
+    private Pixmap createRoundedRect(int width, int height, int radius, Color bgColor, Color borderColor,
+            int borderThickness) {
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        
+
         // Fill background
         pixmap.setColor(bgColor);
         pixmap.fillRectangle(radius, 0, width - 2 * radius, height);
@@ -147,15 +175,16 @@ public class MilitopiaGame extends Game {
                 int w = width - 1 - i * 2;
                 int h = height - 1 - i * 2;
                 int offset = i;
-                
+
                 // Horizontal/Vertical lines
                 pixmap.drawLine(r + offset, offset, width - r - offset, offset); // top
                 pixmap.drawLine(r + offset, height - 1 - offset, width - r - offset, height - 1 - offset); // bottom
                 pixmap.drawLine(offset, r + offset, offset, height - r - offset); // left
                 pixmap.drawLine(width - 1 - offset, r + offset, width - 1 - offset, height - r - offset); // right
-                
+
                 // Simple corner approximations (45 deg)
-                // In a real NinePatch we'd use a better circle draw, but lines work for blocky look
+                // In a real NinePatch we'd use a better circle draw, but lines work for blocky
+                // look
             }
         }
         return pixmap;
@@ -172,5 +201,6 @@ public class MilitopiaGame extends Game {
         batch.dispose();
         assets.dispose();
         AudioManager.getInstance().dispose();
+        VideoBackgroundManager.getInstance().dispose();
     }
 }

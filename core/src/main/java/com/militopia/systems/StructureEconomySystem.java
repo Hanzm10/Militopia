@@ -15,6 +15,7 @@ import com.militopia.factories.UnitFactory;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -294,5 +295,57 @@ public class StructureEconomySystem extends EntitySystem {
             if (stats.owner == playerID) total += calculateBaseIncome(entity);
         }
         return total;
+    }
+
+    /**
+     * Returns a per-structure-name income breakdown for a player.
+     * Identical names are merged (e.g. two Towns → "Town: +4").
+     * Structures contributing 0 income are omitted.
+     */
+    public LinkedHashMap<String, Integer> getIncomeBreakdown(int playerID) {
+        LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
+        ImmutableArray<Entity> entities = getEngine().getEntitiesFor(Family.all(StatsComponent.class).get());
+        for (int i = 0; i < entities.size(); i++) {
+            Entity entity = entities.get(i);
+            StatsComponent stats = entity.getComponent(StatsComponent.class);
+            if (stats.owner != playerID) continue;
+            int inc = calculateBaseIncome(entity);
+            if (inc <= 0) continue;
+            Integer existing = map.get(stats.name);
+            map.put(stats.name, (existing != null ? existing : 0) + inc);
+        }
+        return map;
+    }
+
+    /**
+     * Returns a per-structure XP breakdown for a player.
+     * Bases use their name + ordinal as key to distinguish multiple bases.
+     * Returns an empty map on Turn 1.
+     */
+    public LinkedHashMap<String, Integer> getXPBreakdown(int playerID) {
+        LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>();
+        if (gameState.turnCount <= 1) return map;
+
+        ImmutableArray<Entity> entities = getEngine().getEntitiesFor(Family.all(StatsComponent.class).get());
+        for (int i = 0; i < entities.size(); i++) {
+            Entity entity = entities.get(i);
+            StatsComponent stats = entity.getComponent(StatsComponent.class);
+            if (stats.owner != playerID) continue;
+
+            if (stats.income >= 2 && StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
+                // Natural base XP
+                int naturalGain = 250 + ((stats.level - 1) * 10);
+                String key = (stats.baseOrdinal != null && !stats.baseOrdinal.isEmpty())
+                        ? stats.name + " " + stats.baseOrdinal
+                        : stats.name;
+                Integer existing = map.get(key);
+                map.put(key, (existing != null ? existing : 0) + naturalGain);
+            } else if (stats.xpGain > 0 && stats.parentBaseX != -1) {
+                // Structure XP contribution
+                Integer existing = map.get(stats.name);
+                map.put(stats.name, (existing != null ? existing : 0) + stats.xpGain);
+            }
+        }
+        return map;
     }
 }

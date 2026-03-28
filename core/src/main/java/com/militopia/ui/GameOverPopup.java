@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
+import com.militopia.data.GameState;
 import com.militopia.screen.GameScreen;
 import com.militopia.screen.MenuScreen;
 import com.militopia.utils.GameLogger;
@@ -40,8 +41,8 @@ public class GameOverPopup {
         this.bottomBar = bottomBar;
     }
 
-    public void show(int winnerID) {
-        buildPopup(winnerID);
+    public void show(int winnerID, GameState state) {
+        buildPopup(winnerID, state);
 
         // Explicitly set bounds to ensure input blocking on first frame
         popupTable.setBounds(0, 0, stage.getWidth(), stage.getHeight());
@@ -53,7 +54,7 @@ public class GameOverPopup {
         bottomBar.setBlocked(true);
     }
 
-    private void buildPopup(int winnerID) {
+    private void buildPopup(int winnerID, GameState state) {
         popupTable = new Table();
         popupTable.setFillParent(true);
         popupTable.setBackground(game.skin.newDrawable("white", new Color(0, 0, 0, 0.85f)));
@@ -82,13 +83,13 @@ public class GameOverPopup {
         title.setFontScale(2.5f);
         modal.add(title).padBottom(20).row();
 
-        String winnerName = (winnerID == 1) ? "PLAYER 1" : "PLAYER 2";
+        String winnerName = (winnerID == 1) ? state.p1Name : state.p2Name;
         Color winnerColor = (winnerID == 1) ? Color.CYAN : Color.RED;
         Label winnerLabel = new Label(winnerName + " VICTORIOUS!", game.skin, "default-font", winnerColor);
         winnerLabel.setFontScale(1.2f);
         modal.add(winnerLabel).padBottom(40).row();
 
-        TextButton menuBtn = new TextButton("Return to Main Menu", game.skin);
+        TextButton menuBtn = new TextButton("Return to Main Menu", game.skin, "militopia-btn");
         menuBtn.addListener(new HoverListener());
         menuBtn.addListener(new ClickListener() {
             @Override
@@ -97,7 +98,7 @@ public class GameOverPopup {
                 gameScreen.saveAndExit();
             }
         });
-        modal.add(menuBtn).size(250, 50);
+        modal.add(menuBtn).fillX().width(280);
 
         popupTable.add(modal);
     }

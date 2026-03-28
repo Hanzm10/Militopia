@@ -4,8 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.militopia.MilitopiaGame;
-import com.militopia.managers.AssetManager;
-import com.militopia.utils.RenderUtils;
+import com.militopia.managers.VideoBackgroundManager;
 
 /**
  * First screen of the application. Displayed after the application is created.
@@ -20,17 +19,13 @@ public class FirstScreen implements Screen {
 
     @Override
     public void show() {
-        // Prepare your screen here.
+        VideoBackgroundManager.getInstance().play();
     }
 
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
-
-        // --- DRAW BACKGROUND ---
-        if (game.assets.manager.isLoaded(AssetManager.BACKGROUND)) {
-            RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
-        }
+        VideoBackgroundManager.getInstance().render(game.batch);
     }
 
     @Override
@@ -56,7 +51,7 @@ public class FirstScreen implements Screen {
 
     @Override
     public void hide() {
-        // This method is called when another screen replaces this one.
+        VideoBackgroundManager.getInstance().pause();
     }
 
     @Override

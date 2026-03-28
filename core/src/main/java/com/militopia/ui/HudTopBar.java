@@ -37,9 +37,9 @@ public class HudTopBar {
         TextureRegionDrawable topBg = createGradientDrawable(80, true);
 
         Table topContent = new Table();
-        topContent.add(createStatGroup("XP", "0")).expandX();
-        topContent.add(createStatGroup("Funding", "1000")).expandX();
-        topContent.add(createStatGroup("Turn", "1")).expandX();
+        topContent.add(createStatGroup("XP", "0")).expandX().padRight(40);
+        topContent.add(createStatGroup("Funding", "1000")).expandX().padLeft(40).padRight(40);
+        topContent.add(createStatGroup("Turn", "1")).expandX().padLeft(40);
 
         topContainer = new Table();
         topContainer.setBackground(topBg);

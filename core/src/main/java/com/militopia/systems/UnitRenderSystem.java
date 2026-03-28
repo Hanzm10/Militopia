@@ -281,14 +281,17 @@ public class UnitRenderSystem extends EntitySystem {
             if (frame != null) {
                 float dW = (spriteAnim.drawWidth > 0) ? spriteAnim.drawWidth : GameConfig.DRAW_WIDTH;
                 float dH = (spriteAnim.drawHeight > 0) ? spriteAnim.drawHeight : GameConfig.DRAW_HEIGHT;
-                
-                // Center the sprite relative to the 16x10 tile size
+
+                // Center the sprite on the tile diamond center (isoY + TILE_HEIGHT/2).
+                // Pure effect entities have no TextureComponent so don't inherit the unit's
+                // verticalOff — that offset is for lifting unit sprites above the ground.
+                float effectVerticalOff = (tex != null) ? verticalOff : GameConfig.TILE_HEIGHT / 2f;
                 float currentXOffset = (dW - GameConfig.TILE_WIDTH) / 2f;
                 float currentYOffset = (dH - GameConfig.TILE_HEIGHT) / 2f;
 
                 batch.draw(frame,
                         isoX - currentXOffset + spriteAnim.worldOffsetX,
-                        isoY - currentYOffset + verticalOff + animY + spriteAnim.worldOffsetY,
+                        isoY - currentYOffset + effectVerticalOff + animY + spriteAnim.worldOffsetY,
                         dW, dH);
             }
         }

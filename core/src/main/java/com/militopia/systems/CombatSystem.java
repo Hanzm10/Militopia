@@ -162,6 +162,20 @@ public class CombatSystem extends EntitySystem {
         if (aPos == null || dPos == null || aStats == null || dStats == null)
             return;
 
+        // Face the attacker toward the defender
+        FacingComponent attackFacing = attacker.getComponent(FacingComponent.class);
+        TextureComponent attackerTex = attacker.getComponent(TextureComponent.class);
+        if (attackFacing != null && attackerTex != null) {
+            float attackerIsoX = (aPos.x - aPos.y);
+            float defenderIsoX = (dPos.x - dPos.y);
+            float visualDelta = defenderIsoX - attackerIsoX;
+            if (visualDelta > 0) {
+                attackerTex.region = attackFacing.rightRegion;
+            } else if (visualDelta < 0) {
+                attackerTex.region = attackFacing.leftRegion;
+            }
+        }
+
         // OIL DERRICK & NUCLEAR PLANT: Indestructible
         StructureType dStructType = StructureType.fromDisplayName(dStats.name);
         if (dStructType == StructureType.OIL_DERRICK || dStructType == StructureType.NUCLEAR_PLANT) {

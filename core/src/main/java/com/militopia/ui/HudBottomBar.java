@@ -92,14 +92,14 @@ public class HudBottomBar {
         statsBtn = createCircleButton(AssetManager.ICON_STATS);
         endTurnBtn = createCircleButton(AssetManager.ICON_END);
 
-        waitingLabel = new Label("Wait for the opponent turn end", game.skin, "default-font", 
+        waitingLabel = new Label("Wait for the opponent turn end", game.skin, "default-font",
                 game.skin.get("color-gold", Color.class));
         waitingLabel.setFontScale(0.85f);
         waitingLabel.setVisible(false);
 
-        actionTable.add(createIconGroup(settingsBtn, "Settings")).expandX().padLeft(20);
-        actionTable.add(createIconGroup(statsBtn, "Game Stats")).expandX();
-        actionTable.add(createIconGroup(endTurnBtn, "End Turn")).expandX().padRight(20);
+        actionTable.add(createIconGroup(settingsBtn, "Settings")).expandX().padLeft(20).padRight(30);
+        actionTable.add(createIconGroup(statsBtn, "Game Stats")).expandX().padLeft(30).padRight(30);
+        actionTable.add(createIconGroup(endTurnBtn, "End Turn")).expandX().padLeft(30).padRight(20);
 
         bottomContainer = new Table();
         bottomContainer.setBackground(bottomBg);
@@ -154,7 +154,7 @@ public class HudBottomBar {
         Label title = new Label("PAUSED", game.skin);
         title.setFontScale(1.5f);
 
-        final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin);
+        final TextButton fogBtn = new TextButton("Toggle Fog: ON", game.skin, "militopia-btn");
         fogBtn.addListener(new HoverListener());
         fogBtn.addListener(new ClickListener() {
             @Override
@@ -165,7 +165,7 @@ public class HudBottomBar {
         });
 
         String saveExitText = screen.getGameState().isLanGame ? "Exit Game" : "Save & Exit";
-        TextButton saveExitBtn = new TextButton(saveExitText, game.skin);
+        TextButton saveExitBtn = new TextButton(saveExitText, game.skin, "militopia-btn");
         saveExitBtn.addListener(new HoverListener());
         saveExitBtn.addListener(new ClickListener() {
             @Override
@@ -174,7 +174,7 @@ public class HudBottomBar {
             }
         });
 
-        final TextButton undoRedoBtn = new TextButton("Undo/Redo: OFF", game.skin);
+        final TextButton undoRedoBtn = new TextButton("Undo/Redo: OFF", game.skin, "militopia-btn");
         undoRedoBtn.addListener(new HoverListener());
         undoRedoBtn.addListener(new ClickListener() {
             @Override
@@ -184,7 +184,7 @@ public class HudBottomBar {
             }
         });
 
-        TextButton resumeBtn = new TextButton("Resume", game.skin);
+        TextButton resumeBtn = new TextButton("Resume", game.skin, "militopia-btn");
         resumeBtn.addListener(new HoverListener());
         resumeBtn.addListener(new ClickListener() {
             @Override
@@ -197,12 +197,12 @@ public class HudBottomBar {
 
         menuBox.add(title).pad(20).row();
         if (!screen.getGameState().isLanGame) {
-            menuBox.add(fogBtn).size(200, 50).pad(10).row();
+            menuBox.add(fogBtn).fillX().width(240).pad(10).row();
         }
-        menuBox.add(undoRedoBtn).size(200, 50).pad(10).row();
-        menuBox.add(saveExitBtn).size(200, 50).pad(10).row();
-        menuBox.add(resumeBtn).size(200, 50).pad(10);
-        settingsOverlay.add(menuBox).size(300, 360);
+        menuBox.add(undoRedoBtn).fillX().width(240).pad(10).row();
+        menuBox.add(saveExitBtn).fillX().width(240).pad(10).row();
+        menuBox.add(resumeBtn).fillX().width(240).pad(10);
+        settingsOverlay.add(menuBox).width(300);
         stage.addActor(settingsOverlay);
     }
 
@@ -213,13 +213,6 @@ public class HudBottomBar {
     private ImageButton createCircleButton(String iconPath) {
         ImageButton.ImageButtonStyle style = new ImageButton.ImageButtonStyle();
         try {
-            // Background: Gold-ringed circle
-            Texture circleTex = assets.get(AssetManager.CIRCLE_UI2);
-            TextureRegionDrawable bg = new TextureRegionDrawable(new TextureRegion(circleTex));
-            style.up = bg;
-            style.down = bg.tint(Color.GRAY);
-
-            // Icon: The actual action icon (settings, stats, etc)
             Texture iconTex = assets.get(iconPath);
             iconTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             TextureRegionDrawable icon = new TextureRegionDrawable(new TextureRegion(iconTex));
@@ -231,15 +224,16 @@ public class HudBottomBar {
 
         ImageButton btn = new ImageButton(style);
         btn.setTransform(true);
-        btn.setSize(64, 64);
+        btn.setSize(80, 80);
         btn.setOrigin(Align.center);
-        btn.getImageCell().size(32, 32); // Scale icon inside the gold ring
+        btn.getImageCell().size(80, 80);
         return btn;
     }
 
     /**
      * Updates the UI based on whose turn it is.
-     * Hides the End Turn button and shows "Hold" message if it's the opponent's turn.
+     * Hides the End Turn button and shows "Hold" message if it's the opponent's
+     * turn.
      */
     public void updateTurnState(int currentPlayer, int localPlayerID) {
         boolean isMyTurn = (currentPlayer == localPlayerID);
@@ -256,15 +250,13 @@ public class HudBottomBar {
             waitingLabel.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.forever(
                     com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(
                             com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut(1.0f),
-                            com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeIn(1.0f)
-                    )
-            ));
+                            com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeIn(1.0f))));
         }
     }
 
     private Table createIconGroup(ImageButton btn, String labelText) {
         Table t = new Table();
-        t.add(btn).size(60, 60).row();
+        t.add(btn).size(56, 56).row();
         Label lbl = new Label(labelText, game.skin, "default-font", Color.WHITE);
         lbl.setFontScale(0.7f);
         t.add(lbl).padTop(5);

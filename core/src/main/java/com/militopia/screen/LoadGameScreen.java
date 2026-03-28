@@ -7,6 +7,7 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -17,10 +18,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
-import com.militopia.managers.AssetManager;
+import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
-import com.militopia.utils.RenderUtils;
 
 public class LoadGameScreen implements Screen {
 
@@ -56,25 +56,33 @@ public class LoadGameScreen implements Screen {
             // 2. LOOP THROUGH FILES
             for (FileHandle file : files) {
                 try {
-                    // Read the file to get stats (names, seed)
                     final GameState state = json.fromJson(GameState.class, file.readString());
 
-                    String buttonText = state.saveName + " (" + state.timestamp + ")";
-                    if (state.isGameOver) {
-                        buttonText += " [FINISHED]";
-                    }
-                    TextButton btn = new TextButton(buttonText, game.skin);
-                    btn.addListener(new HoverListener());
+                    TextButton.TextButtonStyle milStyle = game.skin.get("militopia-btn", TextButton.TextButtonStyle.class);
 
-                    btn.addListener(new ClickListener() {
+                    Table entry = new Table();
+                    entry.setBackground(milStyle.up);
+
+                    String title = state.saveName != null ? state.saveName : "Unnamed";
+                    Label titleLbl = new Label(title, game.skin);
+                    entry.add(titleLbl).left().row();
+
+                    String sub = "Seed: " + state.seed + "   |   " + (state.timestamp != null ? state.timestamp : "");
+                    if (state.isGameOver) sub += "   |   FINISHED";
+                    Label subLbl = new Label(sub, game.skin);
+                    subLbl.setFontScale(0.7f);
+                    subLbl.setColor(Color.LIGHT_GRAY);
+                    entry.add(subLbl).left();
+
+                    entry.addListener(new HoverListener());
+                    entry.addListener(new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
-                            // LOAD THE GAME with the saved seed
                             game.setScreen(new GameScreen(game, state));
                         }
                     });
 
-                    listTable.add(btn).fillX().pad(10).width(600).row();
+                    listTable.add(entry).fillX().width(680).pad(8).row();
 
                 } catch (Exception e) {
                     GameLogger.logScreen("Corrupt save file: " + file.name());
@@ -83,9 +91,9 @@ public class LoadGameScreen implements Screen {
         }
 
         ScrollPane scroll = new ScrollPane(listTable, game.skin);
-        mainTable.add(scroll).size(500, 300).row();
+        mainTable.add(scroll).size(720, 380).row();
 
-        TextButton backBtn = new TextButton("Back", game.skin);
+        TextButton backBtn = new TextButton("Back", game.skin, "militopia-btn");
         backBtn.addListener(new HoverListener());
         backBtn.addListener(new ClickListener() {
             @Override
@@ -93,15 +101,13 @@ public class LoadGameScreen implements Screen {
                 game.setScreen(new MenuScreen(game));
             }
         });
-        mainTable.add(backBtn).pad(20);
+        mainTable.add(backBtn).fillX().width(300).pad(20);
     }
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-
-        RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
-
+        ScreenUtils.clear(0, 0, 0, 1);
+        VideoBackgroundManager.getInstance().render(game.batch);
         stage.act();
         stage.draw();
     }
@@ -113,11 +119,13 @@ public class LoadGameScreen implements Screen {
 
     @Override
     public void show() {
+        VideoBackgroundManager.getInstance().play();
     }
 
     @Override
     public void hide() {
         Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
+        VideoBackgroundManager.getInstance().pause();
     }
 
     @Override

@@ -9,6 +9,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
@@ -33,6 +34,7 @@ public class GameInputController extends InputAdapter {
 
     private final GameScreen screen;
     private final OrthographicCamera camera;
+    private final Viewport viewport;
     private final PooledEngine engine;
     private final MapGenerator.GameMap gameMap;
     private final UnitFactory unitFactory;
@@ -53,11 +55,12 @@ public class GameInputController extends InputAdapter {
     private String targetingAbilityKey = null;
     private Entity targetingUnit = null;
 
-    public GameInputController(GameScreen screen, OrthographicCamera camera, PooledEngine engine,
-            MapGenerator.GameMap gameMap, UnitFactory unitFactory,
+    public GameInputController(GameScreen screen, OrthographicCamera camera, Viewport viewport,
+            PooledEngine engine, MapGenerator.GameMap gameMap, UnitFactory unitFactory,
             EntityFactory entityFactory, GameHUD gameHUD, CombatSystem combatSystem) {
         this.screen = screen;
         this.camera = camera;
+        this.viewport = viewport;
         this.engine = engine;
         this.gameMap = gameMap;
         this.unitFactory = unitFactory;
@@ -164,7 +167,9 @@ public class GameInputController extends InputAdapter {
 
         lastTouchX = screenX;
         lastTouchY = screenY;
-        Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+        Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0),
+                viewport.getScreenX(), viewport.getScreenY(),
+                viewport.getScreenWidth(), viewport.getScreenHeight());
         // INPUT_OFFSET shifts world coords to align with the rendered tile origin
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
@@ -694,7 +699,9 @@ public class GameInputController extends InputAdapter {
     public boolean mouseMoved(int screenX, int screenY) {
         if (!inputEnabled)
             return false;
-        Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+        Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0),
+                viewport.getScreenX(), viewport.getScreenY(),
+                viewport.getScreenWidth(), viewport.getScreenHeight());
         // Inverse isometric projection — see touchDown for formula derivation
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
@@ -717,9 +724,15 @@ public class GameInputController extends InputAdapter {
         if (!inputEnabled)
             return false;
         if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
-            float x = Gdx.input.getDeltaX();
-            float y = Gdx.input.getDeltaY();
-            camera.translate(-x * camera.zoom * GameConfig.DRAG_SPEED, y * camera.zoom * GameConfig.DRAG_SPEED);
+            Vector3 oldWorld = camera.unproject(new Vector3(lastTouchX, lastTouchY, 0),
+                    viewport.getScreenX(), viewport.getScreenY(),
+                    viewport.getScreenWidth(), viewport.getScreenHeight());
+            Vector3 newWorld = camera.unproject(new Vector3(screenX, screenY, 0),
+                    viewport.getScreenX(), viewport.getScreenY(),
+                    viewport.getScreenWidth(), viewport.getScreenHeight());
+            camera.translate(oldWorld.x - newWorld.x, oldWorld.y - newWorld.y);
+            lastTouchX = screenX;
+            lastTouchY = screenY;
             camera.update();
             return true;
         }
@@ -830,6 +843,12 @@ public class GameInputController extends InputAdapter {
                 boolean isJuggernaut = stats != null && stats.unitType == UnitType.JUGGERNAUT;
                 if (tileUnit == null && !isJuggernaut)
                     continue;
+                // Juggernaut cannot jump onto water
+                if (isJuggernaut) {
+                    MapGenerator.TerrainType t = gameMap.terrain[tx][ty];
+                    if (t == MapGenerator.TerrainType.WATER || t == MapGenerator.TerrainType.DEEP_WATER)
+                        continue;
+                }
                 entityFactory.createAttackMarker(tx, ty);
             }
         }

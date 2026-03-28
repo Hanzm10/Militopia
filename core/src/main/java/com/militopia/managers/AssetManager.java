@@ -95,7 +95,10 @@ public class AssetManager {
     public static final String BTN_SLIDEDOWN = "ui/slidedown_btn.png";
     public static final String CIRCLE_UI     = "ui/circle_ui.png";
     public static final String CIRCLE_UI2    = "ui/circle_ui2.png";
+    public static final String MILITOPIA_BTN = "ui/militopia-button.png";
     public static final String BACKGROUND    = "game-system/militopia_background.png";
+    public static final String LOGO          = "game-system/militopia-logo.png";
+    public static final String TEXT_LOGO     = "game-system/militopia-text-logo.png";
 
     // Attack Animations
     public static final String[] ATTACK_RECRUIT_FRAMES = {
@@ -159,6 +162,7 @@ public class AssetManager {
     // Fonts
     public static final String GAME_FONT = "game-system/game_font.ttf";
     public static final String RUSSO_FONT = "game-system/russo_one.ttf";
+    public static final String RUSSO_FONT_BTN = "game-system/russo_one_btn.ttf"; // same file, smaller size
 
     public AssetManager() {
         manager = new com.badlogic.gdx.assets.AssetManager();
@@ -249,7 +253,10 @@ public class AssetManager {
         manager.load(BTN_SLIDEDOWN, Texture.class);
         manager.load(CIRCLE_UI, Texture.class);
         manager.load(CIRCLE_UI2, Texture.class);
+        manager.load(MILITOPIA_BTN, Texture.class);
         manager.load(BACKGROUND, Texture.class);
+        manager.load(LOGO, Texture.class);
+        manager.load(TEXT_LOGO, Texture.class);
 
         // Attack animations
         for (String frame : ATTACK_RECRUIT_FRAMES)
@@ -283,6 +290,14 @@ public class AssetManager {
         russoParam.fontParameters.minFilter = Texture.TextureFilter.Linear;
         russoParam.fontParameters.magFilter = Texture.TextureFilter.Linear;
         manager.load(RUSSO_FONT, BitmapFont.class, russoParam);
+
+        // Load Russo One at smaller size for buttons (so text sits inside button with breathing room)
+        FreetypeFontLoader.FreeTypeFontLoaderParameter russoBtnParam = new FreetypeFontLoader.FreeTypeFontLoaderParameter();
+        russoBtnParam.fontFileName = RUSSO_FONT;
+        russoBtnParam.fontParameters.size = 16;
+        russoBtnParam.fontParameters.minFilter = Texture.TextureFilter.Linear;
+        russoBtnParam.fontParameters.magFilter = Texture.TextureFilter.Linear;
+        manager.load(RUSSO_FONT_BTN, BitmapFont.class, russoBtnParam);
     }
 
     public void finishLoading() {
@@ -308,6 +323,10 @@ public class AssetManager {
 
     public BitmapFont getRussoFont() {
         return manager.get(RUSSO_FONT, BitmapFont.class);
+    }
+
+    public BitmapFont getRussoBtnFont() {
+        return manager.get(RUSSO_FONT_BTN, BitmapFont.class);
     }
 
     public void dispose() {

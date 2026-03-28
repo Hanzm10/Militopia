@@ -20,17 +20,16 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
-import com.militopia.managers.AssetManager;
+import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
-import com.militopia.utils.RenderUtils;
 
 public class NewGameScreen implements Screen {
 
     final MilitopiaGame game;
     Stage stage;
 
-    TextField nameField, seedField;
+    TextField nameField, seedField, p1NameField, p2NameField;
     Label errorLabel, titleLabel;
     Label modeInfoLabel;
 
@@ -53,6 +52,12 @@ public class NewGameScreen implements Screen {
 
         seedField = new TextField("", game.skin);
         seedField.setMessageText("Enter Seed");
+
+        p1NameField = new TextField("", game.skin);
+        p1NameField.setMessageText("Player 1 Name");
+
+        p2NameField = new TextField("", game.skin);
+        p2NameField.setMessageText("Player 2 Name");
 
         Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default-font"), Color.RED);
         errorLabel = new Label("", errorStyle);
@@ -98,16 +103,18 @@ public class NewGameScreen implements Screen {
             }
         });
 
-        TextButton startBtn = new TextButton("Start Game", game.skin);
+        TextButton startBtn = new TextButton("Start Game", game.skin, "militopia-btn");
         startBtn.addListener(new HoverListener());
-        TextButton backBtn = new TextButton("Back", game.skin);
+        TextButton backBtn = new TextButton("Back", game.skin, "militopia-btn");
         backBtn.addListener(new HoverListener());
         table.clear(); // Clear to rebuild neatly
         table.setFillParent(true);
         
         table.add(titleLabel).padBottom(40).row();
-        table.add(nameField).width(320).pad(10).row();
-        table.add(seedField).width(320).pad(10).row();
+        addLabeledField(table, "Game Name", nameField);
+        addLabeledField(table, "Seed", seedField);
+        addLabeledField(table, "Player 1 Name", p1NameField);
+        addLabeledField(table, "Player 2 Name", p2NameField);
 
         Table modeTable = new Table();
         modeTable.add().width(110); 
@@ -118,8 +125,8 @@ public class NewGameScreen implements Screen {
         table.add(modeTable).left().row();
 
         Table btnRow = new Table();
-        btnRow.add(backBtn).width(200).pad(10);
-        btnRow.add(startBtn).width(200).pad(10);
+        btnRow.add(backBtn).fillX().width(200).pad(10);
+        btnRow.add(startBtn).fillX().width(200).pad(10);
         table.add(btnRow).padTop(100).row();
 
         table.row();
@@ -144,6 +151,10 @@ public class NewGameScreen implements Screen {
                     // Create GameState with selected Dimensions
                     GameState newState = new GameState(seed, nameField.getText() + '_' + seed, selectedWidth,
                             selectedHeight);
+                    String p1 = p1NameField.getText().trim();
+                    String p2 = p2NameField.getText().trim();
+                    newState.p1Name = p1.isEmpty() ? "Player 1" : p1;
+                    newState.p2Name = p2.isEmpty() ? "Player 2" : p2;
                     game.setScreen(new GameScreen(game, newState));
                 }
             }
@@ -162,14 +173,17 @@ public class NewGameScreen implements Screen {
         return field.getText() == null || field.getText().trim().isEmpty();
     }
 
-    private void addInputRow(Table t, TextField field) {
-        t.add(field).width(300).pad(10).row();
+    private void addLabeledField(Table t, String labelText, TextField field) {
+        Label label = new Label(labelText, game.skin);
+        label.setColor(Color.LIGHT_GRAY);
+        t.add(label).width(320).padTop(10).padLeft(10).left().row();
+        t.add(field).width(320).padBottom(4).padLeft(10).padRight(10).row();
     }
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-        RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
+        ScreenUtils.clear(0, 0, 0, 1);
+        VideoBackgroundManager.getInstance().render(game.batch);
         stage.act();
         stage.draw();
     }
@@ -182,10 +196,12 @@ public class NewGameScreen implements Screen {
     @Override
     public void show() {
         GameLogger.logScreen("New Game Screen opened");
+        VideoBackgroundManager.getInstance().play();
     }
 
     @Override
     public void hide() {
+        VideoBackgroundManager.getInstance().pause();
     }
 
     @Override

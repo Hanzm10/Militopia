@@ -9,6 +9,7 @@ public class NetworkMessage {
     public static final String TYPE_GAME_INIT = "GAME_INIT";
     public static final String TYPE_END_TURN = "END_TURN";
     public static final String TYPE_DISCONNECT = "DISCONNECT";
+    public static final String TYPE_PLAYER_NAME = "PLAYER_NAME";
 
     public String type;
     public String payload;
@@ -32,5 +33,9 @@ public class NetworkMessage {
 
     public static NetworkMessage disconnect() {
         return new NetworkMessage(TYPE_DISCONNECT, "");
+    }
+
+    public static NetworkMessage playerName(String name) {
+        return new NetworkMessage(TYPE_PLAYER_NAME, name);
     }
 }

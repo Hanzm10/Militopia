@@ -33,7 +33,7 @@ public class DisplayAssetConfig {
         DATA.put("RECRUIT", new AssetData(5, 5, 0, 7.2f, 8, 5, 0, 0));
         DATA.put("RANGER", new AssetData(5, 5, 0, 7.2f, 8, 5, 0, 0));
         DATA.put("SNIPER", new AssetData(7, 7, 1.3f, 7f, 8, 5, 0, 0));
-        DATA.put("TANK", new AssetData(12, 12, 1, 6f, 10, 10, 0, -5));
+        DATA.put("TANK", new AssetData(12, 12, 0, 6f, 10, 10, 0, -5));
         DATA.put("JUGGERNAUT", new AssetData(12, 12, 0, 9f, 10, 10, 0, -3));
 
         DATA.put("RECON_DRONE", new AssetData(10, 10, 0, 12f, 10, 5, 0, 0));

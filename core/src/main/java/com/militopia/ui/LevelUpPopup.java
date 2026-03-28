@@ -164,7 +164,7 @@ public class LevelUpPopup {
         }
         modal.add(incentives).row();
 
-        TextButton okBtn = new TextButton("Awesome!", game.skin);
+        TextButton okBtn = new TextButton("Awesome!", game.skin, "militopia-btn");
         okBtn.addListener(new HoverListener());
         okBtn.addListener(new ClickListener() {
             @Override
@@ -172,7 +172,7 @@ public class LevelUpPopup {
                 dismiss();
             }
         });
-        modal.add(okBtn).padTop(30).size(150, 50);
+        modal.add(okBtn).fillX().width(200).padTop(30);
 
         popupTable.add(modal);
     }

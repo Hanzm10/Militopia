@@ -151,7 +151,7 @@ public class SuperUnitChoicePopup {
 
         // Choose button
         com.badlogic.gdx.scenes.scene2d.ui.TextButton chooseBtn =
-                new com.badlogic.gdx.scenes.scene2d.ui.TextButton("Choose", game.skin);
+                new com.badlogic.gdx.scenes.scene2d.ui.TextButton("Choose", game.skin, "militopia-btn");
         chooseBtn.addListener(new HoverListener());
         chooseBtn.addListener(new ClickListener() {
             @Override
@@ -160,7 +160,7 @@ public class SuperUnitChoicePopup {
                 dismiss();
             }
         });
-        card.add(chooseBtn).size(120, 44).padBottom(14);
+        card.add(chooseBtn).fillX().width(140).padBottom(14);
 
         return card;
     }

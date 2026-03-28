@@ -19,12 +19,11 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.data.GameState;
-import com.militopia.managers.AssetManager;
+import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.net.NetworkManager;
 import com.militopia.net.NetworkMessage;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
-import com.militopia.utils.RenderUtils;
 
 /**
  * LAN Lobby screen — allows hosting or joining a LAN game.
@@ -47,7 +46,7 @@ public class LobbyScreen implements Screen {
     LobbyState lobbyState = LobbyState.CHOOSE;
 
     // Host config
-    TextField nameField, seedField;
+    TextField nameField, seedField, hostNameField;
     SelectBox<String> modeSelectBox;
     Label modeInfoLabel;
     int selectedWidth = 16;
@@ -59,7 +58,14 @@ public class LobbyScreen implements Screen {
     Label errorLabel;
 
     // Join
-    TextField ipField;
+    TextField ipField, clientNameField;
+
+    // Name exchange state
+    private String hostPlayerName = "Player 1";
+    private String clientPlayerName = "Player 2";
+    private boolean clientNameSent = false;
+    private boolean clientNameReceived = false;
+    private String receivedClientName = "Player 2";
 
     // Networking
     NetworkManager networkManager;
@@ -89,17 +95,17 @@ public class LobbyScreen implements Screen {
         Label title = new Label("LAN Game", game.skin);
         title.setFontScale(1.2f);
 
-        TextButton hostBtn = new TextButton("Host Game", game.skin);
+        TextButton hostBtn = new TextButton("Host Game", game.skin, "militopia-btn");
         hostBtn.addListener(new HoverListener());
-        TextButton joinBtn = new TextButton("Join Game", game.skin);
+        TextButton joinBtn = new TextButton("Join Game", game.skin, "militopia-btn");
         joinBtn.addListener(new HoverListener());
-        TextButton backBtn = new TextButton("Back", game.skin);
+        TextButton backBtn = new TextButton("Back", game.skin, "militopia-btn");
         backBtn.addListener(new HoverListener());
 
         rootTable.add(title).pad(20).colspan(2).row();
-        rootTable.add(hostBtn).fillX().uniformX().pad(10).width(200).row();
-        rootTable.add(joinBtn).fillX().uniformX().pad(10).width(200).row();
-        rootTable.add(backBtn).fillX().uniformX().pad(10).width(200).row();
+        rootTable.add(hostBtn).fillX().width(300).pad(10).row();
+        rootTable.add(joinBtn).fillX().width(300).pad(10).row();
+        rootTable.add(backBtn).fillX().width(300).pad(10).row();
 
         hostBtn.addListener(new ClickListener() {
             @Override
@@ -137,6 +143,9 @@ public class LobbyScreen implements Screen {
 
         Label title = new Label("Host a LAN Game", game.skin);
         title.setFontScale(1.0f);
+
+        hostNameField = new TextField("", game.skin);
+        hostNameField.setMessageText("Your Name");
 
         nameField = new TextField("", game.skin);
         nameField.setMessageText("Game Name");
@@ -185,12 +194,14 @@ public class LobbyScreen implements Screen {
         Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default-font"), Color.RED);
         errorLabel = new Label("", errorStyle);
 
-        TextButton startBtn = new TextButton("Start Hosting", game.skin);
+        TextButton startBtn = new TextButton("Start Hosting", game.skin, "militopia-btn");
         startBtn.addListener(new HoverListener());
-        TextButton backBtn = new TextButton("Back", game.skin);
+        TextButton backBtn = new TextButton("Back", game.skin, "militopia-btn");
         backBtn.addListener(new HoverListener());
 
         rootTable.add(title).colspan(2).pad(15).row();
+        rootTable.add(hostNameField).width(300).pad(10);
+        rootTable.row();
         rootTable.add(nameField).width(300).pad(10);
         rootTable.row();
         rootTable.add(seedField).width(300).pad(10);
@@ -210,8 +221,8 @@ public class LobbyScreen implements Screen {
         rootTable.add(errorLabel).colspan(2).pad(10).row();
 
         Table btnRow = new Table();
-        btnRow.add(backBtn).width(200).pad(10);
-        btnRow.add(startBtn).width(200).pad(10);
+        btnRow.add(backBtn).fillX().width(200).pad(10);
+        btnRow.add(startBtn).fillX().width(200).pad(10);
         rootTable.add(btnRow).colspan(2).padTop(120).row();
 
         startBtn.addListener(new ClickListener() {
@@ -221,6 +232,10 @@ public class LobbyScreen implements Screen {
                     errorLabel.setText("All fields are required!");
                     return;
                 }
+                String hn = hostNameField.getText().trim();
+                hostPlayerName = hn.isEmpty() ? "Player 1" : hn;
+                clientNameReceived = false;
+                receivedClientName = "Player 2";
                 beginHosting();
             }
         });
@@ -251,13 +266,13 @@ public class LobbyScreen implements Screen {
         statusLabel.setFontScale(0.7f);
         statusLabel.setColor(Color.LIGHT_GRAY);
 
-        TextButton cancelBtn = new TextButton("Cancel", game.skin);
+        TextButton cancelBtn = new TextButton("Cancel", game.skin, "militopia-btn");
         cancelBtn.addListener(new HoverListener());
 
         rootTable.add(title).pad(20).row();
         rootTable.add(ipLabel).pad(10).row();
         rootTable.add(statusLabel).pad(10).row();
-        rootTable.add(cancelBtn).width(120).pad(20).row();
+        rootTable.add(cancelBtn).fillX().width(200).pad(20).row();
 
         cancelBtn.addListener(new ClickListener() {
             @Override
@@ -291,26 +306,30 @@ public class LobbyScreen implements Screen {
         statusLabel.setFontScale(0.7f);
         statusLabel.setColor(Color.LIGHT_GRAY);
 
+        clientNameField = new TextField("", game.skin);
+        clientNameField.setMessageText("Your Name");
+
         ipField = new TextField("", game.skin);
         ipField.setMessageText("Enter Host IP");
 
-        TextButton connectBtn = new TextButton("Connect", game.skin);
+        TextButton connectBtn = new TextButton("Connect", game.skin, "militopia-btn");
         connectBtn.addListener(new HoverListener());
-        TextButton backBtn = new TextButton("Back", game.skin);
+        TextButton backBtn = new TextButton("Back", game.skin, "militopia-btn");
         backBtn.addListener(new HoverListener());
 
         Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default-font"), Color.RED);
         errorLabel = new Label("", errorStyle);
 
         rootTable.add(title).colspan(2).pad(15).row();
+        rootTable.add(clientNameField).colspan(2).width(300).pad(10).row();
         rootTable.add(statusLabel).colspan(2).pad(10).row();
         rootTable.add(new Label("Host IP:", game.skin)).right().pad(5);
         rootTable.add(ipField).width(200).pad(5).row();
         rootTable.add(errorLabel).colspan(2).pad(10).row();
 
         Table btnRow = new Table();
-        btnRow.add(backBtn).width(100).pad(10);
-        btnRow.add(connectBtn).width(120).pad(10);
+        btnRow.add(backBtn).fillX().width(150).pad(10);
+        btnRow.add(connectBtn).fillX().width(150).pad(10);
         rootTable.add(btnRow).colspan(2).row();
 
         connectBtn.addListener(new ClickListener() {
@@ -343,6 +362,10 @@ public class LobbyScreen implements Screen {
         statusLabel.setColor(Color.YELLOW);
         errorLabel.setText("");
 
+        String cn = clientNameField.getText().trim();
+        clientPlayerName = cn.isEmpty() ? "Player 2" : cn;
+        clientNameSent = false;
+
         if (networkManager != null) networkManager.disconnect();
         networkManager = new NetworkManager();
         networkManager.connectToHost(ip);
@@ -354,15 +377,22 @@ public class LobbyScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1);
-        RenderUtils.drawProportionalBackground(game.batch, game.assets.get(AssetManager.BACKGROUND));
+        ScreenUtils.clear(0, 0, 0, 1);
+        VideoBackgroundManager.getInstance().render(game.batch);
 
         // --- Network state polling ---
         if (networkManager != null && !transitioning) {
 
-            // HOST: waiting for connection → on connect, send GAME_INIT
+            // HOST: waiting for connection → wait for client name → send GAME_INIT
             if (lobbyState == LobbyState.HOST_WAITING) {
-                if (networkManager.getState() == NetworkManager.State.CONNECTED) {
+                if (networkManager.getState() == NetworkManager.State.CONNECTED && !clientNameReceived) {
+                    NetworkMessage nameMsg = networkManager.poll();
+                    if (nameMsg != null && NetworkMessage.TYPE_PLAYER_NAME.equals(nameMsg.type)) {
+                        receivedClientName = nameMsg.payload.trim().isEmpty() ? "Player 2" : nameMsg.payload.trim();
+                        clientNameReceived = true;
+                    }
+                }
+                if (clientNameReceived && !transitioning) {
                     transitioning = true;
                     GameLogger.logScreen("LAN: Client connected, sending game init");
 
@@ -376,6 +406,8 @@ public class LobbyScreen implements Screen {
                     GameState newState = new GameState(seed, nameField.getText() + "_LAN", selectedWidth, selectedHeight);
                     newState.isLanGame = true;
                     newState.localPlayerID = 1; // Host is always Player 1
+                    newState.p1Name = hostPlayerName;
+                    newState.p2Name = receivedClientName;
 
                     // Send the game init to client
                     String stateJson = json.toJson(newState);
@@ -401,6 +433,10 @@ public class LobbyScreen implements Screen {
                 }
 
                 if (networkManager.getState() == NetworkManager.State.CONNECTED) {
+                    if (!clientNameSent) {
+                        networkManager.send(NetworkMessage.playerName(clientPlayerName));
+                        clientNameSent = true;
+                    }
                     statusLabel.setText("Connected! Waiting for game data...");
                     statusLabel.setColor(Color.GREEN);
                 }
@@ -439,10 +475,12 @@ public class LobbyScreen implements Screen {
     @Override
     public void show() {
         GameLogger.logScreen("LAN Lobby opened");
+        VideoBackgroundManager.getInstance().play();
     }
 
     @Override
     public void hide() {
+        VideoBackgroundManager.getInstance().pause();
     }
 
     @Override
