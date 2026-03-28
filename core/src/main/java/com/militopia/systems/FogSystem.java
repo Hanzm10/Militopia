@@ -112,7 +112,7 @@ public class FogSystem extends EntitySystem {
                     // Normal tiles revealed up to radius.
                     // Jammed tiles ONLY revealed if within radius 1 of the unit.
                     int dist = Math.max(Math.abs(x - centerX), Math.abs(y - centerY));
-                    if (!jammerMask[x][y] || dist <= 1) {
+                    if (!jammerMask[x][y] || dist <= CombatConstants.JAMMER_SUPPRESSED_VISION) {
                         gameMap.visibleTiles[x][y] = true;
                     }
                 }
