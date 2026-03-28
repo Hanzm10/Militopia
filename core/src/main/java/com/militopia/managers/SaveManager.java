@@ -68,6 +68,13 @@ public class SaveManager {
         state.mapObjects = map.objects;
     }
 
+    /**
+     * Collects current engine state and writes it to a JSON save file.
+     *
+     * @param state  game state object that receives collected data and provides the save file name
+     * @param engine Ashley engine whose entities are serialised
+     * @param map    game map needed for object-type context during collection
+     */
     public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
         collectState(state, engine, map);
 

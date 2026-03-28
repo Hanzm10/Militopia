@@ -117,6 +117,13 @@ public class CombatSystem extends EntitySystem {
         exhaustAttacker(attacker, aStats, primaryTarget != null);
     }
 
+    /**
+     * Detonates a nuclear strike at the target tile, dealing area damage and exhausting the attacker.
+     *
+     * @param attacker the entity launching the nuke (must have {@link StatsComponent} and {@link AbilitiesComponent})
+     * @param tx       target tile X coordinate
+     * @param ty       target tile Y coordinate
+     */
     public void launchNuke(Entity attacker, int tx, int ty) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
         AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);

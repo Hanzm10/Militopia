@@ -338,6 +338,12 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
+    /**
+     * Returns the gold cost for purchasing the given unit type.
+     *
+     * @param unitType the unit type to query
+     * @return cost in gold; 0 for super units or unrecognised types
+     */
     public static int getUnitCost(UnitType unitType) {
         // Must match cost in createUnit
         switch (unitType) {
@@ -358,6 +364,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Returns the movement domain (LAND, AIR, or SEA) for the given unit type.
+     *
+     * @param unitType the unit type to query
+     * @return the corresponding {@link StatsComponent.MoveType}
+     */
     public StatsComponent.MoveType getUnitMoveType(UnitType unitType) {
         switch (unitType) {
             case RECON_DRONE:
@@ -431,6 +443,12 @@ public class UnitFactory {
                 unitSnaps, structSnaps, objClone);
     }
 
+    /**
+     * Returns the gold cost to build the given structure type.
+     *
+     * @param type structure key (e.g. "MUNITION_FACTORY", "PORT")
+     * @return cost in gold; 0 for unrecognised types
+     */
     public int getStructureCost(String type) {
         switch (type) {
             case "MUNITION_FACTORY":
@@ -454,6 +472,16 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Creates and registers a non-base structure entity at the given tile.
+     *
+     * @param type    structure key (e.g. "MUNITION_FACTORY", "PORT")
+     * @param x       grid column
+     * @param y       grid row
+     * @param owner   player ID (1 or 2)
+     * @param parentX grid column of the parent base that built this structure
+     * @param parentY grid row of the parent base that built this structure
+     */
     public void createStructure(String type, int x, int y, int owner, int parentX, int parentY) {
         String regionKey = type;
 
@@ -526,6 +554,14 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
+    /**
+     * Creates and registers a map-object entity (animal, base, town, or terrain decoration).
+     *
+     * @param x     grid column
+     * @param y     grid row
+     * @param type  the object type that determines which entity variant is spawned
+     * @param state game state updated when a base is placed (increments base counts)
+     */
     public void createObjectEntity(int x, int y, MapGenerator.ObjectType type, GameState state) {
         UiInfo info = getObjectUi(type);
         if (info.region == null) {
@@ -644,6 +680,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Swaps the base entity's texture to match its current owner and level.
+     *
+     * @param entity the base entity to update
+     * @param stats  the base's stats component (provides owner and level)
+     */
     public void updateBaseTexture(Entity entity, StatsComponent stats) {
         TextureComponent tex = entity.getComponent(TextureComponent.class);
         String color = (stats.owner == 1) ? "blue" : "red";
@@ -656,6 +698,13 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Restores a structure entity's stats from a saved {@link com.militopia.data.StructureData} record.
+     *
+     * @param entity the existing structure entity to update
+     * @param data   the persisted data to apply
+     * @param map    game map used to determine if the entity is a Town (fixed stats)
+     */
     public void updateStructureFromSave(Entity entity, com.militopia.data.StructureData data,
             MapGenerator.GameMap map) {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
@@ -780,6 +829,14 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Spawns a random set of wild animals on tiles surrounding the given base.
+     *
+     * @param baseX grid column of the base
+     * @param baseY grid row of the base
+     * @param map   game map used for terrain and existing-object lookups
+     * @param state game state passed through to {@link #createObjectEntity}
+     */
     public void spawnAnimalsAroundBase(int baseX, int baseY, MapGenerator.GameMap map, GameState state) {
         int radius = GameConfig.BORDER_RADIUS;
         List<GridPoint> validSpots = new ArrayList<>();
@@ -838,10 +895,27 @@ public class UnitFactory {
     }
 
     // --- HELPER: Checks for entity at coordinates and layer ---
+
+    /**
+     * Returns true if any entity occupies the given tile at the specified Z-layer.
+     *
+     * @param x      grid column
+     * @param y      grid row
+     * @param zLayer Z-index layer to check (e.g. 2 for animals, 3 for units)
+     * @return true if an entity exists at (x, y, zLayer)
+     */
     public boolean hasEntityAt(int x, int y, int zLayer) {
         return getEntityAt(x, y, zLayer) != null;
     }
 
+    /**
+     * Returns the entity at the given tile and Z-layer, or null if none exists.
+     *
+     * @param x      grid column
+     * @param y      grid row
+     * @param zLayer Z-index layer to search (e.g. 2 for animals, 3 for units)
+     * @return the matching entity, or null
+     */
     public Entity getEntityAt(int x, int y, int zLayer) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
         for (Entity e : entities) {
@@ -922,10 +996,23 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Converts a SCREAMING_SNAKE_CASE type key to a display-friendly name.
+     *
+     * @param type raw enum name (e.g. "RECON_DRONE")
+     * @return display name with capitalised first letter and spaces (e.g. "Recon drone")
+     */
     public String toNiceName(String type) {
         return type.charAt(0) + type.substring(1).toLowerCase().replace("_", " ");
     }
 
+    /**
+     * Resolves a display texture by lookup key for popup/HUD use.
+     * Checks unit regions, structure regions, and base regions in order.
+     *
+     * @param key unit or structure key (e.g. "TANK", "PORT", "BASE_P1")
+     * @return the matching display {@link TextureRegion}, or a fallback if not found
+     */
     public TextureRegion getTextureForPopup(String key) {
         if (unitRegions.containsKey(key)) {
             return unitRegions.get(key)[2];
@@ -939,12 +1026,24 @@ public class UnitFactory {
         return horseDisplayRegion;
     }
 
+    /**
+     * Returns the display name and HUD texture for the given unit type.
+     *
+     * @param unitType the unit type to look up
+     * @return a {@link UiInfo} with name and display region; falls back to Recruit if unknown
+     */
     public UiInfo getUnitUi(UnitType unitType) {
         TextureRegion[] regs = unitRegions.get(unitType.name());
         return (regs != null) ? new UiInfo(toNiceName(unitType.name()), regs[2])
                 : new UiInfo("Unknown", unitRegions.get(UnitType.RECRUIT.name())[2]);
     }
 
+    /**
+     * Returns the HUD icon texture for the given map object type (animals, bases, towns).
+     *
+     * @param type the object type to look up
+     * @return the corresponding display {@link TextureRegion}
+     */
     public TextureRegion getHudIcon(MapGenerator.ObjectType type) {
         switch (type) {
             case HORSE:
@@ -1013,6 +1112,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Returns the display name and tile texture for the given map object type.
+     *
+     * @param type the object type to look up
+     * @return a {@link UiInfo} with name and texture region; falls back to "Unknown Object" if not matched
+     */
     public UiInfo getObjectUi(MapGenerator.ObjectType type) {
         // Base Object
         if (type == MapGenerator.ObjectType.BASE_P1) {
@@ -1120,6 +1225,12 @@ public class UnitFactory {
         return new UiInfo("Unknown Object", grassRegion);
     }
 
+    /**
+     * Returns the tile texture for the given terrain type ordinal.
+     *
+     * @param terrainId ordinal index into {@link MapGenerator.TerrainType#values()}
+     * @return the matching terrain {@link TextureRegion}; defaults to grass if out of range
+     */
     public TextureRegion getTextureForTerrain(int terrainId) {
         MapGenerator.TerrainType[] allTypes = MapGenerator.TerrainType.values();
         if (terrainId < 0 || terrainId >= allTypes.length) {
@@ -1139,6 +1250,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Returns the display name and tile texture for the given terrain type.
+     *
+     * @param type the terrain type to look up
+     * @return a {@link UiInfo} with a human-readable name and texture region
+     */
     public UiInfo getTerrainUi(MapGenerator.TerrainType type) {
         switch (type) {
             case WATER:
@@ -1154,6 +1271,11 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Injects the {@link EntityFactory} used for spawning floating-text and VFX entities.
+     *
+     * @param entityFactory the factory instance to use
+     */
     public void setEntityFactory(EntityFactory entityFactory) {
         this.entityFactory = entityFactory;
     }
