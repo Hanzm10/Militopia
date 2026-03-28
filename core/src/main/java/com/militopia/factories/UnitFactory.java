@@ -239,6 +239,15 @@ public class UnitFactory {
         this.zebraDisplayRegion = new TextureRegion(assets.get(AssetManager.ZEBRA_DISPLAY));
     }
 
+    /**
+     * Creates and registers a unit entity with stats matching the given type.
+     *
+     * @param unitType   the type of unit to create
+     * @param x          grid column to place the unit
+     * @param y          grid row to place the unit
+     * @param owner      player ID (1 or 2)
+     * @param isSummoned true if summoned mid-turn (marks hasActed so unit cannot act immediately)
+     */
     public void createUnit(UnitType unitType, int x, int y, int owner, boolean isSummoned) {
         TextureRegion[] regions = unitRegions.get(unitType.name());
         if (regions == null) {
@@ -566,6 +575,14 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
+    /**
+     * Checks if the base has enough XP to level up and applies all level-up effects.
+     * Loops until XP falls below the threshold (handles multiple level-ups in one turn).
+     *
+     * @param baseEntity the base entity whose XP should be checked
+     * @param state      game state to apply funding bonuses and unlocks against
+     * @param hud        HUD to show the level-up popup (may be null in tests)
+     */
     public void checkAndApplyLevelUp(Entity baseEntity, GameState state, GameHUD hud) {
         StatsComponent stats = baseEntity.getComponent(StatsComponent.class);
         if (stats == null) {
@@ -673,6 +690,15 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Transfers ownership of a structure (town or enemy base) to newOwner,
+     * converting it to a base for the capturing player.
+     *
+     * @param objectEntity the structure entity being captured
+     * @param newOwner     player ID of the capturing player (1 or 2)
+     * @param map          game map used to update the ObjectType array
+     * @param state        game state to update base counts and XP
+     */
     public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map, GameState state) {
         StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
