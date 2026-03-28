@@ -57,6 +57,8 @@ public class GameHUD {
     private LevelUpPopup levelUpPopup;
     private SuperUnitChoicePopup superUnitChoicePopup;
     private GameOverPopup gameOverPopup;
+    private GameStatsPopup gameStatsPopup;
+    private EconomyPopup economyPopup;
 
     private GameScreen screen;
     private GameInputController inputController;
@@ -118,6 +120,8 @@ public class GameHUD {
         levelUpPopup = new LevelUpPopup(game, assets, stage, inputController, bottomBar);
         superUnitChoicePopup = new SuperUnitChoicePopup(game, assets, stage, inputController, bottomBar);
         gameOverPopup = new GameOverPopup(game, screen, stage, inputController, bottomBar);
+        gameStatsPopup = new GameStatsPopup(game, stage, inputController, bottomBar);
+        economyPopup = new EconomyPopup(game, stage, inputController, bottomBar);
 
         // Expose summonMenu for callers that still reference gameHUD.summonMenu
         summonMenu = slideMenu.menuTable;
@@ -450,5 +454,17 @@ public class GameHUD {
 
     public void showGameOverPopup(int winnerID) {
         gameOverPopup.show(winnerID);
+    }
+
+    // -------------------------------------------------------------------------
+    // Stats & Economy popups
+    // -------------------------------------------------------------------------
+
+    public void showGameStats(GameState state) {
+        gameStatsPopup.show(state);
+    }
+
+    public void showEconomyPopup(int turnCount, int income, int xpGain, int currentFunds) {
+        economyPopup.show(turnCount, income, xpGain, currentFunds);
     }
 }

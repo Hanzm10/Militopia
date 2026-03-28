@@ -520,12 +520,12 @@ public class GameScreen implements Screen {
         return structureEconomySystem.calculateIncome(playerID);
     }
 
-    private int processTurnEconomy(int playerID) {
+    private int[] processTurnEconomy(int playerID) {
         int totalIncome = calculateIncome(playerID);
         // XP distribution, Hospital healing, and base leveling are handled
         // by StructureEconomySystem to keep this screen thin.
-        structureEconomySystem.processTurn(playerID);
-        return totalIncome;
+        int totalXP = structureEconomySystem.processTurn(playerID);
+        return new int[]{totalIncome, totalXP};
     }
 
     @Override
@@ -543,7 +543,10 @@ public class GameScreen implements Screen {
                     gameState.turnCount++;
                 }
 
-                int income = processTurnEconomy(gameState.currentPlayer);
+                int[] economyOut = processTurnEconomy(gameState.currentPlayer);
+                int income = economyOut[0];
+                int xpGain = economyOut[1];
+
                 int currentTotal = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
 
                 if (gameState.turnCount > 1) {
@@ -553,6 +556,10 @@ public class GameScreen implements Screen {
                     } else {
                         gameState.p2Funding += income;
                         currentTotal = gameState.p2Funding;
+                    }
+
+                    if (!isLanGame || gameState.currentPlayer == localPlayerID) {
+                        gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal);
                     }
                 }
 

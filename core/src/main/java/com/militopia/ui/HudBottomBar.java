@@ -112,6 +112,13 @@ public class HudBottomBar {
         statsBtn.addListener(new HoverListener());
         endTurnBtn.addListener(new HoverListener());
 
+        statsBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                gameHud.showGameStats(screen.getGameState());
+            }
+        });
+
         settingsBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
