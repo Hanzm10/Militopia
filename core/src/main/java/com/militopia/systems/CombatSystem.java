@@ -194,8 +194,15 @@ public class CombatSystem extends EntitySystem {
         AbilitiesComponent dAbilities = defender.getComponent(AbilitiesComponent.class);
         int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
 
-        int dmg = Math.max(0, (aStats.attack + shoreBonus) - (dStats.defense + digInBonus) - defTerrainBonus
-                - (maxRange && aStats.attackRange > 1 ? CombatConstants.MAX_RANGE_ATTACK_PENALTY : 0));
+        // Damage formula: (attack + shore bonus) - (defense + dig-in bonus) - terrain bonus - long-range penalty
+        // shoreBonus:        Destroyer gets +bonus vs land units (Shore Bombardment)
+        // digInBonus:        Recruit Dig In grants defender extra defense for one turn
+        // defTerrainBonus:   Mountain (+3) or Tree (+1) on defender's tile
+        // MAX_RANGE_ATTACK_PENALTY: ranged units firing at their furthest tile suffer an accuracy penalty
+        int rawAttack = aStats.attack + shoreBonus;
+        int rawDefense = dStats.defense + digInBonus + defTerrainBonus;
+        int rangePenalty = (maxRange && aStats.attackRange > 1) ? CombatConstants.MAX_RANGE_ATTACK_PENALTY : 0;
+        int dmg = Math.max(0, rawAttack - rawDefense - rangePenalty);
 
         boolean isKill = (dmg >= dStats.currentHP);
         boolean isRecruitMelee = aStats.unitType == UnitType.RECRUIT && aStats.attackRange <= 1;
