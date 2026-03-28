@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
+import com.militopia.config.AnimalType;
 import com.militopia.config.GameConfig;
 import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
@@ -369,12 +370,13 @@ public class GameInputController extends InputAdapter {
 
         if (foundAnimal != null) {
             String animName = foundAnimal.getComponent(StatsComponent.class).name;
+            AnimalType detectedAnimal = AnimalType.fromKey(animName);
             MapGenerator.ObjectType animType = MapGenerator.ObjectType.HORSE;
-            if (animName.contains("DEER"))
+            if (detectedAnimal == AnimalType.DEER)
                 animType = MapGenerator.ObjectType.DEER;
-            else if (animName.contains("FISH"))
+            else if (detectedAnimal == AnimalType.FISH)
                 animType = MapGenerator.ObjectType.FISH;
-            else if (animName.contains("ZEBRA"))
+            else if (detectedAnimal == AnimalType.ZEBRA)
                 animType = MapGenerator.ObjectType.ZEBRA;
             gameHUD.openHuntMenu(foundAnimal, foundUnit, animType, unitFactory, this);
         }
@@ -399,14 +401,15 @@ public class GameInputController extends InputAdapter {
         StatsComponent stats = foundAnimal.getComponent(StatsComponent.class);
         String rawName = (stats != null) ? stats.name : "";
         GameLogger.log(GameLogger.INPUT, "Animal inspected: " + rawName);
+        AnimalType detectedAnimal = AnimalType.fromKey(rawName);
         MapGenerator.ObjectType type = MapGenerator.ObjectType.HORSE;
-        if (rawName.contains("DEER"))
+        if (detectedAnimal == AnimalType.DEER)
             type = MapGenerator.ObjectType.DEER;
-        else if (rawName.contains("FISH"))
+        else if (detectedAnimal == AnimalType.FISH)
             type = MapGenerator.ObjectType.FISH;
-        else if (rawName.contains("ZEBRA"))
+        else if (detectedAnimal == AnimalType.ZEBRA)
             type = MapGenerator.ObjectType.ZEBRA;
-        else if (rawName.contains("HORSE"))
+        else if (detectedAnimal == AnimalType.HORSE)
             type = MapGenerator.ObjectType.HORSE;
         UnitFactory.UiInfo info = unitFactory.getObjectUi(type);
         gameHUD.showTileInfo(info.name, unitFactory.getHudIcon(type));

@@ -568,8 +568,7 @@ public class UnitFactory {
             return;
         }
 
-        boolean isAnimal = (type.name().contains("HORSE") || type.name().contains("FISH")
-                || type.name().contains("DEER") || type.name().contains("ZEBRA"));
+        boolean isAnimal = (com.militopia.config.AnimalType.fromKey(type.name()) != null);
         int zIndex = isAnimal ? 2 : 1;
 
         Entity entity = engine.createEntity();
