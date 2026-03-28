@@ -120,8 +120,10 @@ public class UnitRenderSystem extends EntitySystem {
             boolean isMyUnit = (stats != null && stats.owner == activePlayer);
 
             if (fogEnabled) {
-                if (!gameMap.visibleTiles[pos.x][pos.y] && !isMyUnit) {
-                    return;
+                if (pos.x >= 0 && pos.x < gameMap.width && pos.y >= 0 && pos.y < gameMap.height) {
+                    if (!gameMap.visibleTiles[pos.x][pos.y] && !isMyUnit) {
+                        return;
+                    }
                 }
             }
 

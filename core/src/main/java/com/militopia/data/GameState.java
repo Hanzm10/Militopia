@@ -35,6 +35,10 @@ public class GameState {
     public boolean isGameOver = false;
     public int winnerID = 0;
 
+    // --- LAN Multiplayer ---
+    public boolean isLanGame = false;
+    public int localPlayerID = 1; // 1 or 2. In hotseat, matches currentPlayer.
+
     public GameState() {
     }
 

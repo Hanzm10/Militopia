@@ -21,7 +21,7 @@ public class FogSystem extends EntitySystem {
     public FogSystem(MapGenerator.GameMap map, int initialPlayerID) {
         this.gameMap = map;
         this.playerID = initialPlayerID;
-        this.priority = 0;
+        this.priority = -1; // Must run BEFORE UnitRenderSystem (priority 1) and MapRenderSystem (priority 0)
     }
 
     // --- NEW: Switch Active Player ---

@@ -5,12 +5,16 @@ import com.militopia.screen.GameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -27,10 +31,11 @@ public class NewGameScreen implements Screen {
     Stage stage;
 
     TextField nameField, seedField;
-    Label errorLabel;
+    Label errorLabel, titleLabel;
+    Label modeInfoLabel;
 
     // Mode Selection
-    TextButton blitzBtn, marathonBtn;
+    SelectBox<String> modeSelectBox;
     int selectedWidth = 16;
     int selectedHeight = 16;
 
@@ -52,29 +57,44 @@ public class NewGameScreen implements Screen {
         Label.LabelStyle errorStyle = new Label.LabelStyle(game.skin.getFont("default-font"), Color.RED);
         errorLabel = new Label("", errorStyle);
 
-        // --- GAME MODE BUTTONS ---
-        blitzBtn = new TextButton("Blitz (16x16)", game.skin, "toggle");
-        marathonBtn = new TextButton("Marathon (32x32)", game.skin, "toggle");
+        titleLabel = new Label("NEW GAME", game.skin, "default-font", Color.WHITE);
+        titleLabel.setFontScale(1.8f);
 
-        // Default selection: Blitz
-        blitzBtn.setChecked(true);
-        marathonBtn.setChecked(false);
+        // --- MODE SELECTOR ---
+        modeSelectBox = new SelectBox<>(game.skin);
+        modeSelectBox.setItems("Game mode", "Blitz", "Marathon");
+        modeSelectBox.setSelected("Game mode");
 
-        blitzBtn.addListener(new ClickListener() {
+        modeInfoLabel = new Label("16x16 map", game.skin);
+        modeInfoLabel.setColor(Color.LIGHT_GRAY);
+        modeInfoLabel.setFontScale(0.8f);
+        modeInfoLabel.setVisible(false);
+
+        modeSelectBox.addListener(new ChangeListener() {
             @Override
-            public void clicked(InputEvent event, float x, float y) {
-                selectedWidth = 16;
-                selectedHeight = 16;
-                marathonBtn.setChecked(false); // Manual Toggle
+            public void changed(ChangeEvent event, Actor actor) {
+                String selected = modeSelectBox.getSelected();
+                if (selected.contains("Blitz")) {
+                    modeInfoLabel.setText("16x16 map");
+                    selectedWidth = 16; selectedHeight = 16;
+                } else if (selected.contains("Marathon")) {
+                    modeInfoLabel.setText("32x32 map");
+                    selectedWidth = 32; selectedHeight = 32;
+                } else {
+                    modeInfoLabel.setText("16x16 map");
+                    selectedWidth = 16; selectedHeight = 16;
+                }
             }
         });
 
-        marathonBtn.addListener(new ClickListener() {
+        modeSelectBox.addListener(new InputListener() {
             @Override
-            public void clicked(InputEvent event, float x, float y) {
-                selectedWidth = 32;
-                selectedHeight = 32;
-                blitzBtn.setChecked(false); // Manual Toggle
+            public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                if (pointer == -1) modeInfoLabel.setVisible(true);
+            }
+            @Override
+            public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+                if (pointer == -1) modeInfoLabel.setVisible(false);
             }
         });
 
@@ -82,24 +102,28 @@ public class NewGameScreen implements Screen {
         startBtn.addListener(new HoverListener());
         TextButton backBtn = new TextButton("Back", game.skin);
         backBtn.addListener(new HoverListener());
+        table.clear(); // Clear to rebuild neatly
+        table.setFillParent(true);
+        
+        table.add(titleLabel).padBottom(40).row();
+        table.add(nameField).width(320).pad(10).row();
+        table.add(seedField).width(320).pad(10).row();
 
-        addInputRow(table, "Map Name:", nameField);
-        addInputRow(table, "Seed:", seedField);
-
-        // Add Mode Selection Row
-        table.row().pad(10);
-        table.add(new Label("Game Mode:", game.skin)).right().pad(5);
         Table modeTable = new Table();
-        modeTable.add(blitzBtn).width(150).padRight(5);
-        modeTable.add(marathonBtn).width(150);
-        table.add(modeTable).left();
+        modeTable.add().width(110); 
+        modeTable.add(modeSelectBox).width(300).pad(5);
+        modeTable.add(modeInfoLabel).width(100).padLeft(10);
+        
+        table.row().pad(10);
+        table.add(modeTable).left().row();
+
+        Table btnRow = new Table();
+        btnRow.add(backBtn).width(200).pad(10);
+        btnRow.add(startBtn).width(200).pad(10);
+        table.add(btnRow).padTop(100).row();
 
         table.row();
-        table.add(errorLabel).colspan(2).pad(10);
-
-        table.row().padTop(20);
-        table.add(backBtn).width(100).pad(10);
-        table.add(startBtn).width(100).pad(10);
+        table.add(errorLabel).colspan(2).pad(10).row();
 
         startBtn.addListener(new ClickListener() {
             @Override
@@ -138,10 +162,8 @@ public class NewGameScreen implements Screen {
         return field.getText() == null || field.getText().trim().isEmpty();
     }
 
-    private void addInputRow(Table t, String labelText, TextField field) {
-        t.add(new Label(labelText, game.skin)).right().pad(5);
-        t.add(field).width(200).pad(5);
-        t.row();
+    private void addInputRow(Table t, TextField field) {
+        t.add(field).width(300).pad(10).row();
     }
 
     @Override

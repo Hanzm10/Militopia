@@ -114,8 +114,9 @@ public class HudTopBar {
         Table t = new Table();
 
         if (title.equals("Funding")) {
-            fundingTitleLabel = new Label(title + " (+0)", game.skin, "default-font", Color.WHITE);
-            fundingTitleLabel.setFontScale(0.8f);
+            fundingTitleLabel = new Label(title + " (+0)", game.skin, "default-font", 
+                    game.skin.get("color-gold", Color.class));
+            fundingTitleLabel.setFontScale(0.75f);
             t.add(fundingTitleLabel).left().row();
 
             Table valueRow = new Table();
@@ -135,10 +136,11 @@ public class HudTopBar {
             t.add(valueRow).left();
 
         } else {
-            Label titleLbl = new Label(title, game.skin, "default-font", Color.WHITE);
-            titleLbl.setFontScale(0.8f);
+            Label titleLbl = new Label(title, game.skin, "default-font", 
+                    game.skin.get("color-gold", Color.class));
+            titleLbl.setFontScale(0.75f);
             Label valLbl = new Label(placeholderValue, game.skin, "default-font", Color.WHITE);
-            valLbl.setFontScale(1.2f);
+            valLbl.setFontScale(1.15f);
 
             if (title.equals("XP"))
                 xpLabel = valLbl;

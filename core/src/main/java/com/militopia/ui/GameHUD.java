@@ -59,6 +59,7 @@ public class GameHUD {
     private GameOverPopup gameOverPopup;
     private GameStatsPopup gameStatsPopup;
     private EconomyPopup economyPopup;
+    private DisconnectPopup disconnectPopup;
 
     private GameScreen screen;
     private GameInputController inputController;
@@ -122,6 +123,7 @@ public class GameHUD {
         gameOverPopup = new GameOverPopup(game, screen, stage, inputController, bottomBar);
         gameStatsPopup = new GameStatsPopup(game, stage, inputController, bottomBar);
         economyPopup = new EconomyPopup(game, stage, inputController, bottomBar);
+        disconnectPopup = new DisconnectPopup(game, screen, stage, inputController, bottomBar);
 
         // Expose summonMenu for callers that still reference gameHUD.summonMenu
         summonMenu = slideMenu.menuTable;
@@ -137,8 +139,8 @@ public class GameHUD {
         // 3. Build right-panel snapshot overlay (mounted as a stage overlay, not in rootTable)
         buildSnapshotPanel(screen);
 
-        // 4. Prime the top bar with the initial state
-        updateTurn(state.turnCount);
+        // 4. Prime the HUD with the initial state
+        updateTurn(state.turnCount, state.currentPlayer, screen.getActiveLocalPlayer());
         updateXP(state.p1XP);
         int startIncome = screen.calculateIncome(1);
         updateFunding(state.p1Funding, startIncome);
@@ -330,8 +332,9 @@ public class GameHUD {
         topBar.updateXP(xp);
     }
 
-    public void updateTurn(int turn) {
+    public void updateTurn(int turn, int currentPlayer, int localPlayerID) {
         topBar.updateTurn(turn);
+        bottomBar.updateTurnState(currentPlayer, localPlayerID);
     }
 
     public void updateFunding(int funding, int income) {
@@ -466,5 +469,9 @@ public class GameHUD {
 
     public void showEconomyPopup(int turnCount, int income, int xpGain, int currentFunds) {
         economyPopup.show(turnCount, income, xpGain, currentFunds);
+    }
+
+    public void showDisconnectPopup(String message) {
+        disconnectPopup.show(message);
     }
 }

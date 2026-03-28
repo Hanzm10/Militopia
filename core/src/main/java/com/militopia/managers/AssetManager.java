@@ -202,6 +202,7 @@ public class AssetManager {
 
     // Fonts
     public static final String GAME_FONT = "game-system/game_font.ttf";
+    public static final String RUSSO_FONT = "game-system/russo_one.ttf";
 
     public AssetManager() {
         manager = new com.badlogic.gdx.assets.AssetManager();
@@ -357,6 +358,14 @@ public class AssetManager {
         fontParam.fontParameters.magFilter = Texture.TextureFilter.Linear;
 
         manager.load(GAME_FONT, BitmapFont.class, fontParam);
+
+        // Load Russo One (The "Heavy Tank" font)
+        FreetypeFontLoader.FreeTypeFontLoaderParameter russoParam = new FreetypeFontLoader.FreeTypeFontLoaderParameter();
+        russoParam.fontFileName = RUSSO_FONT;
+        russoParam.fontParameters.size = 24;
+        russoParam.fontParameters.minFilter = Texture.TextureFilter.Linear;
+        russoParam.fontParameters.magFilter = Texture.TextureFilter.Linear;
+        manager.load(RUSSO_FONT, BitmapFont.class, russoParam);
     }
 
     public void finishLoading() {
@@ -378,6 +387,10 @@ public class AssetManager {
 
     public BitmapFont getFont() {
         return manager.get(GAME_FONT, BitmapFont.class);
+    }
+
+    public BitmapFont getRussoFont() {
+        return manager.get(RUSSO_FONT, BitmapFont.class);
     }
 
     public void dispose() {
