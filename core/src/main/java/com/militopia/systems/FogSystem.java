@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
+import com.militopia.config.CombatConstants;
 import com.militopia.config.StructureType;
 import com.militopia.map.MapGenerator;
 
@@ -55,7 +56,7 @@ public class FogSystem extends EntitySystem {
             StatsComponent stats = e.getComponent(StatsComponent.class);
             if (stats.owner != playerID && StructureType.fromDisplayName(stats.name) == StructureType.SIGNAL_JAMMER) {
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
-                markJammingZone(pos.x, pos.y, 4); // Radius 4 for Static
+                markJammingZone(pos.x, pos.y, CombatConstants.JAMMER_RADIUS);
             }
         }
 
@@ -66,22 +67,20 @@ public class FogSystem extends EntitySystem {
 
             if (stats.owner == playerID) {
                 int radius = stats.vision;
-                // RADAR STATION: Scanner (+4 Vision)
+                // RADAR STATION: Scanner bonus vision
                 if (StructureType.fromDisplayName(stats.name) == StructureType.RADAR) {
-                    radius += 4;
+                    radius += CombatConstants.RADAR_VISION_BONUS;
                 }
 
-                // --- NEW: Jammer Override ---
-                // If the unit is inside a jammed zone, its vision radius is forced to 1.
+                // Jammer Override: units inside a jammed zone see only 1 tile
                 if (jammerMask[pos.x][pos.y]) {
-                    radius = 1;
+                    radius = CombatConstants.JAMMER_SUPPRESSED_VISION;
                 }
 
                 clearFog(pos.x, pos.y, radius);
 
-                // --- NEW: Stealth Detection ---
-                // All units can see cloaked enemies in adjacent tiles (radius 1)
-                markDetectionZone(pos.x, pos.y, 1);
+                // Stealth Detection: all units can spot cloaked enemies in adjacent tiles
+                markDetectionZone(pos.x, pos.y, CombatConstants.STEALTH_DETECTION_RADIUS);
             }
         }
     }

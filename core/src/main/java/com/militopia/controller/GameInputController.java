@@ -158,10 +158,15 @@ public class GameInputController extends InputAdapter {
         lastTouchX = screenX;
         lastTouchY = screenY;
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+        // INPUT_OFFSET shifts world coords to align with the rendered tile origin
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
         float halfW = GameConfig.TILE_WIDTH / 2.0f;
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
+        // Inverse isometric projection: convert 2D screen position back to grid (x, y).
+        // Standard iso formula: screenX = (gridX - gridY) * halfW,
+        //                       screenY = (gridX + gridY) * halfH
+        // Solving for gridX and gridY gives the expressions below.
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
@@ -674,6 +679,7 @@ public class GameInputController extends InputAdapter {
         if (!inputEnabled)
             return false;
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
+        // Inverse isometric projection — see touchDown for formula derivation
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
         float halfW = GameConfig.TILE_WIDTH / 2.0f;

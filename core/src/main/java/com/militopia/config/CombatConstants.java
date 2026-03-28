@@ -49,4 +49,16 @@ public class CombatConstants {
     public static final int NUKE_RADIUS             = 1;
     public static final int NUKE_DAMAGE             = 15;
     public static final int NUKE_COOLDOWN_TURNS     = 3;
+
+    // -----------------------------------------------------------------------
+    // Fog of War / Vision
+    // -----------------------------------------------------------------------
+    /** Radius of the jamming zone projected by a Signal Jammer structure. */
+    public static final int JAMMER_RADIUS            = 4;
+    /** Bonus vision tiles added to a Radar Station's base vision stat. */
+    public static final int RADAR_VISION_BONUS       = 4;
+    /** Vision radius forced on any unit standing inside a jammer zone. */
+    public static final int JAMMER_SUPPRESSED_VISION = 1;
+    /** Radius within which any unit can spot a cloaked (stealthed) enemy. */
+    public static final int STEALTH_DETECTION_RADIUS = 1;
 }
