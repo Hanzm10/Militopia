@@ -558,9 +558,7 @@ public class GameScreen implements Screen {
                         currentTotal = gameState.p2Funding;
                     }
 
-                    if (!isLanGame || gameState.currentPlayer == localPlayerID) {
-                        gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal);
-                    }
+                    gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal);
                 }
 
                 // Update GameLogger context for the new active player/turn
