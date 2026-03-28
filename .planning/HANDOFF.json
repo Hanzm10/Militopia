@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-28T02:11:24.230Z",
+  "timestamp": "2026-03-28T02:46:32.336Z",
   "phase": "08",
   "phase_name": "polish-ux",
   "phase_dir": ".planning/phases/08-polish-ux",
@@ -15,28 +15,22 @@
     {"id": 4, "name": "Javadoc on createUnit, checkAndApplyLevelUp, captureStructure", "status": "done", "commit": "1ffeb35"},
     {"id": 5, "name": "Inline comments on arc formula (AnimationSystem) and damage calc (CombatSystem)", "status": "done", "commit": "e400c0e"},
     {"id": 6, "name": "Javadoc on remaining 20 public methods across UnitFactory, CombatSystem, SaveManager", "status": "done", "commit": "7c39537"},
-    {"id": 7, "name": "AnimalType enum replaces fragile string contains checks in GameInputController + UnitFactory", "status": "done", "commit": "e91080a"}
+    {"id": 7, "name": "AnimalType enum replaces fragile string contains checks in GameInputController + UnitFactory", "status": "done", "commit": "e91080a"},
+    {"id": 8, "name": "Fix 3 failing AbilityTest NPEs (entityFactory null guards in CombatSystem)", "status": "done", "commit": "74e6d91"},
+    {"id": 9, "name": "Tech debt #9: UnitStatConfig consolidates 3 duplicate unit stat switches", "status": "done", "commit": "c5ce167"},
+    {"id": 10, "name": "Tech debt #4 + #5: Extract GIC entity loops + move economy to StructureEconomySystem", "status": "done", "commit": "fee58ae"}
   ],
   "remaining_tasks": [
-    {"id": 8, "name": "Execute 08-04-PLAN.md — defend SFX, BGM wiring, fallback audio files", "status": "not_started"},
-    {"id": 9, "name": "Tech debt #1: Tests for CombatSystem, UnitFactory, GameInputController", "status": "not_started"},
-    {"id": 10, "name": "Tech debt #3: UnitFactory god class extraction (TextureRegistry, LevelUpSystem, CaptureSystem)", "status": "not_started"},
-    {"id": 11, "name": "Tech debt #4: Business logic out of GameInputController (summon, scavenge)", "status": "not_started"},
-    {"id": 12, "name": "Tech debt #5: Business logic out of GameScreen (capture, solar array)", "status": "not_started"},
-    {"id": 13, "name": "Tech debt #9: Unit stats to data-driven JSON config", "status": "not_started"}
+    {"id": 11, "name": "Tech debt #1: Tests for CombatSystem, UnitFactory, GameInputController", "status": "not_started"},
+    {"id": 12, "name": "Tech debt #3: UnitFactory god class extraction (DEFERRED — see decisions)", "status": "deferred"},
+    {"id": 13, "name": "Execute 08-04-PLAN.md — defend SFX, BGM wiring, fallback audio files", "status": "not_started"}
   ],
   "blockers": [],
-  "human_actions_pending": [
-    {
-      "action": "Run ./gradlew build to verify all tech debt refactors compile clean",
-      "context": "6 commits of refactoring (new enums, replaced string checks, added imports) — build verification recommended before Phase 9",
-      "blocking": false
-    }
-  ],
+  "human_actions_pending": [],
   "decisions": [
     {
-      "decision": "StructureType enum placed in com.militopia.config package (alongside GameConfig, CombatConstants)",
-      "rationale": "Consistent with existing config pattern; parallel to UnitType which is in com.militopia.enums",
+      "decision": "StructureType enum placed in com.militopia.config package",
+      "rationale": "Consistent with existing config pattern; parallel to UnitType",
       "phase": "tech-debt"
     },
     {
@@ -45,12 +39,22 @@
       "phase": "tech-debt"
     },
     {
-      "decision": "Tech debt items 4, 5, 9 deferred — require build verification to safely extract live game logic",
-      "rationale": "Moving logic between classes without ability to run game risks silent behavior changes",
+      "decision": "Tech debt #3 (UnitFactory god class) deferred indefinitely",
+      "rationale": "checkAndApplyLevelUp, chooseSuperUnit, captureStructure all call internal UnitFactory methods (updateBaseTexture, getOrdinal, spawnAnimalsAroundBase). Any extracted class would still need a UnitFactory reference — low ROI for the risk.",
+      "phase": "tech-debt"
+    },
+    {
+      "decision": "UnitStatConfig uses static EnumMap, not JSON file",
+      "rationale": "Matches existing BaseLevelConfig pattern — no Gdx.files dependency, works in headless tests",
+      "phase": "tech-debt"
+    },
+    {
+      "decision": "Economy methods kept as public delegates on GameScreen",
+      "rationale": "Callers reference screen.calculate*(). Logic moved to StructureEconomySystem; GameScreen thin-delegates. Zero call-site changes.",
       "phase": "tech-debt"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Run ./gradlew build to verify tech debt commits, then /gsd:execute-phase 08 to close 08-04 (audio gaps)",
-  "context_notes": "This session was an ad-hoc tech debt session. 6/10 tech debt items closed. The 4 remaining open items (tests, UnitFactory extraction, controller logic, data-driven stats) are medium-to-high effort and need build verification. Phase 08 has one plan remaining: 08-04 (defend SFX, BGM, fallback audio files). After 08-04, Phase 9 (Railways) begins."
+  "next_action": "Tech debt #1: add tests for CombatSystem and UnitFactory — OR execute 08-04-PLAN.md (audio gaps) to close Phase 08",
+  "context_notes": "Two-session tech debt effort. 8/10 items closed total. Build is green (46 tests, 0 failures). Remaining: #1 tests (HIGH severity — CombatSystem, UnitFactory, GameInputController have no direct test classes) and #3 extraction (deferred). Phase 08 still has 08-04 (audio) unexecuted. After audio closes, Phase 09 (Railways) begins."
 }
