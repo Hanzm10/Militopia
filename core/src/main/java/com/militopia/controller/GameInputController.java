@@ -451,20 +451,7 @@ public class GameInputController extends InputAdapter {
             if (structStats.name.equalsIgnoreCase("Port")) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
-                    int portLevel = 1;
-                    ImmutableArray<Entity> allEnts = engine.getEntitiesFor(
-                            Family.all(StatsComponent.class, GridPositionComponent.class).get());
-                    for (Entity e : allEnts) {
-                        StatsComponent bs = e.getComponent(StatsComponent.class);
-                        GridPositionComponent bp = e.getComponent(GridPositionComponent.class);
-                        if (bs.owner == structStats.owner && bs.level >= 1 && bs.name.contains("Base")) {
-                            int radius = bs.vision;
-                            if (Math.abs(bp.x - gridX) <= radius && Math.abs(bp.y - gridY) <= radius) {
-                                if (bs.level > portLevel)
-                                    portLevel = bs.level;
-                            }
-                        }
-                    }
+                    int portLevel = findMaxBaseLevelNear(gridX, gridY, structStats.owner);
                     gameHUD.openSummonMenu(structStats.owner, screen.getGameState(), portLevel, "PORT");
                     return;
                 }
@@ -582,31 +569,13 @@ public class GameInputController extends InputAdapter {
         }
 
         int owner = screen.getCurrentPlayer();
-        int maxLevel = 0;
-        boolean isTerritory = false;
-        int parentX = -1, parentY = -1;
 
         // --- 1. TERRITORY CHECK (Critical for Build Menu) ---
-        ImmutableArray<Entity> entities = engine
-                .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
-        for (Entity e : entities) {
-            StatsComponent stats = e.getComponent(StatsComponent.class);
-            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
-            if (stats.owner == owner && stats.income >= 2 && stats.name.contains("Base")) {
-                int radius = stats.vision;
-                if (Math.abs(pos.x - x) <= radius && Math.abs(pos.y - y) <= radius) {
-                    isTerritory = true;
-                    if (stats.level > maxLevel) {
-                        maxLevel = stats.level;
-                        parentX = pos.x;
-                        parentY = pos.y;
-                    }
-                }
-            }
-        }
+        // [0]=isTerritory(1/0), [1]=maxLevel, [2]=parentX, [3]=parentY
+        int[] territory = findControllingBase(x, y, owner);
 
         // --- 3. BUILD MENU OR TERRAIN INFO ---
-        if (isTerritory) {
+        if (territory[0] == 1) {
             boolean isWater = (terrain == MapGenerator.TerrainType.WATER
                     || terrain == MapGenerator.TerrainType.DEEP_WATER);
             boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
@@ -614,8 +583,8 @@ public class GameInputController extends InputAdapter {
             boolean hasBuildOptions = !isWater || isCoastalWater;
 
             if (hasBuildOptions) {
-                gameHUD.openBuildMenu(x, y, owner, maxLevel, isWater, isCoastalWater, isCoastalLand,
-                        screen.getGameState(), parentX, parentY, terrain, unitFactory);
+                gameHUD.openBuildMenu(x, y, owner, territory[1], isWater, isCoastalWater, isCoastalLand,
+                        screen.getGameState(), territory[2], territory[3], terrain, unitFactory);
             } else {
                 gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                         unitFactory.getTextureForTerrain(terrain.ordinal()));
@@ -624,6 +593,50 @@ public class GameInputController extends InputAdapter {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
         }
+    }
+
+    /**
+     * Returns the highest-level friendly base whose vision radius covers (tx, ty),
+     * defaulting to 1 if none found. Used to determine port summon tier.
+     */
+    private int findMaxBaseLevelNear(int tx, int ty, int owner) {
+        int maxLevel = 1;
+        ImmutableArray<Entity> allEnts = engine.getEntitiesFor(
+                Family.all(StatsComponent.class, GridPositionComponent.class).get());
+        for (Entity e : allEnts) {
+            StatsComponent bs = e.getComponent(StatsComponent.class);
+            GridPositionComponent bp = e.getComponent(GridPositionComponent.class);
+            if (bs.owner == owner && bs.income >= 2 && bs.name.contains("Base")) {
+                if (Math.abs(bp.x - tx) <= bs.vision && Math.abs(bp.y - ty) <= bs.vision) {
+                    if (bs.level > maxLevel) maxLevel = bs.level;
+                }
+            }
+        }
+        return maxLevel;
+    }
+
+    /**
+     * Finds the highest-level friendly base whose territory covers (tx, ty).
+     * Returns [isTerritory(1/0), maxLevel, parentX, parentY].
+     */
+    private int[] findControllingBase(int tx, int ty, int owner) {
+        int maxLevel = 0, parentX = -1, parentY = -1;
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(StatsComponent.class, GridPositionComponent.class).get());
+        for (Entity e : entities) {
+            StatsComponent stats = e.getComponent(StatsComponent.class);
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+            if (stats.owner == owner && stats.income >= 2 && stats.name.contains("Base")) {
+                if (Math.abs(pos.x - tx) <= stats.vision && Math.abs(pos.y - ty) <= stats.vision) {
+                    if (stats.level > maxLevel) {
+                        maxLevel = stats.level;
+                        parentX = pos.x;
+                        parentY = pos.y;
+                    }
+                }
+            }
+        }
+        return new int[]{ maxLevel > 0 ? 1 : 0, maxLevel, parentX, parentY };
     }
 
     private boolean hasAdjacentLand(int x, int y) {

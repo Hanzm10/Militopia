@@ -479,61 +479,11 @@ public class GameScreen implements Screen {
     }
 
     public int calculateBaseXPGain(Entity base) {
-        StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (stats == null)
-            return 0;
-
-        int totalGain = 0;
-        // Natural gain (Bases only)
-        if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
-            totalGain = 250 + ((stats.level - 1) * 10);
-
-            // Add XP from child structures
-            GridPositionComponent bPos = base.getComponent(GridPositionComponent.class);
-            if (bPos != null) {
-                ImmutableArray<Entity> entities = engine
-                        .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
-                for (Entity other : entities) {
-                    StatsComponent oStats = other.getComponent(StatsComponent.class);
-                    if (oStats.owner == stats.owner && oStats.parentBaseX == bPos.x && oStats.parentBaseY == bPos.y) {
-                        totalGain += oStats.xpGain;
-                    }
-                }
-            }
-        } else {
-            // Specialized structures show their own contribution
-            totalGain = stats.xpGain;
-        }
-        return totalGain;
+        return structureEconomySystem.calculateBaseXPGain(base);
     }
 
     public int calculateBaseIncome(Entity entity) {
-        StatsComponent stats = entity.getComponent(StatsComponent.class);
-        if (stats == null)
-            return 0;
-
-        int individualIncome = stats.income;
-        GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
-
-        if (pos != null) {
-            // SOLAR ARRAY: Tech Synergy (+1 for each adjacent friendly structure)
-            if (StructureType.fromDisplayName(stats.name) == StructureType.SOLAR) {
-                ImmutableArray<Entity> entities = engine
-                        .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
-                for (Entity other : entities) {
-                    if (other == entity)
-                        continue;
-                    StatsComponent oStats = other.getComponent(StatsComponent.class);
-                    GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
-                    if (oStats.owner == stats.owner && (oStats.income > 0 || StructureType.fromDisplayName(oStats.name) == StructureType.BASE)) {
-                        if (Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
-                            individualIncome += 1;
-                        }
-                    }
-                }
-            }
-        }
-        return individualIncome;
+        return structureEconomySystem.calculateBaseIncome(entity);
     }
 
     /**
@@ -541,40 +491,11 @@ public class GameScreen implements Screen {
      * Used by InfoPanel for display.
      */
     public int calculateGroupedBaseIncome(Entity base) {
-        StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (stats == null || StructureType.fromDisplayName(stats.name) != StructureType.BASE)
-            return calculateBaseIncome(base);
-
-        int totalGroupedIncome = calculateBaseIncome(base);
-        GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
-
-        if (pos != null) {
-            ImmutableArray<Entity> entities = engine
-                    .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
-            for (Entity other : entities) {
-                if (other == base)
-                    continue;
-                StatsComponent oStats = other.getComponent(StatsComponent.class);
-                if (oStats.owner == stats.owner && oStats.parentBaseX == pos.x && oStats.parentBaseY == pos.y) {
-                    totalGroupedIncome += calculateBaseIncome(other);
-                }
-            }
-        }
-        return totalGroupedIncome;
+        return structureEconomySystem.calculateGroupedBaseIncome(base);
     }
 
     public int calculateIncome(int playerID) {
-        int totalIncome = 0;
-        ImmutableArray<Entity> entities = engine
-                .getEntitiesFor(Family.all(StatsComponent.class).get());
-
-        for (Entity entity : entities) {
-            StatsComponent stats = entity.getComponent(StatsComponent.class);
-            if (stats.owner == playerID) {
-                totalIncome += calculateBaseIncome(entity);
-            }
-        }
-        return totalIncome;
+        return structureEconomySystem.calculateIncome(playerID);
     }
 
     private int processTurnEconomy(int playerID) {
