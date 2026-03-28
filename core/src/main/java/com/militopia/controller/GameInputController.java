@@ -156,6 +156,12 @@ public class GameInputController extends InputAdapter {
         if (!inputEnabled)
             return false;
 
+        // --- LAN LOCKDOWN ---
+        // Prevent all map interaction if it's not the local hardware's turn!
+        if (screen.getGameState().currentPlayer != screen.getActiveLocalPlayer()) {
+            return false;
+        }
+
         lastTouchX = screenX;
         lastTouchY = screenY;
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0));
@@ -202,7 +208,7 @@ public class GameInputController extends InputAdapter {
                 Entity enemy = null;
                 if (targetUnit != null) {
                     StatsComponent tStats = targetUnit.getComponent(StatsComponent.class);
-                    if (tStats != null && tStats.owner != screen.getCurrentPlayer()) {
+                    if (tStats != null && tStats.owner != screen.getActiveLocalPlayer()) {
                         enemy = targetUnit;
                     }
                 }
@@ -225,7 +231,7 @@ public class GameInputController extends InputAdapter {
                     StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
                     GridPositionComponent aPos = selectedUnitEntity.getComponent(GridPositionComponent.class);
                     if (tStats != null && aStats != null && aPos != null
-                            && tStats.owner != screen.getCurrentPlayer()) {
+                            && tStats.owner != screen.getActiveLocalPlayer()) {
                         int dist = chebyshev(aPos.x, aPos.y, gridX, gridY);
                         if (dist <= aStats.attackRange) {
                             if (aStats.unitType == UnitType.JUGGERNAUT) {
@@ -334,7 +340,7 @@ public class GameInputController extends InputAdapter {
         Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
         if (tileUnit != null) {
             StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
-            if (ts != null && ts.owner == screen.getCurrentPlayer()) return;
+            if (ts != null && ts.owner == screen.getActiveLocalPlayer()) return;
         }
         combatSystem.resolveJumperAttack(attacker, target, tx, ty);
         if (aStats != null && aStats.currentHP > 0) {
@@ -357,7 +363,7 @@ public class GameInputController extends InputAdapter {
     private void handleUnitTarget(Entity foundUnit, Entity foundAnimal, Entity foundStructure, int gridX, int gridY) {
         StatsComponent unitStats = foundUnit.getComponent(StatsComponent.class);
 
-        if (unitStats.owner != screen.getCurrentPlayer()) {
+        if (unitStats.owner != screen.getActiveLocalPlayer()) {
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
             GameLogger.log(GameLogger.INPUT, unitStats.owner,
                     "Enemy unit inspected: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY)
@@ -446,7 +452,7 @@ public class GameInputController extends InputAdapter {
             int owner = (objType == MapGenerator.ObjectType.BASE_P2) ? 2 : 1;
 
             // Show base info in the bottom panel (D-01)
-            if (owner == screen.getCurrentPlayer()) {
+            if (owner == screen.getActiveLocalPlayer()) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
                     int level = structStats.level;
@@ -462,7 +468,7 @@ public class GameInputController extends InputAdapter {
         }
 
         // --- Handle Specialized Structures (like PORTS) ---
-        if (structStats != null && structStats.owner == screen.getCurrentPlayer()) {
+        if (structStats != null && structStats.owner == screen.getActiveLocalPlayer()) {
             if (structStats.name.equalsIgnoreCase("Port")) {
                 Entity unitOnTop = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitOnTop == null) {
@@ -583,7 +589,7 @@ public class GameInputController extends InputAdapter {
             return;
         }
 
-        int owner = screen.getCurrentPlayer();
+        int owner = screen.getActiveLocalPlayer();
 
         // --- 1. TERRITORY CHECK (Critical for Build Menu) ---
         // [0]=isTerritory(1/0), [1]=maxLevel, [2]=parentX, [3]=parentY
@@ -817,7 +823,7 @@ public class GameInputController extends InputAdapter {
                 Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
                 if (tileUnit != null) {
                     StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
-                    if (ts != null && ts.owner == screen.getCurrentPlayer())
+                    if (ts != null && ts.owner == screen.getActiveLocalPlayer())
                         continue; // skip own units
                 }
                 // Juggernaut can jump to any tile (empty or enemy); others need an actual enemy

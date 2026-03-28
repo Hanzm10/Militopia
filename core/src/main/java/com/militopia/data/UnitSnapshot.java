@@ -8,13 +8,25 @@ import com.militopia.components.StatsComponent;
  */
 public class UnitSnapshot {
 
-    public final String unitTypeKey; // Factory key e.g. "RECRUIT", "TANK"
-    public final int x, y;
-    public final int owner;
-    public final int currentHP;
-    public final boolean hasActed;
-    public final boolean hasMoved;
-    public final StatsComponent.MoveType moveType;
+    public String unitTypeKey; // Factory key e.g. "RECRUIT", "TANK"
+    public int x, y;
+    public int owner;
+    public int currentHP;
+    public boolean hasActed;
+    public boolean hasMoved;
+    public StatsComponent.MoveType moveType;
+
+    /** No-arg constructor for LibGDX Json serialization */
+    public UnitSnapshot() {
+        this.unitTypeKey = "";
+        this.x = 0;
+        this.y = 0;
+        this.owner = 0;
+        this.currentHP = 0;
+        this.hasActed = false;
+        this.hasMoved = false;
+        this.moveType = null;
+    }
 
     public UnitSnapshot(String unitTypeKey, int x, int y, int owner,
             int currentHP, boolean hasActed, boolean hasMoved,

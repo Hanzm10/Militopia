@@ -46,6 +46,9 @@ import com.militopia.systems.StructureEconomySystem;
 import com.militopia.systems.WinConditionSystem;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
+import com.militopia.net.NetworkManager;
+import com.militopia.net.NetworkMessage;
+import com.badlogic.gdx.utils.Json;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +57,7 @@ public class GameScreen implements Screen {
 
     private final MilitopiaGame game;
     private final GameState gameState;
+    private final NetworkManager networkManager;
 
     private OrthographicCamera camera;
     private ExtendViewport viewport;
@@ -86,8 +90,13 @@ public class GameScreen implements Screen {
     private ShapeRenderer shapeRenderer;
 
     public GameScreen(final MilitopiaGame game, GameState loadedState) {
+        this(game, loadedState, null);
+    }
+
+    public GameScreen(final MilitopiaGame game, GameState loadedState, NetworkManager networkManager) {
         this.game = game;
         this.gameState = loadedState;
+        this.networkManager = networkManager;
         this.shapeRenderer = new ShapeRenderer();
 
         camera = new OrthographicCamera();
@@ -160,7 +169,14 @@ public class GameScreen implements Screen {
         engine.addSystem(combatSystem);
         engine.addSystem(new EffectSystem());
 
-        fogSystem = new FogSystem(gameMap, gameState.currentPlayer);
+        // 3. Initialize fog/render systems
+        // IMPORTANT: In LAN, we MUST lock these to the local player ID immediately.
+        int initialVisionID = getActiveLocalPlayer();
+        fogSystem = new FogSystem(gameMap, initialVisionID);
+        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, game.assets.getFont());
+        unitRenderSystem.setPlayer(initialVisionID);
+
+        engine.addSystem(unitRenderSystem);
         engine.addSystem(fogSystem);
 
         abilityStatusSystem = new AbilityStatusSystem(gameMap);
@@ -232,7 +248,7 @@ public class GameScreen implements Screen {
                 this, camera, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
 
         gameHUD.build(this, inputController, unitFactory, gameState, turnHistory);
-        gameHUD.updateTurn(gameState.turnCount);
+        gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
         gameHUD.updateXP(gameState.p1XP);
 
         int startIncome = calculateIncome(gameState.currentPlayer);
@@ -316,8 +332,25 @@ public class GameScreen implements Screen {
 
     public void endTurnAction() {
         if (turnState == TurnState.PLAYING) {
+            // --- LAN LOCKDOWN ---
+            // Only the owner of the current turn can trigger an end-turn action!
+            if (gameState.currentPlayer != getActiveLocalPlayer()) {
+                GameLogger.log(GameLogger.INPUT, "LAN: Ignored end-turn click (not your turn)");
+                return;
+            }
+
             GameLogger.log(GameLogger.ECONOMY,
                     "P" + gameState.currentPlayer + " ends turn " + gameState.turnCount);
+
+            // --- LAN: Send FRESH snapshot to opponent before fading ---
+            if (gameState.isLanGame && networkManager != null) {
+                // Capture the board state AFTER all moves are done
+                TurnSnapshot finalSnap = unitFactory.captureSnapshot(engine, gameState, gameMap);
+                Json json = new Json();
+                String snapJson = json.toJson(finalSnap);
+                networkManager.send(NetworkMessage.endTurn(snapJson));
+            }
+
             turnState = TurnState.FADING_OUT;
             fadeTime = 0f;
             inputController.setInputEnabled(false);
@@ -343,7 +376,15 @@ public class GameScreen implements Screen {
     }
 
     public void saveAndExit() {
-        saveManager.saveGame(gameState, engine, gameMap);
+        if (gameState.isLanGame) {
+            // LAN: Skip local save, send disconnect msg
+            if (networkManager != null && networkManager.getState() == NetworkManager.State.CONNECTED) {
+                networkManager.send(NetworkMessage.disconnect());
+            }
+        } else {
+            // Hotseat: Save normally
+            saveManager.saveGame(gameState, engine, gameMap);
+        }
         game.setScreen(new com.militopia.screen.MenuScreen(game));
     }
 
@@ -485,12 +526,14 @@ public class GameScreen implements Screen {
         }
 
         // 6. Refresh fog, HUD
-        fogSystem.setPlayer(gameState.currentPlayer);
+        // In LAN, visibility is ALWAYS locked to the local player.
+        int fogPlayer = getActiveLocalPlayer();
+        fogSystem.setPlayer(fogPlayer);
         fogSystem.update(0);
-        unitRenderSystem.setPlayer(gameState.currentPlayer);
+        unitRenderSystem.setPlayer(fogPlayer);
         int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
         int income = calculateIncome(gameState.currentPlayer);
-        gameHUD.updateTurn(gameState.turnCount);
+        gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
         gameHUD.updateFunding(currentFunds, income);
         gameHUD.updateXP((gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP);
         gameHUD.hideTileInfo();
@@ -521,12 +564,12 @@ public class GameScreen implements Screen {
         return structureEconomySystem.calculateIncome(playerID);
     }
 
-    private int processTurnEconomy(int playerID) {
+    private int[] processTurnEconomy(int playerID) {
         int totalIncome = calculateIncome(playerID);
         // XP distribution, Hospital healing, and base leveling are handled
         // by StructureEconomySystem to keep this screen thin.
-        structureEconomySystem.processTurn(playerID);
-        return totalIncome;
+        int totalXP = structureEconomySystem.processTurn(playerID);
+        return new int[]{totalIncome, totalXP};
     }
 
     @Override
@@ -538,52 +581,14 @@ public class GameScreen implements Screen {
             fadeTime += delta;
             if (fadeTime >= FADE_DURATION) {
                 fadeTime = FADE_DURATION;
+                // 1. Swap Player
                 gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
-
                 if (gameState.currentPlayer == 1) {
                     gameState.turnCount++;
                 }
 
-                int income = processTurnEconomy(gameState.currentPlayer);
-                int currentTotal = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
-
-                if (gameState.turnCount > 1) {
-                    if (gameState.currentPlayer == 1) {
-                        gameState.p1Funding += income;
-                        currentTotal = gameState.p1Funding;
-                    } else {
-                        gameState.p2Funding += income;
-                        currentTotal = gameState.p2Funding;
-                    }
-                }
-
-                // Update GameLogger context for the new active player/turn
-                GameLogger.setContext(gameState.turnCount, gameState.currentPlayer);
-                int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
-                GameLogger.log(GameLogger.ECONOMY,
-                        "Turn " + gameState.turnCount
-                                + " | P" + gameState.currentPlayer + " starts"
-                                + " | income=+" + income
-                                + " | funds=" + currentTotal
-                                + " | XP=" + currentXP);
-
-                // --- Ability Turn Start Processing ---
-                abilityStatusSystem.onTurnStart(gameState.currentPlayer);
-
-                logBaseXPStatus(income);
-
-                resetUnitActions();
-                gameHUD.updateTurn(gameState.turnCount);
-
-                gameHUD.updateXP(currentXP);
-
-                gameHUD.updateFunding(currentTotal, income);
-                fogSystem.setPlayer(gameState.currentPlayer);
-                fogSystem.update(0);
-                unitRenderSystem.setPlayer(gameState.currentPlayer);
-                centerCameraOnBase(gameState.currentPlayer);
-                turnState = TurnState.FADING_IN;
-                fadeTime = FADE_DURATION;
+                // 2. Process Economy, XP, and HUD for the NEW active player
+                startActiveTurn();
             }
         } else if (turnState == TurnState.FADING_IN) {
             fadeTime -= delta;
@@ -604,6 +609,12 @@ public class GameScreen implements Screen {
         }
 
         inputController.update(delta);
+
+        // --- LAN: Poll for incoming network messages ---
+        if (gameState.isLanGame && networkManager != null) {
+            pollNetwork();
+        }
+
         camera.update();
         game.batch.setProjectionMatrix(camera.combined);
 
@@ -701,6 +712,68 @@ public class GameScreen implements Screen {
         GameLogger.logScreen(sb.toString());
     }
 
+    /**
+     * Common initialization logic when a new player's turn starts.
+     * Handles economy calculations, XP distribution, HUD updates, and turn state transitions.
+     */
+    private void startActiveTurn() {
+        int[] economyOut = processTurnEconomy(gameState.currentPlayer);
+        int income = economyOut[0];
+        int xpGain = economyOut[1];
+
+        int currentTotal = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
+
+        // Apply income (skip Turn 1 income if logic dictates)
+        if (gameState.turnCount > 1) {
+            if (gameState.currentPlayer == 1) {
+                gameState.p1Funding += income;
+                currentTotal = gameState.p1Funding;
+            } else {
+                gameState.p2Funding += income;
+                currentTotal = gameState.p2Funding;
+            }
+
+            // Show economy popup ONLY if this is the hardware owner's turn
+            if (gameState.currentPlayer == getActiveLocalPlayer()) {
+                gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal);
+            }
+        }
+
+        // Update technical systems for the new player
+        GameLogger.setContext(gameState.turnCount, gameState.currentPlayer);
+        int currentXP = (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP;
+        GameLogger.log(GameLogger.ECONOMY,
+                "Turn " + gameState.turnCount
+                        + " | P" + gameState.currentPlayer + " starts"
+                        + " | income=+" + income
+                        + " | funds=" + currentTotal);
+
+        abilityStatusSystem.onTurnStart(gameState.currentPlayer);
+        logBaseXPStatus(income);
+        resetUnitActions();
+
+        // Refresh UI
+        gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
+        gameHUD.updateXP(currentXP);
+        gameHUD.updateFunding(currentTotal, income);
+        
+        // --- VISIBILITY LOCKDOWN (LAN) ---
+        // In LAN, the device always shows the LOCAL player's fog/knowledge.
+        int localID = getActiveLocalPlayer();
+        fogSystem.setPlayer(localID);
+        fogSystem.update(0);
+        unitRenderSystem.setPlayer(localID);
+
+        // Only center camera if it's the LOCAL hardware's turn
+        if (gameState.currentPlayer == localID) {
+            centerCameraOnBase(gameState.currentPlayer);
+        }
+
+        // Start the fade-in sequence
+        turnState = TurnState.FADING_IN;
+        fadeTime = FADE_DURATION;
+    }
+
     private void drawFadeOverlay() {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -724,6 +797,49 @@ public class GameScreen implements Screen {
         engine.clearPools();
         gameHUD.dispose();
         shapeRenderer.dispose();
+        if (networkManager != null) {
+            networkManager.disconnect();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // LAN Multiplayer
+    // -------------------------------------------------------------------------
+
+    private void pollNetwork() {
+        NetworkMessage msg = networkManager.poll();
+        if (msg == null) return;
+
+        if (NetworkMessage.TYPE_END_TURN.equals(msg.type)) {
+            GameLogger.log(GameLogger.INPUT, "LAN: Received END_TURN from opponent");
+            
+            // 1. Sync game state from snapshot
+            Json json = new Json();
+            TurnSnapshot snap = json.fromJson(TurnSnapshot.class, msg.payload);
+            restoreSnapshot(snap);
+            
+            // 2. The snapshot contains the state AFTER the opponent's moves, 
+            // but BEFORE the turn was swapped. We now advance the turn locally.
+            gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
+            if (gameState.currentPlayer == 1) {
+                gameState.turnCount++;
+            }
+
+            // 3. Process economy for the NEW active player and unlock HUD
+            startActiveTurn();
+        } else if (NetworkMessage.TYPE_DISCONNECT.equals(msg.type)) {
+            GameLogger.log(GameLogger.INPUT, "LAN: Opponent disconnected");
+            gameHUD.showDisconnectPopup("The opponent has disconnected.");
+        }
+    }
+
+    /**
+     * Returns the player ID that owns the local hardware.
+     * In LAN, this is fixed (1 or 2). In hotseat, it matches currentPlayer.
+     */
+    public int getActiveLocalPlayer() {
+        if (gameState.isLanGame) return gameState.localPlayerID;
+        return gameState.currentPlayer;
     }
 
     @Override

@@ -31,11 +31,13 @@ public class MenuScreen implements Screen {
         table.setFillParent(true);
         stage.addActor(table);
 
-        TextButton newGameBtn = new TextButton("New Game", game.skin);
+        TextButton newGameBtn = new TextButton("New Game", game.skin, "default");
         newGameBtn.addListener(new HoverListener());
-        TextButton resumeBtn = new TextButton("Resume Game", game.skin);
+        TextButton lanBtn = new TextButton("Multiplayer", game.skin, "default");
+        lanBtn.addListener(new HoverListener());
+        TextButton resumeBtn = new TextButton("Saved Games", game.skin, "default");
         resumeBtn.addListener(new HoverListener());
-        TextButton exitBtn = new TextButton("Exit", game.skin);
+        TextButton exitBtn = new TextButton("Exit", game.skin, "default");
         exitBtn.addListener(new HoverListener());
 
         newGameBtn.addListener(new ClickListener() {
@@ -43,6 +45,14 @@ public class MenuScreen implements Screen {
             public void clicked(InputEvent event, float x, float y) {
                 GameLogger.logScreen("Navigating → New Game Screen");
                 game.setScreen(new NewGameScreen(game));
+            }
+        });
+
+        lanBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                GameLogger.logScreen("Navigating → LAN Lobby");
+                game.setScreen(new LobbyScreen(game));
             }
         });
 
@@ -63,6 +73,8 @@ public class MenuScreen implements Screen {
         });
 
         table.add(newGameBtn).fillX().uniformX().pad(10).width(200);
+        table.row();
+        table.add(lanBtn).fillX().uniformX().pad(10);
         table.row();
         table.add(resumeBtn).fillX().uniformX().pad(10);
         table.row();

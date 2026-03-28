@@ -11,18 +11,33 @@ import java.util.List;
 public class TurnSnapshot {
 
     // --- GameState scalars ---
-    public final int p1Funding, p2Funding;
-    public final int p1XP, p2XP;
-    public final int turn;
-    public final int currentPlayer;
-    public final int p1BaseCount, p2BaseCount;
+    public int p1Funding, p2Funding;
+    public int p1XP, p2XP;
+    public int turn;
+    public int currentPlayer;
+    public int p1BaseCount, p2BaseCount;
 
     // --- ECS entity state ---
-    public final List<UnitSnapshot> units;
-    public final List<StructureSnapshot> structures;
+    public List<UnitSnapshot> units;
+    public List<StructureSnapshot> structures;
 
     // --- Map objects layer (captures / uncaptures) ---
-    public final MapGenerator.ObjectType[][] mapObjects; // cloned 2D array
+    public MapGenerator.ObjectType[][] mapObjects; // cloned 2D array
+
+    /** No-arg constructor for LibGDX Json serialization */
+    public TurnSnapshot() {
+        this.p1Funding = 0;
+        this.p2Funding = 0;
+        this.p1XP = 0;
+        this.p2XP = 0;
+        this.turn = 1;
+        this.currentPlayer = 1;
+        this.p1BaseCount = 0;
+        this.p2BaseCount = 0;
+        this.units = null;
+        this.structures = null;
+        this.mapObjects = null;
+    }
 
     public TurnSnapshot(int p1Funding, int p2Funding,
             int p1XP, int p2XP,

@@ -74,7 +74,7 @@ public class LoadGameScreen implements Screen {
                         }
                     });
 
-                    listTable.add(btn).fillX().pad(5).width(400).row();
+                    listTable.add(btn).fillX().pad(10).width(600).row();
 
                 } catch (Exception e) {
                     GameLogger.logScreen("Corrupt save file: " + file.name());

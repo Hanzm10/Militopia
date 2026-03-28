@@ -35,6 +35,11 @@ public class TurnHistoryManager {
         trimToMax(undoStack);
     }
 
+    /** Returns top (newest) snapshot without removal. */
+    public TurnSnapshot peek() {
+        return undoStack.peek();
+    }
+
     /** Pops the most recent undo snapshot. Returns null if empty. */
     public TurnSnapshot undo() {
         if (undoStack.isEmpty()) return null;
