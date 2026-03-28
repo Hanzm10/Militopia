@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-28T02:46:32.336Z",
+  "timestamp": "2026-03-28T08:21:11.286Z",
   "phase": "08",
   "phase_name": "polish-ux",
   "phase_dir": ".planning/phases/08-polish-ux",
@@ -15,18 +15,28 @@
     {"id": 4, "name": "Javadoc on createUnit, checkAndApplyLevelUp, captureStructure", "status": "done", "commit": "1ffeb35"},
     {"id": 5, "name": "Inline comments on arc formula (AnimationSystem) and damage calc (CombatSystem)", "status": "done", "commit": "e400c0e"},
     {"id": 6, "name": "Javadoc on remaining 20 public methods across UnitFactory, CombatSystem, SaveManager", "status": "done", "commit": "7c39537"},
-    {"id": 7, "name": "AnimalType enum replaces fragile string contains checks in GameInputController + UnitFactory", "status": "done", "commit": "e91080a"},
-    {"id": 8, "name": "Fix 3 failing AbilityTest NPEs (entityFactory null guards in CombatSystem)", "status": "done", "commit": "74e6d91"},
-    {"id": 9, "name": "Tech debt #9: UnitStatConfig consolidates 3 duplicate unit stat switches", "status": "done", "commit": "c5ce167"},
-    {"id": 10, "name": "Tech debt #4 + #5: Extract GIC entity loops + move economy to StructureEconomySystem", "status": "done", "commit": "fee58ae"}
+    {"id": 7, "name": "AnimalType enum replaces fragile string contains checks", "status": "done", "commit": "e91080a"},
+    {"id": 8, "name": "Fix 3 failing AbilityTest NPEs", "status": "done", "commit": "74e6d91"},
+    {"id": 9, "name": "UnitStatConfig consolidates 3 duplicate unit stat switches", "status": "done", "commit": "c5ce167"},
+    {"id": 10, "name": "Extract GIC entity loops + move economy to StructureEconomySystem", "status": "done", "commit": "fee58ae"},
+    {"id": 11, "name": "Ad-hoc: Fix port placement in coastal corners (8-directional hasAdjacentLand)", "status": "done", "commit": "uncommitted"},
+    {"id": 12, "name": "Ad-hoc: Juggernaut jump arc raised to 120f (CombatConstants.JUMP_ARC_HEIGHT)", "status": "done", "commit": "uncommitted"},
+    {"id": 13, "name": "Ad-hoc: Add jumpArcHeight to MovementComponent + UnitRenderSystem arc during movement", "status": "done", "commit": "uncommitted"}
   ],
   "remaining_tasks": [
-    {"id": 11, "name": "Tech debt #1: Tests for CombatSystem, UnitFactory, GameInputController", "status": "not_started"},
-    {"id": 12, "name": "Tech debt #3: UnitFactory god class extraction (DEFERRED — see decisions)", "status": "deferred"},
-    {"id": 13, "name": "Execute 08-04-PLAN.md — defend SFX, BGM wiring, fallback audio files", "status": "not_started"}
+    {"id": 14, "name": "Tech debt #1: Tests for CombatSystem, UnitFactory, GameInputController", "status": "not_started"},
+    {"id": 15, "name": "Tech debt #3: UnitFactory god class extraction (DEFERRED)", "status": "deferred"},
+    {"id": 16, "name": "Execute 08-04-PLAN.md — defend SFX, BGM wiring, fallback audio files", "status": "not_started"},
+    {"id": 17, "name": "Verify juggernaut jump attack fires after rebuild (user reports normal-damage behavior)", "status": "needs_verification"}
   ],
   "blockers": [],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {
+      "action": "Rebuild (./gradlew run in PowerShell) and retest juggernaut jump attack",
+      "context": "User sees normal range damage instead of instant-kill + AoE jump. Code path looks correct. Likely stale binary. Check logs for [ABILITY] Juggernaut JUMP vs [ATTACK].",
+      "blocking": false
+    }
+  ],
   "decisions": [
     {
       "decision": "StructureType enum placed in com.militopia.config package",
@@ -34,27 +44,44 @@
       "phase": "tech-debt"
     },
     {
-      "decision": "AnimalType enum placed in com.militopia.enums package",
-      "rationale": "Parallel to UnitType enum, same pattern",
-      "phase": "tech-debt"
-    },
-    {
       "decision": "Tech debt #3 (UnitFactory god class) deferred indefinitely",
-      "rationale": "checkAndApplyLevelUp, chooseSuperUnit, captureStructure all call internal UnitFactory methods (updateBaseTexture, getOrdinal, spawnAnimalsAroundBase). Any extracted class would still need a UnitFactory reference — low ROI for the risk.",
+      "rationale": "checkAndApplyLevelUp etc. call internal UnitFactory methods — any extracted class still needs UnitFactory ref. Low ROI.",
       "phase": "tech-debt"
     },
     {
-      "decision": "UnitStatConfig uses static EnumMap, not JSON file",
-      "rationale": "Matches existing BaseLevelConfig pattern — no Gdx.files dependency, works in headless tests",
-      "phase": "tech-debt"
+      "decision": "8-directional hasAdjacentLand for port coastal check",
+      "rationale": "Corner water tiles (e.g. 11,13 diagonal to land at 12,12) had no cardinal adjacent land but are coastal. Diagonals required.",
+      "phase": "ad-hoc"
+    },
+    {
+      "decision": "Juggernaut jump arc raised from 50f to 120f",
+      "rationale": "50f was possibly too subtle on screen. 120f is ~12 tile heights, unmistakably visible.",
+      "phase": "ad-hoc"
+    },
+    {
+      "decision": "MovementComponent.jumpArcHeight applies to all units EXCEPT juggernaut effectively",
+      "rationale": "Juggernaut never gets blue movement markers (showRangeMarkers skips floodFill for it). Its jump visual is AnimationComponent.JUMP in resolveJumperAttack, not MovementComponent. The jumpArcHeight field is for other units that move normally.",
+      "phase": "ad-hoc"
     },
     {
       "decision": "Economy methods kept as public delegates on GameScreen",
-      "rationale": "Callers reference screen.calculate*(). Logic moved to StructureEconomySystem; GameScreen thin-delegates. Zero call-site changes.",
+      "rationale": "Zero call-site changes. Logic in StructureEconomySystem, GameScreen thin-delegates.",
       "phase": "tech-debt"
     }
   ],
-  "uncommitted_files": [],
-  "next_action": "Tech debt #1: add tests for CombatSystem and UnitFactory — OR execute 08-04-PLAN.md (audio gaps) to close Phase 08",
-  "context_notes": "Two-session tech debt effort. 8/10 items closed total. Build is green (46 tests, 0 failures). Remaining: #1 tests (HIGH severity — CombatSystem, UnitFactory, GameInputController have no direct test classes) and #3 extraction (deferred). Phase 08 still has 08-04 (audio) unexecuted. After audio closes, Phase 09 (Railways) begins."
+  "uncommitted_files": [
+    "core/src/main/java/com/militopia/components/MovementComponent.java",
+    "core/src/main/java/com/militopia/config/CombatConstants.java",
+    "core/src/main/java/com/militopia/controller/GameInputController.java",
+    "core/src/main/java/com/militopia/systems/UnitRenderSystem.java"
+  ],
+  "pre_existing_uncommitted": [
+    "core/src/main/java/com/militopia/data/StructureData.java",
+    "core/src/main/java/com/militopia/managers/SaveManager.java",
+    "core/src/main/java/com/militopia/screen/GameScreen.java",
+    "core/src/main/java/com/militopia/systems/StructureEconomySystem.java",
+    "core/src/main/java/com/militopia/ui/LevelUpPopup.java"
+  ],
+  "next_action": "Rebuild and retest juggernaut. Then either: (a) fix jump if still broken, or (b) continue with 08-04-PLAN.md audio gaps to close Phase 08.",
+  "context_notes": "Session was ad-hoc gameplay bug fixes outside GSD phase. Port coastal corner bug fixed. Juggernaut jump arc bumped. Juggernaut uses AnimationComponent.JUMP (not MovementComponent) for all movement — this is the key architecture insight to remember."
 }
