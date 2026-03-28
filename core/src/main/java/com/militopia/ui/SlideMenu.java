@@ -14,6 +14,7 @@ import com.militopia.MilitopiaGame;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.config.BaseLevelConfig;
+import com.militopia.config.StructureType;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
 import com.militopia.config.UnitType;
@@ -135,7 +136,7 @@ public class SlideMenu {
         StatsComponent sStats = structureEntity.getComponent(StatsComponent.class);
         String label = "Capture Structure";
         if (sStats != null) {
-            if (sStats.name.contains("Town"))
+            if (StructureType.fromDisplayName(sStats.name) == StructureType.TOWN)
                 label = "Capture Town";
             else
                 label = "Capture Enemy Base";

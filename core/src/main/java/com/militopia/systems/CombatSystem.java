@@ -16,6 +16,7 @@ import com.militopia.factories.EntityFactory;
 import com.militopia.managers.AudioManager;
 import com.militopia.map.MapGenerator;
 import com.militopia.config.CombatConstants;
+import com.militopia.config.StructureType;
 import com.militopia.config.UnitType;
 import com.militopia.utils.GameLogger;
 
@@ -155,7 +156,8 @@ public class CombatSystem extends EntitySystem {
             return;
 
         // OIL DERRICK & NUCLEAR PLANT: Indestructible
-        if (dStats.name.contains("Oil Derrick") || dStats.name.contains("Nuclear Plant")) {
+        StructureType dStructType = StructureType.fromDisplayName(dStats.name);
+        if (dStructType == StructureType.OIL_DERRICK || dStructType == StructureType.NUCLEAR_PLANT) {
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     aStats.name + " attacks indestructible " + dStats.name + " at "
                             + GameLogger.pos(dPos.x, dPos.y) + " | BLOCKED");
@@ -429,7 +431,7 @@ public class CombatSystem extends EntitySystem {
         }
 
         // --- NEW: Track Base Destruction ---
-        if (stats.name.contains("Base")) {
+        if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
             if (stats.owner == 1) {
                 gameState.p1BaseCount = Math.max(0, gameState.p1BaseCount - 1);
             } else if (stats.owner == 2) {
@@ -460,7 +462,8 @@ public class CombatSystem extends EntitySystem {
 
             if (chebyshev(centerX, centerY, vPos.x, vPos.y) <= radius) {
                 // OIL DERRICK & NUCLEAR PLANT: Indestructible
-                if (vStats.name.contains("Oil Derrick") || vStats.name.contains("Nuclear Plant")) {
+                StructureType vStructType = StructureType.fromDisplayName(vStats.name);
+                if (vStructType == StructureType.OIL_DERRICK || vStructType == StructureType.NUCLEAR_PLANT) {
                     continue;
                 }
                 vStats.currentHP -= damage;
@@ -542,7 +545,8 @@ public class CombatSystem extends EntitySystem {
             if (p == null || s == null) continue;
             if (s.owner == aStats.owner) continue;
             if (chebyshev(cx, cy, p.x, p.y) > 1) continue;
-            if (s.name.contains("Oil Derrick") || s.name.contains("Nuclear Plant")) continue;
+            StructureType sType = StructureType.fromDisplayName(s.name);
+            if (sType == StructureType.OIL_DERRICK || sType == StructureType.NUCLEAR_PLANT) continue;
 
             int defBonus = terrainDefBonus(p.x, p.y);
             AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
@@ -572,7 +576,8 @@ public class CombatSystem extends EntitySystem {
 
             if (s.owner != aStats.owner && chebyshev(aPos.x, aPos.y, p.x, p.y) <= 1) {
                 // Skip if indestructible building
-                if (s.name.contains("Oil Derrick") || s.name.contains("Nuclear Plant")) {
+                StructureType ssType = StructureType.fromDisplayName(s.name);
+                if (ssType == StructureType.OIL_DERRICK || ssType == StructureType.NUCLEAR_PLANT) {
                     continue;
                 }
                 int defBonus = terrainDefBonus(p.x, p.y);

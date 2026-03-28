@@ -8,6 +8,7 @@ import com.militopia.components.FloatingTextComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
+import com.militopia.config.StructureType;
 import com.militopia.data.GameState;
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
@@ -90,7 +91,7 @@ public class StructureEconomySystem extends EntitySystem {
             if (stats.owner != playerID)
                 continue;
 
-            if (stats.income >= 2 && stats.name.contains("Base")) {
+            if (stats.income >= 2 && StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
                 myBases.add(entity);
             } else if (stats.xpGain > 0 && stats.parentBaseX != -1
                     && entity.getComponent(GridPositionComponent.class) != null) {

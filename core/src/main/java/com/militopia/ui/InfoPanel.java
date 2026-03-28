@@ -21,6 +21,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.BaseLevelConfig;
+import com.militopia.config.StructureType;
 import com.militopia.config.UnitType;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
@@ -143,7 +144,7 @@ public class InfoPanel {
 
         StatsComponent stats = base.getComponent(StatsComponent.class);
         if (stats != null && statsTable != null) {
-            boolean isBase = stats.name.contains("Base");
+            boolean isBase = StructureType.fromDisplayName(stats.name) == StructureType.BASE;
 
             // Level line: only for bases
             if (isBase) {

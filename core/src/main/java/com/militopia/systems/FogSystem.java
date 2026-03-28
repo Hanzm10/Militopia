@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
+import com.militopia.config.StructureType;
 import com.militopia.map.MapGenerator;
 
 public class FogSystem extends EntitySystem {
@@ -52,7 +53,7 @@ public class FogSystem extends EntitySystem {
         // 2. Identify Enemy Jammers (Blocking our vision)
         for (Entity e : entities) {
             StatsComponent stats = e.getComponent(StatsComponent.class);
-            if (stats.owner != playerID && stats.name.contains("Signal Jammer")) {
+            if (stats.owner != playerID && StructureType.fromDisplayName(stats.name) == StructureType.SIGNAL_JAMMER) {
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
                 markJammingZone(pos.x, pos.y, 4); // Radius 4 for Static
             }
@@ -66,7 +67,7 @@ public class FogSystem extends EntitySystem {
             if (stats.owner == playerID) {
                 int radius = stats.vision;
                 // RADAR STATION: Scanner (+4 Vision)
-                if (stats.name.contains("Radar Station")) {
+                if (StructureType.fromDisplayName(stats.name) == StructureType.RADAR) {
                     radius += 4;
                 }
 

@@ -18,6 +18,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
+import com.militopia.config.StructureType;
 import com.militopia.config.UnitType;
 import com.militopia.controller.GameInputController;
 import com.militopia.systems.*;
@@ -484,7 +485,7 @@ public class GameScreen implements Screen {
 
         int totalGain = 0;
         // Natural gain (Bases only)
-        if (stats.name.contains("Base")) {
+        if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
             totalGain = 250 + ((stats.level - 1) * 10);
 
             // Add XP from child structures
@@ -516,7 +517,7 @@ public class GameScreen implements Screen {
 
         if (pos != null) {
             // SOLAR ARRAY: Tech Synergy (+1 for each adjacent friendly structure)
-            if (stats.name.contains("Solar Array")) {
+            if (StructureType.fromDisplayName(stats.name) == StructureType.SOLAR) {
                 ImmutableArray<Entity> entities = engine
                         .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
                 for (Entity other : entities) {
@@ -524,7 +525,7 @@ public class GameScreen implements Screen {
                         continue;
                     StatsComponent oStats = other.getComponent(StatsComponent.class);
                     GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
-                    if (oStats.owner == stats.owner && (oStats.income > 0 || oStats.name.contains("Base"))) {
+                    if (oStats.owner == stats.owner && (oStats.income > 0 || StructureType.fromDisplayName(oStats.name) == StructureType.BASE)) {
                         if (Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
                             individualIncome += 1;
                         }
@@ -541,7 +542,7 @@ public class GameScreen implements Screen {
      */
     public int calculateGroupedBaseIncome(Entity base) {
         StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (stats == null || !stats.name.contains("Base"))
+        if (stats == null || StructureType.fromDisplayName(stats.name) != StructureType.BASE)
             return calculateBaseIncome(base);
 
         int totalGroupedIncome = calculateBaseIncome(base);
@@ -718,7 +719,7 @@ public class GameScreen implements Screen {
             if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
 
                 // --- FIX: Only list Bases in the log ---
-                if (stats.name.contains("Base")) {
+                if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
                     int bInc = calculateGroupedBaseIncome(e);
                     String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP (+%d) | Inc: +%d",
                             stats.name, stats.level, stats.currentBaseXP, stats.maxBaseXP, this.calculateBaseXPGain(e),

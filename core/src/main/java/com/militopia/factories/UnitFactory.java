@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.militopia.components.*;
 import com.militopia.config.BaseLevelConfig;
 import com.militopia.config.GameConfig;
+import com.militopia.config.StructureType;
 import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
 import com.militopia.data.StructureSnapshot;
@@ -457,19 +458,8 @@ public class UnitFactory {
         entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
         entity.add(new AbilitiesComponent()); // NEW: Add abilities state
 
-        String niceName = type.replace("_", " ");
-        if (type.equals("SOLAR"))
-            niceName = "Solar Array";
-        if (type.equals("RADAR"))
-            niceName = "Radar Station";
-        if (type.equals("JAMMER"))
-            niceName = "Signal Jammer";
-        if (type.equals("NUCLEAR"))
-            niceName = "Nuclear Plant";
-        if (type.equals("OIL_DERRICK"))
-            niceName = "Oil Derrick";
-        if (type.equals("MUNITION_FACTORY"))
-            niceName = "Munition Factory";
+        StructureType structureType = StructureType.fromKey(type);
+        String niceName = (structureType != null) ? structureType.getDisplayName() : type.replace("_", " ");
 
         // Create Stats (Default Income = 0, we add it to Base XP instead)
         StatsComponent stats = new StatsComponent(niceName, 10, 0, 0, 0, 0, 1, getStructureCost(type),
