@@ -87,7 +87,7 @@ public class GameScreen implements Screen {
 
     private TurnState turnState = TurnState.PLAYING;
     private float fadeTime = 0f;
-    private final float FADE_DURATION = 0.3f;
+    private final float FADE_DURATION = 0.8f;
     private ShapeRenderer shapeRenderer;
 
     public GameScreen(final MilitopiaGame game, GameState loadedState) {
@@ -196,7 +196,8 @@ public class GameScreen implements Screen {
 
         unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
         unitRenderSystem.setPlayer(gameState.currentPlayer);
-        unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
+        unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(
+                game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
         engine.addSystem(unitRenderSystem);
 
         engine.addSystem(new FloatingTextSystem());
@@ -205,7 +206,8 @@ public class GameScreen implements Screen {
             for (UnitData u : loadedState.units) {
                 String key = (u.unitTypeKey != null) ? u.unitTypeKey : u.type;
                 UnitType ut = UnitType.fromKey(key);
-                if (ut == null) ut = UnitType.RECRUIT;
+                if (ut == null)
+                    ut = UnitType.RECRUIT;
 
                 unitFactory.createUnit(ut, u.x, u.y, u.owner, u.hasActed);
 
@@ -231,8 +233,8 @@ public class GameScreen implements Screen {
                 if (e == null) {
                     // Built structure (Solar, Hospital, Jammer, etc.) — not in gameMap.objects
                     // so no entity was created during map init. Recreate it now.
-                    com.militopia.config.StructureType st =
-                            com.militopia.config.StructureType.fromDisplayName(s.baseName);
+                    com.militopia.config.StructureType st = com.militopia.config.StructureType
+                            .fromDisplayName(s.baseName);
                     if (st != null && st != com.militopia.config.StructureType.BASE) {
                         unitFactory.createStructure(st.name(), s.x, s.y, s.owner,
                                 s.parentBaseX, s.parentBaseY);
@@ -271,6 +273,10 @@ public class GameScreen implements Screen {
             gameHUD.showGameOverPopup(gameState.winnerID);
             winConditionSystem.setPlaying(false);
         }
+
+        // Start the fade-in sequence when screen first loads
+        turnState = TurnState.FADING_IN;
+        fadeTime = FADE_DURATION;
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(gameHUD.stage);
@@ -417,16 +423,20 @@ public class GameScreen implements Screen {
      */
     public void undoTurn() {
         TurnSnapshot snap = turnHistory.undo();
-        if (snap == null) return;
+        if (snap == null)
+            return;
         GameLogger.log(GameLogger.INPUT,
                 "Undo — reverting to P" + snap.currentPlayer + " T" + snap.turn);
         restoreSnapshot(snap);
     }
 
-    /** Jumps to the snapshot at the given index (0 = most recent) in the undo stack. */
+    /**
+     * Jumps to the snapshot at the given index (0 = most recent) in the undo stack.
+     */
     public void undoToSnapshot(int index) {
         TurnSnapshot snap = turnHistory.undoToIndex(index);
-        if (snap == null) return;
+        if (snap == null)
+            return;
         GameLogger.log(GameLogger.INPUT,
                 "Jump to P" + snap.currentPlayer + " T" + snap.turn);
         restoreSnapshot(snap);
@@ -435,16 +445,21 @@ public class GameScreen implements Screen {
     /** Steps forward one turn (redo). */
     public void redoTurn() {
         TurnSnapshot snap = turnHistory.redo();
-        if (snap == null) return;
+        if (snap == null)
+            return;
         GameLogger.log(GameLogger.INPUT,
                 "Redo — forward to P" + snap.currentPlayer + " T" + snap.turn);
         restoreSnapshot(snap);
     }
 
-    /** Jumps to the snapshot at the given index (0 = next step forward) in the redo stack. */
+    /**
+     * Jumps to the snapshot at the given index (0 = next step forward) in the redo
+     * stack.
+     */
     public void redoToSnapshot(int index) {
         TurnSnapshot snap = turnHistory.redoToIndex(index);
-        if (snap == null) return;
+        if (snap == null)
+            return;
         GameLogger.log(GameLogger.INPUT,
                 "Redo jump to P" + snap.currentPlayer + " T" + snap.turn);
         restoreSnapshot(snap);
@@ -484,7 +499,8 @@ public class GameScreen implements Screen {
         for (StructureSnapshot ss : snap.structures) {
             for (Entity e : objects) {
                 TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.OBJECT) continue;
+                if (t.type != TypeComponent.Type.OBJECT)
+                    continue;
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
                 if (pos.x == ss.x && pos.y == ss.y) {
                     com.militopia.data.StructureData sd = new com.militopia.data.StructureData();
@@ -508,13 +524,15 @@ public class GameScreen implements Screen {
         // 5. Recreate unit entities from snapshot
         for (UnitSnapshot us : snap.units) {
             UnitType ut = UnitType.fromKey(us.unitTypeKey);
-            if (ut == null) ut = UnitType.RECRUIT;
+            if (ut == null)
+                ut = UnitType.RECRUIT;
             unitFactory.createUnit(ut, us.x, us.y, us.owner, us.hasActed);
             ImmutableArray<Entity> freshUnits = engine.getEntitiesFor(
                     Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
             for (Entity e : freshUnits) {
                 TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.UNIT) continue;
+                if (t.type != TypeComponent.Type.UNIT)
+                    continue;
                 GridPositionComponent p = e.getComponent(GridPositionComponent.class);
                 StatsComponent s = e.getComponent(StatsComponent.class);
                 if (p.x == us.x && p.y == us.y && s.owner == us.owner) {
@@ -570,7 +588,7 @@ public class GameScreen implements Screen {
         // XP distribution, Hospital healing, and base leveling are handled
         // by StructureEconomySystem to keep this screen thin.
         int totalXP = structureEconomySystem.processTurn(playerID);
-        return new int[]{totalIncome, totalXP};
+        return new int[] { totalIncome, totalXP };
     }
 
     @Override
@@ -648,7 +666,8 @@ public class GameScreen implements Screen {
 
         // --- NEW: Consolidated Economy Header ---
         int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
-        String playerLabel = (gameState.currentPlayer == 1) ? gameState.p1Name.toUpperCase() : gameState.p2Name.toUpperCase();
+        String playerLabel = (gameState.currentPlayer == 1) ? gameState.p1Name.toUpperCase()
+                : gameState.p2Name.toUpperCase();
 
         sb.append("ACTIVE PLAYER : ").append(playerLabel).append("\n");
 
@@ -715,7 +734,8 @@ public class GameScreen implements Screen {
 
     /**
      * Common initialization logic when a new player's turn starts.
-     * Handles economy calculations, XP distribution, HUD updates, and turn state transitions.
+     * Handles economy calculations, XP distribution, HUD updates, and turn state
+     * transitions.
      */
     private void startActiveTurn() {
         int[] economyOut = processTurnEconomy(gameState.currentPlayer);
@@ -736,9 +756,12 @@ public class GameScreen implements Screen {
 
             // Show economy popup ONLY if this is the hardware owner's turn
             if (gameState.currentPlayer == getActiveLocalPlayer()) {
-                LinkedHashMap<String, Integer> incomeBreakdown = structureEconomySystem.getIncomeBreakdown(gameState.currentPlayer);
-                LinkedHashMap<String, Integer> xpBreakdown = structureEconomySystem.getXPBreakdown(gameState.currentPlayer);
-                gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal, incomeBreakdown, xpBreakdown);
+                LinkedHashMap<String, Integer> incomeBreakdown = structureEconomySystem
+                        .getIncomeBreakdown(gameState.currentPlayer);
+                LinkedHashMap<String, Integer> xpBreakdown = structureEconomySystem
+                        .getXPBreakdown(gameState.currentPlayer);
+                gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal, incomeBreakdown,
+                        xpBreakdown);
             }
         }
 
@@ -759,7 +782,7 @@ public class GameScreen implements Screen {
         gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
         gameHUD.updateXP(currentXP);
         gameHUD.updateFunding(currentTotal, income);
-        
+
         // --- VISIBILITY LOCKDOWN (LAN) ---
         // In LAN, the device always shows the LOCAL player's fog/knowledge.
         int localID = getActiveLocalPlayer();
@@ -811,17 +834,18 @@ public class GameScreen implements Screen {
 
     private void pollNetwork() {
         NetworkMessage msg = networkManager.poll();
-        if (msg == null) return;
+        if (msg == null)
+            return;
 
         if (NetworkMessage.TYPE_END_TURN.equals(msg.type)) {
             GameLogger.log(GameLogger.INPUT, "LAN: Received END_TURN from opponent");
-            
+
             // 1. Sync game state from snapshot
             Json json = new Json();
             TurnSnapshot snap = json.fromJson(TurnSnapshot.class, msg.payload);
             restoreSnapshot(snap);
-            
-            // 2. The snapshot contains the state AFTER the opponent's moves, 
+
+            // 2. The snapshot contains the state AFTER the opponent's moves,
             // but BEFORE the turn was swapped. We now advance the turn locally.
             gameState.currentPlayer = (gameState.currentPlayer == 1) ? 2 : 1;
             if (gameState.currentPlayer == 1) {
@@ -841,7 +865,8 @@ public class GameScreen implements Screen {
      * In LAN, this is fixed (1 or 2). In hotseat, it matches currentPlayer.
      */
     public int getActiveLocalPlayer() {
-        if (gameState.isLanGame) return gameState.localPlayerID;
+        if (gameState.isLanGame)
+            return gameState.localPlayerID;
         return gameState.currentPlayer;
     }
 

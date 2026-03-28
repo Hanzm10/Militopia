@@ -21,15 +21,23 @@ import com.militopia.MilitopiaGame;
 import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.GL20;
 
 public class LoadGameScreen implements Screen {
 
     final MilitopiaGame game;
     Stage stage;
+    private ShapeRenderer shapeRenderer;
+    private boolean isFadingOut = false;
+    private float fadeTime = 0f;
+    private final float FADE_DURATION = 0.3f;
+    private GameState selectedState = null;
 
     public LoadGameScreen(final MilitopiaGame game) {
         this.game = game;
         stage = new Stage(new ScreenViewport());
+        shapeRenderer = new ShapeRenderer();
         Gdx.input.setInputProcessor(stage);
 
         Table mainTable = new Table();
@@ -78,7 +86,12 @@ public class LoadGameScreen implements Screen {
                     entry.addListener(new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
-                            game.setScreen(new GameScreen(game, state));
+                            if (!isFadingOut) {
+                                isFadingOut = true;
+                                fadeTime = 0f;
+                                selectedState = state;
+                                Gdx.input.setInputProcessor(null); // Disable input during fade
+                            }
                         }
                     });
 
@@ -98,7 +111,9 @@ public class LoadGameScreen implements Screen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new MenuScreen(game));
+                if (!isFadingOut) {
+                    game.setScreen(new MenuScreen(game));
+                }
             }
         });
         mainTable.add(backBtn).fillX().width(300).pad(20);
@@ -110,6 +125,24 @@ public class LoadGameScreen implements Screen {
         VideoBackgroundManager.getInstance().render(game.batch);
         stage.act();
         stage.draw();
+        
+        if (isFadingOut) {
+            fadeTime += delta;
+            
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            shapeRenderer.setProjectionMatrix(stage.getCamera().combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            float alpha = Math.min(1.0f, Math.max(0.0f, fadeTime / FADE_DURATION));
+            shapeRenderer.setColor(0, 0, 0, alpha);
+            shapeRenderer.rect(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            shapeRenderer.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+            
+            if (fadeTime >= FADE_DURATION && selectedState != null) {
+                game.setScreen(new GameScreen(game, selectedState));
+            }
+        }
     }
 
     @Override
@@ -139,5 +172,6 @@ public class LoadGameScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
+        shapeRenderer.dispose();
     }
 }
