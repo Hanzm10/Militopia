@@ -21,6 +21,8 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.BaseLevelConfig;
+import com.militopia.config.StructureType;
+import com.militopia.config.UnitType;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
 import com.militopia.factories.UnitFactory;
@@ -56,22 +58,22 @@ public class InfoPanel {
     private Table infoStack;
     private Label atkLabel, defLabel, rngLabel, movLabel, visLabel;
 
-    private static final java.util.Map<String, String> ABILITY_DESC;
+    private static final java.util.Map<UnitType, String> ABILITY_DESC;
     static {
-        ABILITY_DESC = new java.util.HashMap<String, String>();
-        ABILITY_DESC.put("RECRUIT",      "Dig In: +3 Def for 1 turn");
-        ABILITY_DESC.put("RANGER",       "Overwatch: Auto-attacks enemy entering range");
-        ABILITY_DESC.put("SNIPER",       "Camouflage: Invisible in Forest/Ruins");
-        ABILITY_DESC.put("TANK",         "Blitz: Move again on lethal kill");
-        ABILITY_DESC.put("JUGGERNAUT",   "Suppressing Fire: Hits all 8 adjacent tiles");
-        ABILITY_DESC.put("RECON_DRONE",  "High Altitude: Immune to melee land attacks");
-        ABILITY_DESC.put("SUICIDE_DRONE","Kamikaze: Dies after attacking");
-        ABILITY_DESC.put("APACHE",       "Fuel Gauge: Crashes after 5 turns unfueled");
-        ABILITY_DESC.put("B2",           "Stealth Cloak: Invisible until it attacks");
-        ABILITY_DESC.put("GUNBOAT",      "Skirmish: Move 1 tile after attacking");
-        ABILITY_DESC.put("DESTROYER",    "Shore Bombardment: +5 dmg vs Land units");
-        ABILITY_DESC.put("CARRIER",      "Mobile Airfield: Heals+refuels adjacent air");
-        ABILITY_DESC.put("SUBMARINE",    "Deep Dive: Cloaked; Nuke on 3-turn cooldown");
+        ABILITY_DESC = new java.util.EnumMap<UnitType, String>(UnitType.class);
+        ABILITY_DESC.put(UnitType.RECRUIT,      "Dig In: +3 Def for 1 turn");
+        ABILITY_DESC.put(UnitType.RANGER,       "Overwatch: Auto-attacks enemy entering range");
+        ABILITY_DESC.put(UnitType.SNIPER,       "Camouflage: Invisible in Forest/Ruins");
+        ABILITY_DESC.put(UnitType.TANK,         "Blitz: Move again on lethal kill");
+        ABILITY_DESC.put(UnitType.JUGGERNAUT,   "Suppressing Fire: Hits all 8 adjacent tiles");
+        ABILITY_DESC.put(UnitType.RECON_DRONE,  "High Altitude: Immune to melee land attacks");
+        ABILITY_DESC.put(UnitType.SUICIDE_DRONE,"Kamikaze: Dies after attacking");
+        ABILITY_DESC.put(UnitType.APACHE,       "Fuel Gauge: Crashes after 5 turns unfueled");
+        ABILITY_DESC.put(UnitType.B2,           "Stealth Cloak: Invisible until it attacks");
+        ABILITY_DESC.put(UnitType.GUNBOAT,      "Skirmish: Move 1 tile after attacking");
+        ABILITY_DESC.put(UnitType.DESTROYER,    "Shore Bombardment: +5 dmg vs Land units");
+        ABILITY_DESC.put(UnitType.CARRIER,      "Mobile Airfield: Heals+refuels adjacent air");
+        ABILITY_DESC.put(UnitType.SUBMARINE,    "Deep Dive: Cloaked; Nuke on 3-turn cooldown");
     }
 
     // Base specific labels
@@ -142,7 +144,7 @@ public class InfoPanel {
 
         StatsComponent stats = base.getComponent(StatsComponent.class);
         if (stats != null && statsTable != null) {
-            boolean isBase = stats.name.contains("Base");
+            boolean isBase = StructureType.fromDisplayName(stats.name) == StructureType.BASE;
 
             // Level line: only for bases
             if (isBase) {
@@ -213,13 +215,13 @@ public class InfoPanel {
         final GameState state = screen.getGameState();
         Set<String> unlocked = BaseLevelConfig.getUnlockedForLevel(bs.level, false);
 
-        String[] allUnits = {
-                "RECRUIT", "RANGER", "SNIPER", "TANK", "RECON_DRONE",
-                "SUICIDE_DRONE", "APACHE", "GUNBOAT", "DESTROYER", "CARRIER"
+        UnitType[] allUnits = {
+                UnitType.RECRUIT, UnitType.RANGER, UnitType.SNIPER, UnitType.TANK, UnitType.RECON_DRONE,
+                UnitType.SUICIDE_DRONE, UnitType.APACHE, UnitType.GUNBOAT, UnitType.DESTROYER, UnitType.CARRIER
         };
 
-        for (final String unit : allUnits) {
-            if (!unlocked.contains(unit))
+        for (final UnitType unit : allUnits) {
+            if (!unlocked.contains(unit.name()))
                 continue;
             StatsComponent.MoveType moveType = factory.getUnitMoveType(unit);
             // In a BASE, we only show non-SEA units. PORTS (later) will show SEA units.
@@ -227,7 +229,7 @@ public class InfoPanel {
                 continue;
 
             UnitFactory.UiInfo info = factory.getUnitUi(unit);
-            final int cost = factory.getUnitCost(unit);
+            final int cost = UnitFactory.getUnitCost(unit);
 
             SummonButton.addTo(abilityTable, info.region, info.name + " (" + cost + ")", game, assets,
                     new ClickListener() {
@@ -236,7 +238,7 @@ public class InfoPanel {
                             int funds = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
                             if (funds < cost) {
                                 GameLogger.log(GameLogger.SUMMON, bs.owner,
-                                        "Attempted " + unit + " — insufficient funds ("
+                                        "Attempted " + unit.name() + " — insufficient funds ("
                                                 + funds + "<" + cost + ")");
                                 return;
                             }
@@ -249,7 +251,7 @@ public class InfoPanel {
                                     tx, ty, moveType, screen.getGameMap());
                             if (spawn == null) {
                                 GameLogger.log(GameLogger.SUMMON, bs.owner,
-                                        "Attempted " + unit + " — no valid spawn point found");
+                                        "Attempted " + unit.name() + " — no valid spawn point found");
                                 return;
                             }
                             if (bs.owner == 1)
@@ -260,7 +262,7 @@ public class InfoPanel {
                             factory.createUnit(unit, spawn[0], spawn[1], bs.owner, true);
                             int remaining = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
                             GameLogger.log(GameLogger.SUMMON, bs.owner,
-                                    "Summoned " + unit + " at " + GameLogger.pos(spawn[0], spawn[1])
+                                    "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
                                             + " | cost=" + cost + " | funds remaining=" + remaining);
                             screen.gameHUD.updateFunding(remaining, bs.income);
                             hideTileInfo();
@@ -303,7 +305,7 @@ public class InfoPanel {
 
         // Ability description
         if (abilityDescLabel != null && stats != null) {
-            String desc = ABILITY_DESC.get(stats.unitTypeKey);
+            String desc = ABILITY_DESC.get(stats.unitType);
             if (desc != null) {
                 abilityDescLabel.setText(desc);
                 abilityDescLabel.setVisible(true);
@@ -321,7 +323,7 @@ public class InfoPanel {
                 && stats.owner == screen.getCurrentPlayer()
                 && !stats.hasActed) {
 
-            if (stats.unitTypeKey.equals("RECRUIT")
+            if (stats.unitType == UnitType.RECRUIT
                     && !abilities.hasUsedDigIn && !abilities.isDiggingIn) {
                 addAbilityButton("Dig In",
                         factory.getTextureForPopup("RECRUIT"),
@@ -332,7 +334,7 @@ public class InfoPanel {
                             }
                         });
 
-            } else if (stats.unitTypeKey.equals("SUBMARINE")
+            } else if (stats.unitType == UnitType.SUBMARINE
                     && abilities.nukeCooldown == 0) {
                 addAbilityButton("Launch Nuke",
                         factory.getHudIcon(MapGenerator.ObjectType.BASE_P1),
@@ -342,7 +344,7 @@ public class InfoPanel {
                                 controller.performAbility(unit, "LAUNCH_NUKE");
                             }
                         });
-            } else if (stats.unitTypeKey.equals("RANGER") && !abilities.isOverwatchActive) {
+            } else if (stats.unitType == UnitType.RANGER && !abilities.isOverwatchActive) {
                 addAbilityButton("Overwatch",
                         factory.getTextureForPopup("RANGER"),
                         new ClickListener() {

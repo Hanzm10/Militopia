@@ -75,6 +75,8 @@ public class AnimationSystem extends IteratingSystem {
         // Linear XY travel from source to destination + parabolic arc
         // jumpStartOff is the negative of the travel delta (so at progress=0 we appear at source)
         pos.visualOffsetX = anim.jumpStartOffX * (1 - progress);
+        // sin(progress * PI) traces a parabolic arc: 0 at start, peaks at 1 at midpoint, 0 at end.
+        // Multiplied by arcHeight to control the peak altitude of the jump.
         pos.visualOffsetY = anim.jumpStartOffY * (1 - progress)
                 + anim.arcHeight * (float) Math.sin(progress * Math.PI);
     }

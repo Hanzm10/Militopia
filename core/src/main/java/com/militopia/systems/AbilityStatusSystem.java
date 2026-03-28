@@ -8,6 +8,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
+import com.militopia.config.UnitType;
 import com.militopia.map.MapGenerator;
 
 /**
@@ -52,12 +53,12 @@ public class AbilityStatusSystem extends EntitySystem {
                 }
 
                 // RECRUIT: Dig In reset (expires after 1 enemy turn cycle)
-                if (stats.unitTypeKey.equals("RECRUIT")) {
+                if (stats.unitType == UnitType.RECRUIT) {
                     abilities.isDiggingIn = false;
                 }
 
                 // APACHE: Fuel Gauge
-                if (stats.unitTypeKey.equals("APACHE")) {
+                if (stats.unitType == UnitType.APACHE) {
                     if (abilities.fuel > 0) {
                         abilities.fuel--;
                     }
@@ -77,7 +78,7 @@ public class AbilityStatusSystem extends EntitySystem {
         ImmutableArray<Entity> neighbors = engine.getEntitiesFor(
                 Family.all(StatsComponent.class, GridPositionComponent.class).get());
 
-        boolean isCarrier = stats.unitTypeKey.equals("CARRIER");
+        boolean isCarrier = stats.unitType == UnitType.CARRIER;
         boolean isHospital = stats.name.contains("Hospital");
         boolean isSolar = stats.name.contains("Solar");
 

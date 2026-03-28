@@ -18,6 +18,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
 import com.militopia.managers.AssetManager;
+import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
 import com.militopia.utils.RenderUtils;
 
@@ -76,7 +77,7 @@ public class LoadGameScreen implements Screen {
                     listTable.add(btn).fillX().pad(5).width(400).row();
 
                 } catch (Exception e) {
-                    System.out.println("Corrupt save file: " + file.name());
+                    GameLogger.logScreen("Corrupt save file: " + file.name());
                 }
             }
         }

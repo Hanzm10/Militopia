@@ -11,21 +11,24 @@ import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
 import com.militopia.data.UnitData;
 import com.militopia.data.AnimalData;
+import com.militopia.components.AnimalComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.map.MapGenerator;
+import com.militopia.utils.GameLogger;
 
 public class SaveManager {
 
-    public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
-
-        // 1. Clear old data lists
+    /**
+     * Collects current engine state into the GameState data object.
+     * Package-private for testability — call saveGame() in production.
+     */
+    void collectState(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
         state.units.clear();
         state.structures.clear();
         state.animals.clear();
 
-        // 2. Extract Data from Engine
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
 
         for (Entity e : entities) {
@@ -34,45 +37,54 @@ public class SaveManager {
             StatsComponent stats = e.getComponent(StatsComponent.class);
 
             if (type.type == TypeComponent.Type.UNIT) {
-                // Save Unit
-                state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, stats.unitTypeKey,
+                String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
+                state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
                         stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
-                // --- FIX: DETECT ANIMALS VIA NAME TAG (Layer 2) ---
-                if (stats != null && stats.name != null && stats.name.startsWith("ANIMAL_")) {
-                    String animalType = stats.name.replace("ANIMAL_", "");
-                    state.animals.add(new AnimalData(pos.x, pos.y, animalType));
+                // --- DETECT ANIMALS VIA COMPONENT TAG ---
+                AnimalComponent animal = e.getComponent(AnimalComponent.class);
+                if (animal != null) {
+                    state.animals.add(new AnimalData(pos.x, pos.y, animal.animalType));
                 }
-                // --- DETECT STRUCTURES (Layer 1) ---
+                // --- DETECT STRUCTURES ---
                 else if (stats != null && stats.owner != 0) {
-                    // Save any object with an owner as a structure (Bases, captured Towns,
-                    // Derricks, etc.)
                     state.structures.add(new StructureData(
                             pos.x, pos.y, stats.owner, stats.level,
-                            stats.currentBaseXP, stats.name, stats.baseOrdinal));
+                            stats.currentBaseXP, stats.name, stats.baseOrdinal,
+                            stats.xpGain, stats.chosenSuperUnit));
                 } else if (stats != null) {
                     // Check for neutral Towns
                     MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
                     if (objType == MapGenerator.ObjectType.TOWN) {
                         state.structures.add(new StructureData(
                                 pos.x, pos.y, stats.owner, stats.level,
-                                stats.currentBaseXP, stats.name, stats.baseOrdinal));
+                                stats.currentBaseXP, stats.name, stats.baseOrdinal,
+                                stats.xpGain, stats.chosenSuperUnit));
                     }
                 }
             }
         }
 
-        // 3. Save Map Objects
         state.mapObjects = map.objects;
+    }
 
-        // 4. Write to JSON File
+    /**
+     * Collects current engine state and writes it to a JSON save file.
+     *
+     * @param state  game state object that receives collected data and provides the save file name
+     * @param engine Ashley engine whose entities are serialised
+     * @param map    game map needed for object-type context during collection
+     */
+    public void saveGame(GameState state, PooledEngine engine, MapGenerator.GameMap map) {
+        collectState(state, engine, map);
+
         Json json = new Json();
         String jsonText = json.toJson(state);
 
         FileHandle file = Gdx.files.local("saves/" + state.saveName + ".json");
         file.writeString(jsonText, false);
 
-        System.out.println("Game Saved: " + file.path());
+        GameLogger.logScreen("Game Saved: " + file.path());
     }
 }

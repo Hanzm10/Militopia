@@ -8,12 +8,15 @@ public class StructureData {
     public float currentBaseXP;
     public String baseName;
     public String baseOrdinal;
+    public int xpGain;
+    public String chosenSuperUnit;
 
     // Default constructor for JSON
     public StructureData() {
     }
 
-    public StructureData(int x, int y, int owner, int level, float currentBaseXP, String baseName, String baseOrdinal) {
+    public StructureData(int x, int y, int owner, int level, float currentBaseXP, String baseName, String baseOrdinal,
+            int xpGain, String chosenSuperUnit) {
         this.x = x;
         this.y = y;
         this.owner = owner;
@@ -21,5 +24,7 @@ public class StructureData {
         this.currentBaseXP = currentBaseXP;
         this.baseName = baseName;
         this.baseOrdinal = baseOrdinal;
+        this.xpGain = xpGain;
+        this.chosenSuperUnit = chosenSuperUnit;
     }
 }

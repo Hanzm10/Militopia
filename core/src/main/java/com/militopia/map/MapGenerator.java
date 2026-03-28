@@ -91,12 +91,20 @@ public class MapGenerator {
     // -------------------------------------------------------------------------
 
     private void generateTerrain(GameMap map, int width, int height, SimpleNoise noise, List<Point> grassTiles) {
+        // scale controls feature size: lower = larger landmasses, higher = noisier/smaller islands
         float scale = 0.15f;
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
+                // SimpleNoise (Simplex) returns values in roughly [-1, 1]
                 double value = noise.eval(x * scale, y * scale);
                 TerrainType type;
 
+                // Threshold bands map noise range to terrain types:
+                //   value < -0.40  →  deep ocean
+                //   -0.40 to -0.15 →  shallow water
+                //   -0.15 to  0.00 →  coastal sand
+                //    0.00 to  0.50 →  grass (most common land)
+                //    0.50+         →  mountain ridges
                 if (value < -0.4)
                     type = TerrainType.DEEP_WATER;
                 else if (value < -0.15)

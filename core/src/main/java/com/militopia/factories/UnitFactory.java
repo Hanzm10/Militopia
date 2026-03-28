@@ -11,6 +11,9 @@ import com.badlogic.gdx.math.MathUtils;
 import com.militopia.components.*;
 import com.militopia.config.BaseLevelConfig;
 import com.militopia.config.GameConfig;
+import com.militopia.config.StructureType;
+import com.militopia.config.UnitStatConfig;
+import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
 import com.militopia.data.StructureSnapshot;
 import com.militopia.data.TurnSnapshot;
@@ -237,10 +240,19 @@ public class UnitFactory {
         this.zebraDisplayRegion = new TextureRegion(assets.get(AssetManager.ZEBRA_DISPLAY));
     }
 
-    public void createUnit(String unitType, int x, int y, int owner, boolean isSummoned) {
-        TextureRegion[] regions = unitRegions.get(unitType);
+    /**
+     * Creates and registers a unit entity with stats matching the given type.
+     *
+     * @param unitType   the type of unit to create
+     * @param x          grid column to place the unit
+     * @param y          grid row to place the unit
+     * @param owner      player ID (1 or 2)
+     * @param isSummoned true if summoned mid-turn (marks hasActed so unit cannot act immediately)
+     */
+    public void createUnit(UnitType unitType, int x, int y, int owner, boolean isSummoned) {
+        TextureRegion[] regions = unitRegions.get(unitType.name());
         if (regions == null) {
-            regions = unitRegions.get("RECRUIT");
+            regions = unitRegions.get(UnitType.RECRUIT.name());
         }
 
         Entity entity = engine.createEntity();
@@ -251,186 +263,23 @@ public class UnitFactory {
         entity.add(new AbilitiesComponent());
         entity.add(new AnimationComponent());
 
-        // --- MANUAL STATS CONFIGURATION ---
-        int hp = 10, atk = 5, def = 0, move = 3, rng = 1, vis = 3, cost = 3;
-        StatsComponent.MoveType moveType = StatsComponent.MoveType.LAND;
+        UnitStatConfig.UnitStatData statData = UnitStatConfig.get(unitType);
 
-        switch (unitType) {
-            case "RECRUIT":
-                hp = 10;
-                atk = 3;
-                def = 1;
-                move = 1;
-                rng = 1;
-                vis = 1;
-                cost = 2;
-                moveType = StatsComponent.MoveType.LAND;
-                break;
-            case "RANGER":
-                hp = 12;
-                atk = 5;
-                def = 1;
-                move = 1;
-                rng = 2;
-                vis = 2;
-                cost = 5;
-                moveType = StatsComponent.MoveType.LAND;
-                break;
-            case "SNIPER":
-                hp = 8;
-                atk = 15;
-                def = 0;
-                move = 1;
-                rng = 3;
-                vis = 3;
-                cost = 8;
-                moveType = StatsComponent.MoveType.LAND;
-                break;
-            case "TANK":
-                hp = 30;
-                atk = 12;
-                def = 5;
-                move = 2;
-                rng = 3;
-                vis = 3;
-                cost = 15;
-                moveType = StatsComponent.MoveType.LAND;
-                break;
-            case "JUGGERNAUT":
-                hp = 50;
-                atk = 12;
-                def = 6;
-                move = 4;
-                rng = 4;
-                vis = 3;
-                cost = 0;
-                moveType = StatsComponent.MoveType.LAND;
-                break;
-            case "RECON_DRONE":
-                hp = 5;
-                atk = 0;
-                def = 0;
-                move = 3;
-                rng = 0;
-                vis = 3;
-                cost = 4;
-                moveType = StatsComponent.MoveType.AIR;
-                break;
-            case "SUICIDE_DRONE":
-                hp = 5;
-                atk = 20;
-                def = 0;
-                move = 2;
-                rng = 1;
-                vis = 2;
-                cost = 7;
-                moveType = StatsComponent.MoveType.AIR;
-                break;
-            case "APACHE":
-                hp = 20;
-                atk = 15;
-                def = 2;
-                move = 3;
-                rng = 2;
-                vis = 3;
-                cost = 18;
-                moveType = StatsComponent.MoveType.AIR;
-                break;
-            case "B2":
-                hp = 45;
-                atk = 18;
-                def = 3;
-                move = 3;
-                rng = 3;
-                vis = 3;
-                cost = 0;
-                moveType = StatsComponent.MoveType.AIR;
-                break;
-            case "GUNBOAT":
-                hp = 10;
-                atk = 5;
-                def = 2;
-                move = 2;
-                rng = 2;
-                vis = 2;
-                cost = 6;
-                moveType = StatsComponent.MoveType.SEA;
-                break;
-            case "DESTROYER":
-                hp = 30;
-                atk = 15;
-                def = 3;
-                move = 3;
-                rng = 3;
-                vis = 3;
-                cost = 13;
-                moveType = StatsComponent.MoveType.SEA;
-                break;
-            case "CARRIER":
-                hp = 45;
-                atk = 5;
-                def = 4;
-                move = 3;
-                rng = 3;
-                vis = 3;
-                cost = 25;
-                moveType = StatsComponent.MoveType.SEA;
-                break;
-            case "SUBMARINE":
-                hp = 40;
-                atk = 25;
-                def = 3;
-                move = 4;
-                rng = 4;
-                vis = 3;
-                cost = 0;
-                moveType = StatsComponent.MoveType.SEA;
-                break;
-            case "TITAN":
-                hp = 60;
-                atk = 20;
-                def = 10;
-                move = 2;
-                rng = 2;
-                vis = 3;
-                cost = 25;
-                moveType = StatsComponent.MoveType.LAND;
-                break;
-            case "WRAITH":
-                hp = 30;
-                atk = 25;
-                def = 3;
-                move = 4;
-                rng = 3;
-                vis = 4;
-                cost = 25;
-                moveType = StatsComponent.MoveType.AIR;
-                break;
-            case "DREADNOUGHT":
-                hp = 70;
-                atk = 20;
-                def = 8;
-                move = 2;
-                rng = 4;
-                vis = 3;
-                cost = 25;
-                moveType = StatsComponent.MoveType.SEA;
-                break;
-        }
-
-        // Use Unit Constructor (No Income Parameter)
-        StatsComponent stats = new StatsComponent(toNiceName(unitType), hp, atk, def, move, rng, vis, cost, moveType,
+        StatsComponent stats = new StatsComponent(toNiceName(unitType.name()),
+                statData.hp, statData.atk, statData.def, statData.move,
+                statData.rng, statData.vis, statData.cost, statData.moveType,
                 owner);
-        stats.unitTypeKey = unitType; // store raw key for snapshot restoration
+        stats.unitTypeKey = unitType.name(); // store raw key for snapshot restoration
+        stats.unitType = unitType;
         stats.hasActed = isSummoned;
 
         // --- Post-processing for specific abilities ---
         AbilitiesComponent abilities = entity.getComponent(AbilitiesComponent.class);
-        if (unitType.equals("APACHE")) {
+        if (stats.unitType == UnitType.APACHE) {
             abilities.fuel = 5;
             abilities.fuelMax = 5;
         }
-        if (unitType.equals("SUBMARINE") || unitType.equals("B2")) {
+        if (stats.unitType == UnitType.SUBMARINE || stats.unitType == UnitType.B2) {
             abilities.isCloaked = true;
         }
 
@@ -438,73 +287,24 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
-    public static int getUnitCost(String unitType) {
-        // Must match cost in createUnit
-        switch (unitType) {
-            case "RECRUIT":
-                return 2;
-            case "RANGER":
-                return 5;
-            case "SNIPER":
-                return 8;
-            case "TANK":
-                return 15;
-            case "JUGGERNAUT":
-                return 0;
-
-            case "RECON_DRONE":
-                return 4;
-            case "SUICIDE_DRONE":
-                return 7;
-            case "APACHE":
-                return 18;
-            case "B2":
-                return 0;
-
-            case "GUNBOAT":
-                return 6;
-            case "DESTROYER":
-                return 13;
-            case "CARRIER":
-                return 25;
-            case "SUBMARINE":
-                return 0;
-            default:
-                return 0;
-        }
+    /**
+     * Returns the gold cost for purchasing the given unit type.
+     *
+     * @param unitType the unit type to query
+     * @return cost in gold; 0 for super units or unrecognised types
+     */
+    public static int getUnitCost(UnitType unitType) {
+        return UnitStatConfig.get(unitType).cost;
     }
 
-    public StatsComponent.MoveType getUnitMoveType(String unitType) {
-        switch (unitType) {
-            case "RECRUIT":
-            case "RANGER":
-            case "SNIPER":
-            case "TANK":
-            case "JUGGERNAUT":
-                return StatsComponent.MoveType.LAND;
-
-            case "RECON_DRONE":
-            case "SUICIDE_DRONE":
-            case "APACHE":
-            case "B2":
-                return StatsComponent.MoveType.AIR;
-
-            case "GUNBOAT":
-            case "DESTROYER":
-            case "CARRIER":
-            case "SUBMARINE":
-            case "DREADNOUGHT":
-                return StatsComponent.MoveType.SEA;
-
-            case "TITAN":
-                return StatsComponent.MoveType.LAND;
-
-            case "WRAITH":
-                return StatsComponent.MoveType.AIR;
-
-            default:
-                return StatsComponent.MoveType.LAND;
-        }
+    /**
+     * Returns the movement domain (LAND, AIR, or SEA) for the given unit type.
+     *
+     * @param unitType the unit type to query
+     * @return the corresponding {@link StatsComponent.MoveType}
+     */
+    public StatsComponent.MoveType getUnitMoveType(UnitType unitType) {
+        return UnitStatConfig.get(unitType).moveType;
     }
 
     // -------------------------------------------------------------------------
@@ -533,7 +333,7 @@ public class UnitFactory {
                         s.currentHP, s.hasActed, s.hasMoved, s.moveType));
 
             } else if (type.type == TypeComponent.Type.OBJECT && s.owner >= 0
-                    && (s.income > 0 || s.maxBaseXP > 0 || !s.name.startsWith("ANIMAL_"))) {
+                    && (s.income > 0 || s.maxBaseXP > 0 || e.getComponent(AnimalComponent.class) == null)) {
                 // Only snapshot income-generating structures: bases (income >= 2) and towns
                 // (income = 1)
                 // Exclude decorative objects (trees, ruins, oil, etc.) — they don't need
@@ -561,6 +361,12 @@ public class UnitFactory {
                 unitSnaps, structSnaps, objClone);
     }
 
+    /**
+     * Returns the gold cost to build the given structure type.
+     *
+     * @param type structure key (e.g. "MUNITION_FACTORY", "PORT")
+     * @return cost in gold; 0 for unrecognised types
+     */
     public int getStructureCost(String type) {
         switch (type) {
             case "MUNITION_FACTORY":
@@ -584,6 +390,16 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Creates and registers a non-base structure entity at the given tile.
+     *
+     * @param type    structure key (e.g. "MUNITION_FACTORY", "PORT")
+     * @param x       grid column
+     * @param y       grid row
+     * @param owner   player ID (1 or 2)
+     * @param parentX grid column of the parent base that built this structure
+     * @param parentY grid row of the parent base that built this structure
+     */
     public void createStructure(String type, int x, int y, int owner, int parentX, int parentY) {
         String regionKey = type;
 
@@ -597,19 +413,8 @@ public class UnitFactory {
         entity.add(new TypeComponent(TypeComponent.Type.OBJECT));
         entity.add(new AbilitiesComponent()); // NEW: Add abilities state
 
-        String niceName = type.replace("_", " ");
-        if (type.equals("SOLAR"))
-            niceName = "Solar Array";
-        if (type.equals("RADAR"))
-            niceName = "Radar Station";
-        if (type.equals("JAMMER"))
-            niceName = "Signal Jammer";
-        if (type.equals("NUCLEAR"))
-            niceName = "Nuclear Plant";
-        if (type.equals("OIL_DERRICK"))
-            niceName = "Oil Derrick";
-        if (type.equals("MUNITION_FACTORY"))
-            niceName = "Munition Factory";
+        StructureType structureType = StructureType.fromKey(type);
+        String niceName = (structureType != null) ? structureType.getDisplayName() : type.replace("_", " ");
 
         // Create Stats (Default Income = 0, we add it to Base XP instead)
         StatsComponent stats = new StatsComponent(niceName, 10, 0, 0, 0, 0, 1, getStructureCost(type),
@@ -667,14 +472,21 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
+    /**
+     * Creates and registers a map-object entity (animal, base, town, or terrain decoration).
+     *
+     * @param x     grid column
+     * @param y     grid row
+     * @param type  the object type that determines which entity variant is spawned
+     * @param state game state updated when a base is placed (increments base counts)
+     */
     public void createObjectEntity(int x, int y, MapGenerator.ObjectType type, GameState state) {
         UiInfo info = getObjectUi(type);
         if (info.region == null) {
             return;
         }
 
-        boolean isAnimal = (type.name().contains("HORSE") || type.name().contains("FISH")
-                || type.name().contains("DEER") || type.name().contains("ZEBRA"));
+        boolean isAnimal = (com.militopia.config.AnimalType.fromKey(type.name()) != null);
         int zIndex = isAnimal ? 2 : 1;
 
         Entity entity = engine.createEntity();
@@ -690,6 +502,7 @@ public class UnitFactory {
             animalStats.name = "ANIMAL_" + type.name();
             animalStats.unitTypeKey = type.name();
             entity.add(animalStats);
+            entity.add(new AnimalComponent(type.name()));
         } else if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
             int owner = (type == MapGenerator.ObjectType.BASE_P1) ? 1 : 2;
             state.p1BaseCount += (owner == 1 ? 1 : 0);
@@ -716,6 +529,14 @@ public class UnitFactory {
         engine.addEntity(entity);
     }
 
+    /**
+     * Checks if the base has enough XP to level up and applies all level-up effects.
+     * Loops until XP falls below the threshold (handles multiple level-ups in one turn).
+     *
+     * @param baseEntity the base entity whose XP should be checked
+     * @param state      game state to apply funding bonuses and unlocks against
+     * @param hud        HUD to show the level-up popup (may be null in tests)
+     */
     public void checkAndApplyLevelUp(Entity baseEntity, GameState state, GameHUD hud) {
         StatsComponent stats = baseEntity.getComponent(StatsComponent.class);
         if (stats == null) {
@@ -762,9 +583,11 @@ public class UnitFactory {
         stats.chosenSuperUnit = superUnitType;
 
         // Spawn one immediately adjacent to the base
-        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superUnitType), map);
+        UnitType superType = UnitType.fromKey(superUnitType);
+        if (superType == null) return;
+        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superType), map);
         if (spawn != null) {
-            createUnit(superUnitType, spawn[0], spawn[1], stats.owner, false);
+            createUnit(superType, spawn[0], spawn[1], stats.owner, false);
             GameLogger.log(GameLogger.SUMMON, stats.owner,
                     stats.name + " chose super unit: " + superUnitType
                             + " — spawned at " + GameLogger.pos(spawn[0], spawn[1]));
@@ -775,6 +598,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Swaps the base entity's texture to match its current owner and level.
+     *
+     * @param entity the base entity to update
+     * @param stats  the base's stats component (provides owner and level)
+     */
     public void updateBaseTexture(Entity entity, StatsComponent stats) {
         TextureComponent tex = entity.getComponent(TextureComponent.class);
         String color = (stats.owner == 1) ? "blue" : "red";
@@ -787,6 +616,13 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Restores a structure entity's stats from a saved {@link com.militopia.data.StructureData} record.
+     *
+     * @param entity the existing structure entity to update
+     * @param data   the persisted data to apply
+     * @param map    game map used to determine if the entity is a Town (fixed stats)
+     */
     public void updateStructureFromSave(Entity entity, com.militopia.data.StructureData data,
             MapGenerator.GameMap map) {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
@@ -800,6 +636,8 @@ public class UnitFactory {
         stats.currentBaseXP = data.currentBaseXP;
         stats.name = data.baseName;
         stats.baseOrdinal = data.baseOrdinal;
+        stats.xpGain = data.xpGain;
+        stats.chosenSuperUnit = data.chosenSuperUnit;
 
         boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
 
@@ -819,6 +657,15 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Transfers ownership of a structure (town or enemy base) to newOwner,
+     * converting it to a base for the capturing player.
+     *
+     * @param objectEntity the structure entity being captured
+     * @param newOwner     player ID of the capturing player (1 or 2)
+     * @param map          game map used to update the ObjectType array
+     * @param state        game state to update base counts and XP
+     */
     public void captureStructure(Entity objectEntity, int newOwner, MapGenerator.GameMap map, GameState state) {
         StatsComponent stats = objectEntity.getComponent(StatsComponent.class);
         TextureComponent tex = objectEntity.getComponent(TextureComponent.class);
@@ -900,6 +747,14 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Spawns a random set of wild animals on tiles surrounding the given base.
+     *
+     * @param baseX grid column of the base
+     * @param baseY grid row of the base
+     * @param map   game map used for terrain and existing-object lookups
+     * @param state game state passed through to {@link #createObjectEntity}
+     */
     public void spawnAnimalsAroundBase(int baseX, int baseY, MapGenerator.GameMap map, GameState state) {
         int radius = GameConfig.BORDER_RADIUS;
         List<GridPoint> validSpots = new ArrayList<>();
@@ -958,10 +813,27 @@ public class UnitFactory {
     }
 
     // --- HELPER: Checks for entity at coordinates and layer ---
+
+    /**
+     * Returns true if any entity occupies the given tile at the specified Z-layer.
+     *
+     * @param x      grid column
+     * @param y      grid row
+     * @param zLayer Z-index layer to check (e.g. 2 for animals, 3 for units)
+     * @return true if an entity exists at (x, y, zLayer)
+     */
     public boolean hasEntityAt(int x, int y, int zLayer) {
         return getEntityAt(x, y, zLayer) != null;
     }
 
+    /**
+     * Returns the entity at the given tile and Z-layer, or null if none exists.
+     *
+     * @param x      grid column
+     * @param y      grid row
+     * @param zLayer Z-index layer to search (e.g. 2 for animals, 3 for units)
+     * @return the matching entity, or null
+     */
     public Entity getEntityAt(int x, int y, int zLayer) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(Family.all(GridPositionComponent.class).get());
         for (Entity e : entities) {
@@ -1042,10 +914,23 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Converts a SCREAMING_SNAKE_CASE type key to a display-friendly name.
+     *
+     * @param type raw enum name (e.g. "RECON_DRONE")
+     * @return display name with capitalised first letter and spaces (e.g. "Recon drone")
+     */
     public String toNiceName(String type) {
         return type.charAt(0) + type.substring(1).toLowerCase().replace("_", " ");
     }
 
+    /**
+     * Resolves a display texture by lookup key for popup/HUD use.
+     * Checks unit regions, structure regions, and base regions in order.
+     *
+     * @param key unit or structure key (e.g. "TANK", "PORT", "BASE_P1")
+     * @return the matching display {@link TextureRegion}, or a fallback if not found
+     */
     public TextureRegion getTextureForPopup(String key) {
         if (unitRegions.containsKey(key)) {
             return unitRegions.get(key)[2];
@@ -1059,12 +944,24 @@ public class UnitFactory {
         return horseDisplayRegion;
     }
 
-    public UiInfo getUnitUi(String unitType) {
-        TextureRegion[] regs = unitRegions.get(unitType);
-        return (regs != null) ? new UiInfo(toNiceName(unitType), regs[2])
-                : new UiInfo("Unknown", unitRegions.get("RECRUIT")[2]);
+    /**
+     * Returns the display name and HUD texture for the given unit type.
+     *
+     * @param unitType the unit type to look up
+     * @return a {@link UiInfo} with name and display region; falls back to Recruit if unknown
+     */
+    public UiInfo getUnitUi(UnitType unitType) {
+        TextureRegion[] regs = unitRegions.get(unitType.name());
+        return (regs != null) ? new UiInfo(toNiceName(unitType.name()), regs[2])
+                : new UiInfo("Unknown", unitRegions.get(UnitType.RECRUIT.name())[2]);
     }
 
+    /**
+     * Returns the HUD icon texture for the given map object type (animals, bases, towns).
+     *
+     * @param type the object type to look up
+     * @return the corresponding display {@link TextureRegion}
+     */
     public TextureRegion getHudIcon(MapGenerator.ObjectType type) {
         switch (type) {
             case HORSE:
@@ -1133,6 +1030,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Returns the display name and tile texture for the given map object type.
+     *
+     * @param type the object type to look up
+     * @return a {@link UiInfo} with name and texture region; falls back to "Unknown Object" if not matched
+     */
     public UiInfo getObjectUi(MapGenerator.ObjectType type) {
         // Base Object
         if (type == MapGenerator.ObjectType.BASE_P1) {
@@ -1240,6 +1143,12 @@ public class UnitFactory {
         return new UiInfo("Unknown Object", grassRegion);
     }
 
+    /**
+     * Returns the tile texture for the given terrain type ordinal.
+     *
+     * @param terrainId ordinal index into {@link MapGenerator.TerrainType#values()}
+     * @return the matching terrain {@link TextureRegion}; defaults to grass if out of range
+     */
     public TextureRegion getTextureForTerrain(int terrainId) {
         MapGenerator.TerrainType[] allTypes = MapGenerator.TerrainType.values();
         if (terrainId < 0 || terrainId >= allTypes.length) {
@@ -1259,6 +1168,12 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Returns the display name and tile texture for the given terrain type.
+     *
+     * @param type the terrain type to look up
+     * @return a {@link UiInfo} with a human-readable name and texture region
+     */
     public UiInfo getTerrainUi(MapGenerator.TerrainType type) {
         switch (type) {
             case WATER:
@@ -1274,6 +1189,11 @@ public class UnitFactory {
         }
     }
 
+    /**
+     * Injects the {@link EntityFactory} used for spawning floating-text and VFX entities.
+     *
+     * @param entityFactory the factory instance to use
+     */
     public void setEntityFactory(EntityFactory entityFactory) {
         this.entityFactory = entityFactory;
     }

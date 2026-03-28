@@ -18,6 +18,8 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
 import com.militopia.config.GameConfig;
+import com.militopia.config.StructureType;
+import com.militopia.config.UnitType;
 import com.militopia.controller.GameInputController;
 import com.militopia.systems.*;
 import com.militopia.data.AnimalData;
@@ -129,13 +131,23 @@ public class GameScreen implements Screen {
         }
 
         if (loadedState.animals != null && !loadedState.animals.isEmpty()) {
-            Gdx.app.log("GameScreen", "Loading " + loadedState.animals.size() + " saved animals.");
+            GameLogger.logScreen("Loading " + loadedState.animals.size() + " saved animals.");
             for (AnimalData a : loadedState.animals) {
-                MapGenerator.ObjectType type = MapGenerator.ObjectType.valueOf(a.type);
+                if (a.type == null) {
+                    GameLogger.logScreen("Null animal type in save — skipping");
+                    continue;
+                }
+                MapGenerator.ObjectType type;
+                try {
+                    type = MapGenerator.ObjectType.valueOf(a.type);
+                } catch (IllegalArgumentException ex) {
+                    GameLogger.logScreen("Unknown animal type in save: " + a.type + " — skipping");
+                    continue;
+                }
                 unitFactory.createObjectEntity(a.x, a.y, type, gameState);
             }
         } else {
-            Gdx.app.log("GameScreen", "Generating new animals for initial bases.");
+            GameLogger.logScreen("Generating new animals for initial bases.");
             for (GridPoint2 pos : initialBases) {
                 unitFactory.spawnAnimalsAroundBase(pos.x, pos.y, gameMap, gameState);
             }
@@ -174,10 +186,10 @@ public class GameScreen implements Screen {
         if (loadedState.units != null) {
             for (UnitData u : loadedState.units) {
                 String key = (u.unitTypeKey != null) ? u.unitTypeKey : u.type;
-                if (key == null)
-                    key = "RECRUIT";
+                UnitType ut = UnitType.fromKey(key);
+                if (ut == null) ut = UnitType.RECRUIT;
 
-                unitFactory.createUnit(key, u.x, u.y, u.owner, u.hasActed);
+                unitFactory.createUnit(ut, u.x, u.y, u.owner, u.hasActed);
 
                 // Restore HP and moved flag
                 Entity freshUnit = findUnitAt(u.x, u.y);
@@ -228,7 +240,7 @@ public class GameScreen implements Screen {
 
         // --- NEW: Handle Finished Games on Load ---
         if (gameState.isGameOver) {
-            Gdx.app.log("GameScreen", "Loading a finished game. Showing Game Over popup.");
+            GameLogger.logScreen("Loading a finished game. Showing Game Over popup.");
             gameHUD.showGameOverPopup(gameState.winnerID);
             winConditionSystem.setPlaying(false);
         }
@@ -440,7 +452,9 @@ public class GameScreen implements Screen {
 
         // 5. Recreate unit entities from snapshot
         for (UnitSnapshot us : snap.units) {
-            unitFactory.createUnit(us.unitTypeKey, us.x, us.y, us.owner, us.hasActed);
+            UnitType ut = UnitType.fromKey(us.unitTypeKey);
+            if (ut == null) ut = UnitType.RECRUIT;
+            unitFactory.createUnit(ut, us.x, us.y, us.owner, us.hasActed);
             ImmutableArray<Entity> freshUnits = engine.getEntitiesFor(
                     Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
             for (Entity e : freshUnits) {
@@ -475,61 +489,11 @@ public class GameScreen implements Screen {
     }
 
     public int calculateBaseXPGain(Entity base) {
-        StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (stats == null)
-            return 0;
-
-        int totalGain = 0;
-        // Natural gain (Bases only)
-        if (stats.name.contains("Base")) {
-            totalGain = 250 + ((stats.level - 1) * 10);
-
-            // Add XP from child structures
-            GridPositionComponent bPos = base.getComponent(GridPositionComponent.class);
-            if (bPos != null) {
-                ImmutableArray<Entity> entities = engine
-                        .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
-                for (Entity other : entities) {
-                    StatsComponent oStats = other.getComponent(StatsComponent.class);
-                    if (oStats.owner == stats.owner && oStats.parentBaseX == bPos.x && oStats.parentBaseY == bPos.y) {
-                        totalGain += oStats.xpGain;
-                    }
-                }
-            }
-        } else {
-            // Specialized structures show their own contribution
-            totalGain = stats.xpGain;
-        }
-        return totalGain;
+        return structureEconomySystem.calculateBaseXPGain(base);
     }
 
     public int calculateBaseIncome(Entity entity) {
-        StatsComponent stats = entity.getComponent(StatsComponent.class);
-        if (stats == null)
-            return 0;
-
-        int individualIncome = stats.income;
-        GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
-
-        if (pos != null) {
-            // SOLAR ARRAY: Tech Synergy (+1 for each adjacent friendly structure)
-            if (stats.name.contains("Solar Array")) {
-                ImmutableArray<Entity> entities = engine
-                        .getEntitiesFor(Family.all(GridPositionComponent.class, StatsComponent.class).get());
-                for (Entity other : entities) {
-                    if (other == entity)
-                        continue;
-                    StatsComponent oStats = other.getComponent(StatsComponent.class);
-                    GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
-                    if (oStats.owner == stats.owner && (oStats.income > 0 || oStats.name.contains("Base"))) {
-                        if (Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
-                            individualIncome += 1;
-                        }
-                    }
-                }
-            }
-        }
-        return individualIncome;
+        return structureEconomySystem.calculateBaseIncome(entity);
     }
 
     /**
@@ -537,40 +501,11 @@ public class GameScreen implements Screen {
      * Used by InfoPanel for display.
      */
     public int calculateGroupedBaseIncome(Entity base) {
-        StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (stats == null || !stats.name.contains("Base"))
-            return calculateBaseIncome(base);
-
-        int totalGroupedIncome = calculateBaseIncome(base);
-        GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
-
-        if (pos != null) {
-            ImmutableArray<Entity> entities = engine
-                    .getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
-            for (Entity other : entities) {
-                if (other == base)
-                    continue;
-                StatsComponent oStats = other.getComponent(StatsComponent.class);
-                if (oStats.owner == stats.owner && oStats.parentBaseX == pos.x && oStats.parentBaseY == pos.y) {
-                    totalGroupedIncome += calculateBaseIncome(other);
-                }
-            }
-        }
-        return totalGroupedIncome;
+        return structureEconomySystem.calculateGroupedBaseIncome(base);
     }
 
     public int calculateIncome(int playerID) {
-        int totalIncome = 0;
-        ImmutableArray<Entity> entities = engine
-                .getEntitiesFor(Family.all(StatsComponent.class).get());
-
-        for (Entity entity : entities) {
-            StatsComponent stats = entity.getComponent(StatsComponent.class);
-            if (stats.owner == playerID) {
-                totalIncome += calculateBaseIncome(entity);
-            }
-        }
-        return totalIncome;
+        return structureEconomySystem.calculateIncome(playerID);
     }
 
     private int processTurnEconomy(int playerID) {
@@ -715,7 +650,7 @@ public class GameScreen implements Screen {
             if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
 
                 // --- FIX: Only list Bases in the log ---
-                if (stats.name.contains("Base")) {
+                if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
                     int bInc = calculateGroupedBaseIncome(e);
                     String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP (+%d) | Inc: +%d",
                             stats.name, stats.level, stats.currentBaseXP, stats.maxBaseXP, this.calculateBaseXPGain(e),
@@ -749,8 +684,7 @@ public class GameScreen implements Screen {
         }
 
         sb.append("========================================\n");
-        // Changing tag to "GameLog" for cleaner filtering if desired
-        Gdx.app.log("GameLog", sb.toString());
+        GameLogger.logScreen(sb.toString());
     }
 
     private void drawFadeOverlay() {

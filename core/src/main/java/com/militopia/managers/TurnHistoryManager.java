@@ -94,11 +94,7 @@ public class TurnHistoryManager {
 
     private void trimToMax(Deque<TurnSnapshot> deque) {
         while (deque.size() > MAX_HISTORY) {
-            TurnSnapshot[] arr = deque.toArray(new TurnSnapshot[0]);
-            deque.clear();
-            for (int i = arr.length - 2; i >= 0; i--) {
-                deque.push(arr[i]);
-            }
+            deque.pollLast(); // Remove oldest entry in O(1)
         }
     }
 }

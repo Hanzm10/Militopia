@@ -3,6 +3,7 @@ package com.militopia.systems;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import com.militopia.components.*;
+import com.militopia.config.UnitType;
 import com.militopia.data.GameState;
 import com.militopia.map.MapGenerator;
 import com.militopia.systems.CombatSystem;
@@ -35,8 +36,8 @@ public class AbilityTest {
 
     @Test
     public void testTankBlitz() {
-        Entity tank = createUnit("TANK", 0, 0, 1);
-        Entity defender = createUnit("RECRUIT", 1, 1, 2);
+        Entity tank = createUnit(UnitType.TANK,0, 0, 1);
+        Entity defender = createUnit(UnitType.RECRUIT,1, 1, 2);
 
         StatsComponent tStats = tank.getComponent(StatsComponent.class);
         StatsComponent dStats = defender.getComponent(StatsComponent.class);
@@ -52,8 +53,8 @@ public class AbilityTest {
 
     @Test
     public void testRangerOverwatch() {
-        Entity ranger = createUnit("RANGER", 0, 0, 1);
-        Entity movingUnit = createUnit("RECRUIT", 2, 2, 2);
+        Entity ranger = createUnit(UnitType.RANGER,0, 0, 1);
+        Entity movingUnit = createUnit(UnitType.RECRUIT,2, 2, 2);
 
         AbilitiesComponent rAbil = ranger.getComponent(AbilitiesComponent.class);
         rAbil.isOverwatchActive = true;
@@ -70,8 +71,8 @@ public class AbilityTest {
 
     @Test
     public void testRecruitDigIn() {
-        Entity attacker = createUnit("RECRUIT", 0, 0, 1);
-        Entity defender = createUnit("RECRUIT", 1, 1, 2);
+        Entity attacker = createUnit(UnitType.RECRUIT,0, 0, 1);
+        Entity defender = createUnit(UnitType.RECRUIT,1, 1, 2);
 
         AbilitiesComponent dAbil = defender.getComponent(AbilitiesComponent.class);
         dAbil.isDiggingIn = true;
@@ -87,7 +88,7 @@ public class AbilityTest {
 
     @Test
     public void testRecruitDigInExpiration() {
-        Entity defender = createUnit("RECRUIT", 1, 1, 2);
+        Entity defender = createUnit(UnitType.RECRUIT,1, 1, 2);
         AbilitiesComponent dAbil = defender.getComponent(AbilitiesComponent.class);
         dAbil.isDiggingIn = true;
 
@@ -102,8 +103,8 @@ public class AbilityTest {
 
     @Test
     public void testReconDroneHighAltitude() {
-        Entity attacker = createUnit("RECRUIT", 0, 0, 1);
-        Entity drone = createUnit("RECON_DRONE", 0, 0, 2);
+        Entity attacker = createUnit(UnitType.RECRUIT,0, 0, 1);
+        Entity drone = createUnit(UnitType.RECON_DRONE,0, 0, 2);
 
         StatsComponent dStats = drone.getComponent(StatsComponent.class);
         int initialHP = dStats.currentHP;
@@ -113,7 +114,7 @@ public class AbilityTest {
         assertEquals(initialHP, dStats.currentHP, "Drone should be immune to Range-1 land attacks (High Altitude)");
     }
 
-    private Entity createUnit(String type, int x, int y, int owner) {
+    private Entity createUnit(UnitType type, int x, int y, int owner) {
         Entity e = engine.createEntity();
         e.add(new GridPositionComponent(x, y, 3));
         e.add(new TypeComponent(TypeComponent.Type.UNIT));
@@ -122,28 +123,28 @@ public class AbilityTest {
         int hp = 10, atk = 5, def = 0, move = 3, rng = 1, vis = 3, cost = 3;
         StatsComponent.MoveType moveType = StatsComponent.MoveType.LAND;
 
-        if ("TANK".equals(type)) {
+        if (type == UnitType.TANK) {
             hp = 30;
             atk = 12;
             def = 5;
             move = 2;
             rng = 3;
         }
-        if ("RECRUIT".equals(type)) {
+        if (type == UnitType.RECRUIT) {
             hp = 10;
             atk = 3;
             def = 1;
             move = 1;
             rng = 1;
         }
-        if ("RANGER".equals(type)) {
+        if (type == UnitType.RANGER) {
             hp = 12;
             atk = 5;
             def = 1;
             move = 1;
             rng = 2;
         }
-        if ("RECON_DRONE".equals(type)) {
+        if (type == UnitType.RECON_DRONE) {
             hp = 5;
             atk = 0;
             def = 0;
@@ -152,8 +153,9 @@ public class AbilityTest {
             moveType = StatsComponent.MoveType.AIR;
         }
 
-        StatsComponent stats = new StatsComponent(type, hp, atk, def, move, rng, vis, cost, moveType, owner);
-        stats.unitTypeKey = type;
+        StatsComponent stats = new StatsComponent(type.name(), hp, atk, def, move, rng, vis, cost, moveType, owner);
+        stats.unitTypeKey = type.name();
+        stats.unitType = type;
         e.add(stats);
 
         engine.addEntity(e);

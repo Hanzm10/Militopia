@@ -14,8 +14,10 @@ import com.militopia.MilitopiaGame;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.config.BaseLevelConfig;
+import com.militopia.config.StructureType;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
+import com.militopia.config.UnitType;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.map.MapGenerator;
@@ -134,7 +136,7 @@ public class SlideMenu {
         StatsComponent sStats = structureEntity.getComponent(StatsComponent.class);
         String label = "Capture Structure";
         if (sStats != null) {
-            if (sStats.name.contains("Town"))
+            if (StructureType.fromDisplayName(sStats.name) == StructureType.TOWN)
                 label = "Capture Town";
             else
                 label = "Capture Enemy Base";
@@ -265,13 +267,13 @@ public class SlideMenu {
 
     private void populateSummonContent(Table content, GameState state, String producerType) {
         java.util.Set<String> unlocked = unlockedForLevel(currentBaseLevel, false);
-        String[] allUnits = {
-                "RECRUIT", "RANGER", "SNIPER", "TANK", "RECON_DRONE",
-                "SUICIDE_DRONE", "APACHE", "GUNBOAT", "DESTROYER", "CARRIER"
+        UnitType[] allUnits = {
+                UnitType.RECRUIT, UnitType.RANGER, UnitType.SNIPER, UnitType.TANK, UnitType.RECON_DRONE,
+                UnitType.SUICIDE_DRONE, UnitType.APACHE, UnitType.GUNBOAT, UnitType.DESTROYER, UnitType.CARRIER
         };
 
-        for (final String unit : allUnits) {
-            if (!unlocked.contains(unit))
+        for (final UnitType unit : allUnits) {
+            if (!unlocked.contains(unit.name()))
                 continue;
             StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(unit);
             boolean show = producerType.equals("PORT")
@@ -281,7 +283,7 @@ public class SlideMenu {
                 continue;
 
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unit);
-            final int cost = unitFactory.getUnitCost(unit);
+            final int cost = UnitFactory.getUnitCost(unit);
 
             SummonButton.addTo(content, info.region, info.name + " (" + cost + ")", game, assets,
                     new ClickListener() {
@@ -290,7 +292,7 @@ public class SlideMenu {
                             int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             if (funds < cost) {
                                 GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
-                                        "Attempted " + unit + " — insufficient funds ("
+                                        "Attempted " + unit.name() + " — insufficient funds ("
                                                 + funds + "<" + cost + ")");
                                 return;
                             }
@@ -300,10 +302,10 @@ public class SlideMenu {
                                 return;
 
                             int[] spawn = unitFactory.findValidSpawnPoint(
-                                    tx, ty, unitFactory.getUnitMoveType(unit), gameScreen.getGameMap());
+                                    tx, ty, moveType, gameScreen.getGameMap());
                             if (spawn == null) {
                                 GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
-                                        "Attempted " + unit + " — no valid spawn point found");
+                                        "Attempted " + unit.name() + " — no valid spawn point found");
                                 return;
                             }
                             if (currentBaseOwner == 1)
@@ -314,7 +316,7 @@ public class SlideMenu {
                             unitFactory.createUnit(unit, spawn[0], spawn[1], currentBaseOwner, true);
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
-                                    "Summoned " + unit + " at " + GameLogger.pos(spawn[0], spawn[1])
+                                    "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
                                             + " | cost=" + cost + " | funds remaining=" + remaining);
 
                             // Use fresh income calculation for HUD update

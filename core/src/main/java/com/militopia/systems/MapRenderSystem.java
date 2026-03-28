@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.militopia.config.GameConfig;
+import com.militopia.config.StructureType;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
 import com.militopia.components.GridPositionComponent;
@@ -69,7 +70,7 @@ public class MapRenderSystem extends EntitySystem {
                 continue;
 
             StatsComponent s = e.getComponent(StatsComponent.class);
-            if (s.name.contains("Base") && s.income >= 2) {
+            if (StructureType.fromDisplayName(s.name) == StructureType.BASE && s.income >= 2) {
                 GridPositionComponent p = e.getComponent(GridPositionComponent.class);
                 BaseInfo bi = new BaseInfo();
                 bi.x = p.x;

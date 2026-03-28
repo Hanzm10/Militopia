@@ -14,6 +14,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
 import com.militopia.config.GameConfig;
+import com.militopia.config.StructureType;
+import com.militopia.config.UnitType;
 import com.militopia.map.MapGenerator;
 import com.militopia.utils.ZComparator;
 
@@ -129,7 +131,7 @@ public class UnitRenderSystem extends EntitySystem {
 
                 // Sniper Camouflage: Grass/Forest/Mountain?
                 // The prompt says "forest/mountains". We use Tree objects or Mountain terrain.
-                if (stats.unitTypeKey.equals("SNIPER")) {
+                if (stats.unitType == UnitType.SNIPER) {
                     MapGenerator.TerrainType terrain = gameMap.terrain[pos.x][pos.y];
                     MapGenerator.ObjectType obj = gameMap.objects[pos.x][pos.y];
                     if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
@@ -338,7 +340,8 @@ public class UnitRenderSystem extends EntitySystem {
             StatsComponent stats = selectedEntity.getComponent(StatsComponent.class);
             TypeComponent type = selectedEntity.getComponent(TypeComponent.class);
             if (stats != null && type.type == TypeComponent.Type.OBJECT
-                    && (stats.owner == 1 || stats.owner == 2) && stats.name.contains("Base")) {
+                    && (stats.owner == 1 || stats.owner == 2)
+                    && StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
                 float isoX = (selectedX - selectedY) * (GameConfig.TILE_WIDTH / 2.0f);
                 float isoY = (selectedX + selectedY) * (GameConfig.TILE_HEIGHT / 2.0f);
                 float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
