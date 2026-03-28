@@ -220,7 +220,7 @@ public class CombatSystem extends EntitySystem {
 
         // Custom attack sprites (Enemy only)
         UnitType unitType = aStats.unitType;
-        if (dStats.owner != aStats.owner && dStats.owner != 0) {
+        if (entityFactory != null && dStats.owner != aStats.owner && dStats.owner != 0) {
             if (unitType == UnitType.RECRUIT && aStats.attackRange <= 1) {
                 entityFactory.createRecruitAttack(dPos.x, dPos.y);
             } else if (unitType == UnitType.TANK || unitType == UnitType.SUICIDE_DRONE) {
@@ -232,7 +232,7 @@ public class CombatSystem extends EntitySystem {
         }
 
         // --- NEW: Muzzle Flash for ranged units ---
-        if (aStats.attackRange > 1) {
+        if (entityFactory != null && aStats.attackRange > 1) {
             FacingComponent facing = attacker.getComponent(FacingComponent.class);
             TextureComponent tex = attacker.getComponent(TextureComponent.class);
             float muzzleOffsetX = CombatConstants.MUZZLE_OFFSET_X_RIGHT;
@@ -286,7 +286,7 @@ public class CombatSystem extends EntitySystem {
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     dStats.name + " at " + GameLogger.pos(dPos.x, dPos.y) + " DESTROYED");
 
-            entityFactory.createExplosion(dPos.x, dPos.y);
+            if (entityFactory != null) entityFactory.createExplosion(dPos.x, dPos.y);
 
             // Melee Auto-Advance
             if (aStats.attackRange <= 1) {
@@ -312,7 +312,7 @@ public class CombatSystem extends EntitySystem {
                     AudioManager.getInstance().playSFX("machine-blocked.WAV");
                 }
             }
-            entityFactory.createHit(dPos.x, dPos.y);
+            if (entityFactory != null) entityFactory.createHit(dPos.x, dPos.y);
         }
 
         // --- 3. Counterattack (range-gated) ---
