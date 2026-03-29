@@ -10,6 +10,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 
 public class GameStatsPopup {
     private final Stage stage;
@@ -60,6 +62,7 @@ public class GameStatsPopup {
         closeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 popupTable.remove();
                 // We rely on GameScreen to manage UI locks, but as a fallback trigger unlock
                 inputController.setInputEnabled(true);

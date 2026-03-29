@@ -10,6 +10,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -95,6 +97,7 @@ public class EconomyPopup {
         closeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 popups.remove(popupTable);
                 popupTable.remove();
 

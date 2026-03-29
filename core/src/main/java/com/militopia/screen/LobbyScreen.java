@@ -19,6 +19,8 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.data.GameState;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.net.NetworkManager;
 import com.militopia.net.NetworkMessage;
@@ -110,6 +112,7 @@ public class LobbyScreen implements Screen {
         hostBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 showHostConfig();
             }
         });
@@ -117,6 +120,7 @@ public class LobbyScreen implements Screen {
         joinBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 showJoinScan();
             }
         });
@@ -124,6 +128,7 @@ public class LobbyScreen implements Screen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 game.setScreen(new MenuScreen(game));
             }
         });
@@ -229,9 +234,11 @@ public class LobbyScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if (nameField.getText().trim().isEmpty() || seedField.getText().trim().isEmpty()) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
                     errorLabel.setText("All fields are required!");
                     return;
                 }
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 String hn = hostNameField.getText().trim();
                 hostPlayerName = hn.isEmpty() ? "Player 1" : hn;
                 clientNameReceived = false;
@@ -243,6 +250,7 @@ public class LobbyScreen implements Screen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 showChooseScreen();
             }
         });
@@ -277,6 +285,7 @@ public class LobbyScreen implements Screen {
         cancelBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 if (networkManager != null) networkManager.disconnect();
                 showChooseScreen();
             }
@@ -337,9 +346,11 @@ public class LobbyScreen implements Screen {
             public void clicked(InputEvent event, float x, float y) {
                 String ip = ipField.getText().trim();
                 if (ip.isEmpty()) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
                     errorLabel.setText("Enter the host's IP address!");
                     return;
                 }
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 attemptConnect(ip);
             }
         });
@@ -347,6 +358,7 @@ public class LobbyScreen implements Screen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 if (networkManager != null) networkManager.disconnect();
                 showChooseScreen();
             }

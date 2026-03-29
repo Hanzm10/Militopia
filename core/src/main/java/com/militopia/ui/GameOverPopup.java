@@ -13,6 +13,8 @@ import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
 import com.militopia.screen.GameScreen;
 import com.militopia.screen.MenuScreen;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
 
@@ -94,6 +96,7 @@ public class GameOverPopup {
         menuBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 GameLogger.logScreen("Navigating → Main Menu from Game Over Popup (Saving Game)");
                 gameScreen.saveAndExit();
             }

@@ -87,7 +87,7 @@ public class GameScreen implements Screen {
 
     private TurnState turnState = TurnState.PLAYING;
     private float fadeTime = 0f;
-    private final float FADE_DURATION = 0.8f;
+    private final float FADE_DURATION = 0.4f;
     private ShapeRenderer shapeRenderer;
 
     public GameScreen(final MilitopiaGame game, GameState loadedState) {
@@ -188,7 +188,13 @@ public class GameScreen implements Screen {
         structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, entityFactory, null);
         engine.addSystem(structureEconomySystem);
 
-        winConditionSystem = new WinConditionSystem(loadedState, winnerID -> gameHUD.showGameOverPopup(winnerID));
+        winConditionSystem = new WinConditionSystem(loadedState, winnerID -> {
+            boolean localWon = (winnerID == getActiveLocalPlayer());
+            AudioManager.getInstance().playSFX(localWon
+                    ? com.militopia.managers.SFXKeys.VICTORY
+                    : com.militopia.managers.SFXKeys.DEFEAT);
+            gameHUD.showGameOverPopup(winnerID);
+        });
         engine.addSystem(winConditionSystem);
 
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
@@ -358,6 +364,7 @@ public class GameScreen implements Screen {
                 networkManager.send(NetworkMessage.endTurn(snapJson));
             }
 
+            AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.TURN_END_PLAYER);
             turnState = TurnState.FADING_OUT;
             fadeTime = 0f;
             inputController.setInputEnabled(false);
@@ -760,6 +767,7 @@ public class GameScreen implements Screen {
                         .getIncomeBreakdown(gameState.currentPlayer);
                 LinkedHashMap<String, Integer> xpBreakdown = structureEconomySystem
                         .getXPBreakdown(gameState.currentPlayer);
+                AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.UI_NOTIFICATION);
                 gameHUD.showEconomyPopup(gameState.turnCount, income, xpGain, currentTotal, incomeBreakdown,
                         xpBreakdown);
             }
@@ -788,11 +796,19 @@ public class GameScreen implements Screen {
         int localID = getActiveLocalPlayer();
         fogSystem.setPlayer(localID);
         fogSystem.update(0);
+        AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.FOG_REVEAL);
         unitRenderSystem.setPlayer(localID);
 
         // Only center camera if it's the LOCAL hardware's turn
         if (gameState.currentPlayer == localID) {
             centerCameraOnBase(gameState.currentPlayer);
+        }
+
+        // Turn start SFX
+        if (gameState.currentPlayer == getActiveLocalPlayer()) {
+            AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.TURN_START_PLAYER);
+        } else {
+            AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.TURN_START_ENEMY);
         }
 
         // Start the fade-in sequence
@@ -872,6 +888,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        AudioManager.getInstance().setBGMVolume(0.2f);
     }
 
     @Override

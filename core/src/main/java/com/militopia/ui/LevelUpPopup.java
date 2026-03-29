@@ -15,6 +15,8 @@ import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.utils.HoverListener;
 
 /**
@@ -169,6 +171,7 @@ public class LevelUpPopup {
         okBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 dismiss();
             }
         });

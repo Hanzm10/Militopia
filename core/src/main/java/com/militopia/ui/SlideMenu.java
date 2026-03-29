@@ -20,6 +20,8 @@ import com.militopia.data.GameState;
 import com.militopia.config.UnitType;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.systems.ScavengeSystem;
@@ -149,6 +151,7 @@ public class SlideMenu {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
                         factory.captureStructure(structureEntity, newOwner, map, state);
+                        AudioManager.getInstance().playSFX(SFXKeys.STRUCTURE_CAPTURE);
                         // Logging
                         StatsComponent struct = structureEntity.getComponent(StatsComponent.class);
                         GridPositionComponent sPos = structureEntity.getComponent(GridPositionComponent.class);
@@ -204,6 +207,7 @@ public class SlideMenu {
         ScavengeSystem.ScavengeReward reward = scavengeSystem.performScavenge(ruinsEntity, unit);
         if (reward == null)
             return;
+        AudioManager.getInstance().playSFX(SFXKeys.ACTION_SCAVENGE);
 
         // Update HUD (ScavengeSystem already updated the GameState numbers, but UI
         // needs snap)
@@ -239,6 +243,7 @@ public class SlideMenu {
 
     /** Slides the menu back down (hides). */
     public void hide() {
+        AudioManager.getInstance().playSFX(SFXKeys.UI_PANEL_CLOSE);
         menuTable.clearActions();
         menuTable.addAction(Actions.moveTo(0, -menuTable.getHeight(), 0.3f, Interpolation.pow2In));
         bottomBar.getBottomContainer().clearActions();
@@ -314,6 +319,7 @@ public class SlideMenu {
                                 state.p2Funding -= cost;
 
                             unitFactory.createUnit(unit, spawn[0], spawn[1], currentBaseOwner, true);
+                            AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             GameLogger.log(GameLogger.SUMMON, currentBaseOwner,
                                     "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
@@ -336,6 +342,7 @@ public class SlideMenu {
 
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 hide();
                 inputController.resetLastClicked();
             }
@@ -395,6 +402,7 @@ public class SlideMenu {
 
                             placementSystem.performBuild(struct, buildX, buildY, currentBaseOwner, cost, buildParentX,
                                     buildParentY);
+                            AudioManager.getInstance().playSFX(SFXKeys.ACTION_BUILD);
 
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
@@ -416,6 +424,7 @@ public class SlideMenu {
     // -------------------------------------------------------------------------
 
     private void slideIn(boolean hideInfoPanel) {
+        AudioManager.getInstance().playSFX(SFXKeys.UI_PANEL_OPEN);
         menuTable.setSize(stage.getWidth(), PANEL_HEIGHT);
         menuTable.setX(0);
         stage.addActor(menuTable);

@@ -29,6 +29,8 @@ import com.militopia.controller.GameInputController;
 import com.militopia.data.GameState;
 import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.GameLogger;
@@ -206,6 +208,7 @@ public class InfoPanel {
                     int player = stats.owner;
                     if (player == 1) state.p1Funding += demolishRefund;
                     else state.p2Funding += demolishRefund;
+                    AudioManager.getInstance().playSFX(SFXKeys.ACTION_DEMOLISH);
                     screen.getEngine().removeEntity(base);
                     int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
                     screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
@@ -261,6 +264,7 @@ public class InfoPanel {
                         public void clicked(InputEvent event, float x, float y) {
                             int funds = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
                             if (funds < cost) {
+                                AudioManager.getInstance().playSFX(SFXKeys.RESOURCE_INSUFFICIENT);
                                 GameLogger.log(GameLogger.SUMMON, bs.owner,
                                         "Attempted " + unit.name() + " — insufficient funds ("
                                                 + funds + "<" + cost + ")");
@@ -284,6 +288,7 @@ public class InfoPanel {
                                 state.p2Funding -= cost;
 
                             factory.createUnit(unit, spawn[0], spawn[1], bs.owner, true);
+                            AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                             int remaining = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
                             GameLogger.log(GameLogger.SUMMON, bs.owner,
                                     "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
@@ -390,6 +395,7 @@ public class InfoPanel {
                     new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
+                            AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
                             screen.getGameMap().objects[unitPos.x][unitPos.y] = null;
                             // Remove the tree entity from the engine so it disappears visually
                             ImmutableArray<Entity> objs = screen.getEngine().getEntitiesFor(
@@ -415,6 +421,46 @@ public class InfoPanel {
                             GameLogger.log(GameLogger.UI, "InfoPanel: Cut Tree at ("
                                     + unitPos.x + "," + unitPos.y + ") | +"
                                     + com.militopia.config.CombatConstants.TREE_CUT_FUNDING + " funding");
+                            hideTileInfo();
+                        }
+                    });
+        }
+
+        // Cut Cactus: unit on a cactus tile that hasn't acted yet
+        if (stats != null && stats.owner == screen.getCurrentPlayer() && !stats.hasActed
+                && unitPos != null
+                && screen.getGameMap().objects[unitPos.x][unitPos.y] == MapGenerator.ObjectType.CACTUS) {
+            addAbilityButton("Cut Cactus (+" + com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING + ")",
+                    factory.getHudIcon(MapGenerator.ObjectType.CACTUS),
+                    new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
+                            screen.getGameMap().objects[unitPos.x][unitPos.y] = null;
+                            // Remove the cactus entity from the engine so it disappears visually
+                            ImmutableArray<Entity> objs = screen.getEngine().getEntitiesFor(
+                                    Family.all(GridPositionComponent.class, TypeComponent.class).get());
+                            for (Entity obj : objs) {
+                                GridPositionComponent op = obj.getComponent(GridPositionComponent.class);
+                                TypeComponent ot = obj.getComponent(TypeComponent.class);
+                                if (op.x == unitPos.x && op.y == unitPos.y
+                                        && ot.type == TypeComponent.Type.OBJECT
+                                        && obj.getComponent(com.militopia.components.AnimalComponent.class) == null) {
+                                    screen.getEngine().removeEntity(obj);
+                                    break;
+                                }
+                            }
+                            GameState state = screen.getGameState();
+                            int player = stats.owner;
+                            if (player == 1) state.p1Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
+                            else state.p2Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
+                            stats.hasActed = true;
+                            stats.hasMoved = true;
+                            int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
+                            screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                            GameLogger.log(GameLogger.UI, "InfoPanel: Cut Cactus at ("
+                                    + unitPos.x + "," + unitPos.y + ") | +"
+                                    + com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING + " funding");
                             hideTileInfo();
                         }
                     });

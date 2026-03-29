@@ -42,6 +42,8 @@ public class CombatConstants {
     // -----------------------------------------------------------------------
     /** Funding gained when a unit cuts down a tree. */
     public static final int TREE_CUT_FUNDING = 1;
+    /** Funding gained when a unit cuts down a cactus. */
+    public static final int CACTUS_CUT_FUNDING = 3;
     /** Funding gained when a unit hunts an animal. */
     public static final int ANIMAL_HUNT_FUNDING = 3;
 

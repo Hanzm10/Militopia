@@ -12,6 +12,8 @@ import com.militopia.config.StructureType;
 import com.militopia.data.GameState;
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
@@ -80,6 +82,9 @@ public class StructureEconomySystem extends EntitySystem {
             // No XP or structure bonuses on Turn 1 (first round setup)
             return 0;
         }
+
+        // Play resource collection SFX once at the start of each turn's economy processing
+        AudioManager.getInstance().playSFX(SFXKeys.RESOURCE_COLLECT);
 
         List<Entity> myBases = new ArrayList<>();
         List<Entity> xpStructures = new ArrayList<>();

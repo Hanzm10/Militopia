@@ -14,8 +14,11 @@ import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Slider;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class MilitopiaGame extends Game {
 
@@ -149,6 +152,24 @@ public class MilitopiaGame extends Game {
         toggleStyle.checked = skin.newDrawable("white", Color.NAVY);
         toggleStyle.over = skin.newDrawable("white", Color.LIGHT_GRAY);
         skin.add("toggle", toggleStyle);
+
+        // Slider style for sound settings
+        Pixmap trackPixmap = new Pixmap(1, 8, Pixmap.Format.RGBA8888);
+        trackPixmap.setColor(new Color(0.3f, 0.3f, 0.3f, 1f));
+        trackPixmap.fill();
+        TextureRegionDrawable trackDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(trackPixmap)));
+        trackPixmap.dispose();
+
+        Pixmap knobPixmap = new Pixmap(16, 24, Pixmap.Format.RGBA8888);
+        knobPixmap.setColor(Color.WHITE);
+        knobPixmap.fill();
+        TextureRegionDrawable knobDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(knobPixmap)));
+        knobPixmap.dispose();
+
+        Slider.SliderStyle sliderStyle = new Slider.SliderStyle();
+        sliderStyle.background = trackDrawable;
+        sliderStyle.knob = knobDrawable;
+        skin.add("default-horizontal", sliderStyle);
 
         this.setScreen(new MenuScreen(this));
     }

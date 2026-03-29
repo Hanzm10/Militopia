@@ -6,7 +6,8 @@
       "Skill(gsd:debug:*)",
       "WebSearch",
       "Bash(python3 -c \":*)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(./gradlew compileJava)"
     ]
   }
 }

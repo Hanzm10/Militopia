@@ -18,8 +18,11 @@ import com.militopia.MilitopiaGame;
 import com.militopia.config.GameConfig;
 import com.militopia.controller.GameInputController;
 import com.militopia.managers.AssetManager;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.HoverListener;
+import com.militopia.ui.SoundSettingsPopup;
 
 /**
  * Bottom gradient bar: Settings, Game Stats, (Undo in testing), End Turn
@@ -115,6 +118,7 @@ public class HudBottomBar {
         statsBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 gameHud.showGameStats(screen.getGameState());
             }
         });
@@ -123,6 +127,7 @@ public class HudBottomBar {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if (settingsOverlay != null) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_PANEL_OPEN);
                     settingsOverlay.setVisible(true);
                     // Freeze map while settings overlay is open.
                     inputController.setInputEnabled(false);
@@ -133,6 +138,7 @@ public class HudBottomBar {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 screen.endTurnAction();
+                // Note: endTurnAction plays TURN_END_PLAYER internally
             }
         });
     }
@@ -159,6 +165,7 @@ public class HudBottomBar {
         fogBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
                 boolean newState = screen.toggleFog();
                 fogBtn.setText("Toggle Fog: " + (newState ? "ON" : "OFF"));
             }
@@ -170,6 +177,7 @@ public class HudBottomBar {
         saveExitBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 screen.saveAndExit();
             }
         });
@@ -179,6 +187,7 @@ public class HudBottomBar {
         undoRedoBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
                 boolean enabled = gameHud.toggleSnapshotPanel();
                 undoRedoBtn.setText("Undo/Redo: " + (enabled ? "ON" : "OFF"));
             }
@@ -189,6 +198,7 @@ public class HudBottomBar {
         resumeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_PANEL_CLOSE);
                 settingsOverlay.setVisible(false);
                 // Restore map input when returning to game.
                 inputController.setInputEnabled(true);
@@ -199,7 +209,19 @@ public class HudBottomBar {
         if (!screen.getGameState().isLanGame) {
             menuBox.add(fogBtn).fillX().width(240).pad(10).row();
         }
+        TextButton soundSettingsBtn = new TextButton("Sound Settings", game.skin, "militopia-btn");
+        soundSettingsBtn.addListener(new HoverListener());
+        soundSettingsBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                settingsOverlay.setVisible(false);
+                new SoundSettingsPopup(game, stage, inputController, HudBottomBar.this).show();
+            }
+        });
+
         menuBox.add(undoRedoBtn).fillX().width(240).pad(10).row();
+        menuBox.add(soundSettingsBtn).fillX().width(240).pad(10).row();
         menuBox.add(saveExitBtn).fillX().width(240).pad(10).row();
         menuBox.add(resumeBtn).fillX().width(240).pad(10);
         settingsOverlay.add(menuBox).width(300);

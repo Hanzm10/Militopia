@@ -26,6 +26,9 @@ public class AudioManager {
     private float masterVolume = 0.8f;
     private float bgmVolume = 0.5f;
 
+    private boolean bgmMuted = false;
+    private boolean sfxMuted = false;
+
     public static AudioManager getInstance() {
         if (instance == null) {
             instance = new AudioManager();
@@ -50,15 +53,27 @@ public class AudioManager {
      * @param path The relative path within assets/audio/sfx/ (e.g., "move.wav")
      */
     public void playSFX(String path) {
+        playSFX(path, 1.0f);
+    }
+
+    /**
+     * Plays a sound effect at a scaled volume relative to masterVolume.
+     *
+     * @param path            Filename within assets/audio/sfx/
+     * @param volumeMultiplier 0.0–1.0 scale applied on top of masterVolume
+     */
+    public void playSFX(String path, float volumeMultiplier) {
         // Rate limiting check
         int count = sfxCountThisFrame.getOrDefault(path, 0);
         if (count >= MAX_IDENTICAL_SFX_PER_FRAME) {
             return;
         }
 
+        if (sfxMuted) return;
+
         Sound sound = getSound(path);
         if (sound != null) {
-            sound.play(masterVolume);
+            sound.play(masterVolume * volumeMultiplier);
             sfxCountThisFrame.put(path, count + 1);
             GameLogger.log(GameLogger.SFX, "Play: " + path);
         }
@@ -125,7 +140,50 @@ public class AudioManager {
     public void setMasterVolume(float volume) {
         this.masterVolume = volume;
         if (currentBGM != null) {
-            currentBGM.setVolume(bgmVolume * masterVolume);
+            currentBGM.setVolume(bgmMuted ? 0f : bgmVolume * masterVolume);
         }
+    }
+
+    public void setBGMVolume(float volume) {
+        this.bgmVolume = volume;
+        if (currentBGM != null) {
+            currentBGM.setVolume(bgmMuted ? 0f : bgmVolume * masterVolume);
+        }
+    }
+
+    public float getMasterVolume() {
+        return masterVolume;
+    }
+
+    public float getBGMVolume() {
+        return bgmVolume;
+    }
+
+    public boolean isBGMMuted() {
+        return bgmMuted;
+    }
+
+    public boolean isSFXMuted() {
+        return sfxMuted;
+    }
+
+    public boolean isMasterMuted() {
+        return bgmMuted && sfxMuted;
+    }
+
+    public void setBGMMuted(boolean muted) {
+        this.bgmMuted = muted;
+        if (currentBGM != null) {
+            currentBGM.setVolume(muted ? 0f : bgmVolume * masterVolume);
+        }
+    }
+
+    public void setSFXMuted(boolean muted) {
+        this.sfxMuted = muted;
+    }
+
+    public void setMasterMuted(boolean muted) {
+        setBGMMuted(muted);
+        setSFXMuted(muted);
     }
 }

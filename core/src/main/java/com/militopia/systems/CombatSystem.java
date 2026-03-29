@@ -14,6 +14,7 @@ import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.JumpLandingComponent;
 import com.militopia.factories.EntityFactory;
 import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.map.MapGenerator;
 import com.militopia.config.CombatConstants;
 import com.militopia.config.StructureType;
@@ -258,28 +259,30 @@ public class CombatSystem extends EntitySystem {
         }
 
         // Play Attack SFX
-        if (unitType == UnitType.JUGGERNAUT || unitType == UnitType.B2
-                || unitType == UnitType.SUBMARINE) {
-            AudioManager.getInstance().playSFX("explode.wav");
+        if (unitType == UnitType.JUGGERNAUT) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_JUGGERNAUT);
+        } else if (unitType == UnitType.B2) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_B2);
+        } else if (unitType == UnitType.SUBMARINE) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_SUBMARINE);
         } else if (unitType == UnitType.RANGER) {
-            boolean isManTarget = dStats.moveType == StatsComponent.MoveType.LAND
-                    && dStats.unitType != UnitType.JUGGERNAUT
-                    && dStats.unitType != UnitType.TANK;
-            if (!(isKill && isManTarget)) {
-                AudioManager.getInstance().playSFX("ranger-ak47.WAV");
-            }
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_AK47);
         } else if (unitType == UnitType.RECRUIT) {
-            AudioManager.getInstance().playSFX("recruit-knife.WAV");
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_KNIFE);
         } else if (unitType == UnitType.SNIPER) {
-            AudioManager.getInstance().playSFX("sniper-awp.WAV");
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_AWP);
         } else if (unitType == UnitType.TANK) {
-            AudioManager.getInstance().playSFX("tank-fire.WAV");
-        } else {
-            if (aStats.attackRange > 1) {
-                AudioManager.getInstance().playSFX("attack_ranged.wav");
-            } else {
-                AudioManager.getInstance().playSFX("attack_melee.wav");
-            }
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_TANK);
+        } else if (unitType == UnitType.APACHE) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_APACHE);
+        } else if (unitType == UnitType.SUICIDE_DRONE) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_SUICIDE_DRONE);
+        } else if (unitType == UnitType.GUNBOAT) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_GUNBOAT);
+        } else if (unitType == UnitType.DESTROYER) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_DESTROYER);
+        } else if (unitType == UnitType.CARRIER) {
+            AudioManager.getInstance().playSFX(SFXKeys.ATTACK_CARRIER);
         }
 
         dStats.currentHP -= dmg;
@@ -321,9 +324,18 @@ public class CombatSystem extends EntitySystem {
                 UnitType defType = dStats.unitType;
                 if (defType == UnitType.RECRUIT || defType == UnitType.RANGER
                         || defType == UnitType.SNIPER) {
-                    AudioManager.getInstance().playSFX("man-blocked.WAV");
+                    AudioManager.getInstance().playSFX(SFXKeys.BLOCKED_MAN);
                 } else {
-                    AudioManager.getInstance().playSFX("machine-blocked.WAV");
+                    AudioManager.getInstance().playSFX(SFXKeys.BLOCKED_MACHINE);
+                }
+            } else {
+                // Defender took damage but survived — play hit reaction
+                UnitType defType = dStats.unitType;
+                if (defType == UnitType.RECRUIT || defType == UnitType.RANGER
+                        || defType == UnitType.SNIPER) {
+                    AudioManager.getInstance().playSFX(SFXKeys.HIT_MAN);
+                } else {
+                    AudioManager.getInstance().playSFX(SFXKeys.HIT_MACHINE);
                 }
             }
             if (entityFactory != null) entityFactory.createHit(dPos.x, dPos.y);
@@ -361,9 +373,9 @@ public class CombatSystem extends EntitySystem {
                     UnitType defenderType = dStats.unitType;
                     if (defenderType == UnitType.RECRUIT || defenderType == UnitType.RANGER
                             || defenderType == UnitType.SNIPER) {
-                        AudioManager.getInstance().playSFX("man-blocked.WAV");
+                        AudioManager.getInstance().playSFX(SFXKeys.BLOCKED_MAN);
                     } else {
-                        AudioManager.getInstance().playSFX("machine-blocked.WAV");
+                        AudioManager.getInstance().playSFX(SFXKeys.BLOCKED_MACHINE);
                     }
                 }
 
@@ -451,14 +463,16 @@ public class CombatSystem extends EntitySystem {
         if (stats == null)
             return;
 
-        // Play Death SFX
-        if (stats.moveType == StatsComponent.MoveType.LAND &&
-                stats.unitType != UnitType.JUGGERNAUT &&
-                stats.unitType != UnitType.TANK) {
-            AudioManager.getInstance().playSFX("man-finished.WAV");
+        // Play Death SFX — split by move type and unit category
+        if (stats.moveType == StatsComponent.MoveType.AIR) {
+            AudioManager.getInstance().playSFX(SFXKeys.DEATH_AIR);
+        } else if (stats.moveType == StatsComponent.MoveType.SEA) {
+            AudioManager.getInstance().playSFX(SFXKeys.DEATH_NAVAL);
+        } else if (stats.unitType == UnitType.RECRUIT || stats.unitType == UnitType.RANGER
+                || stats.unitType == UnitType.SNIPER) {
+            AudioManager.getInstance().playSFX(SFXKeys.DEATH_MAN);
         } else {
-            AudioManager.getInstance().playSFX("machine-finished.WAV");
-            AudioManager.getInstance().playSFX("explode.wav");
+            AudioManager.getInstance().playSFX(SFXKeys.DEATH_MACHINE);
         }
 
         // --- NEW: Track Base Destruction ---
@@ -558,7 +572,7 @@ public class CombatSystem extends EntitySystem {
         entityFactory.createNuclearAttack(landPos.x, landPos.y);
 
         // 4. SFX on landing
-        AudioManager.getInstance().playSFX("explode.wav");
+        AudioManager.getInstance().playSFX(SFXKeys.ATTACK_JUGGERNAUT);
 
         GameLogger.log(GameLogger.ABILITY, aStats.owner,
                 "Juggernaut LANDED at " + GameLogger.pos(landPos.x, landPos.y));

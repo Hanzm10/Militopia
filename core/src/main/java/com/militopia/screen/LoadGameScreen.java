@@ -18,6 +18,8 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
@@ -87,6 +89,7 @@ public class LoadGameScreen implements Screen {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             if (!isFadingOut) {
+                                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                                 isFadingOut = true;
                                 fadeTime = 0f;
                                 selectedState = state;
@@ -112,6 +115,7 @@ public class LoadGameScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if (!isFadingOut) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                     game.setScreen(new MenuScreen(game));
                 }
             }

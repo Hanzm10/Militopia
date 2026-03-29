@@ -20,6 +20,8 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.data.GameState;
 import com.militopia.MilitopiaGame;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
@@ -136,8 +138,10 @@ public class NewGameScreen implements Screen {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if (isEmpty(nameField) || isEmpty(seedField)) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
                     errorLabel.setText("All fields are required!");
                 } else {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                     long seed;
                     try {
                         seed = Long.parseLong(seedField.getText());
@@ -163,6 +167,7 @@ public class NewGameScreen implements Screen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 GameLogger.logScreen("Navigating → Main Menu");
                 game.setScreen(new MenuScreen(game));
             }

@@ -27,6 +27,7 @@ import com.militopia.systems.CombatSystem;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,6 +78,9 @@ public class GameInputController extends InputAdapter {
     }
 
     public void deselect() {
+        if (selectedUnitEntity != null) {
+            AudioManager.getInstance().playSFX(SFXKeys.UNIT_DESELECT);
+        }
         clearMarkers();
         selectedUnitEntity = null;
         gameHUD.hideSummonMenu();
@@ -195,6 +199,7 @@ public class GameInputController extends InputAdapter {
             Entity clickedMoveMarker = getEntityAt(gridX, gridY, TypeComponent.Type.MARKER);
 
             if (screen.isFogEnabled() && !isVisible && clickedMoveMarker == null) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
                 deselect();
                 return true;
             }
@@ -312,6 +317,7 @@ public class GameInputController extends InputAdapter {
                 handleTerrainSelection(gridX, gridY, clickedTerrain);
 
         } else {
+            AudioManager.getInstance().playSFX(SFXKeys.TILE_DESELECT);
             deselect();
             gameHUD.hideTileInfo(); // NEW: Auto-hide D-03
         }
@@ -381,12 +387,14 @@ public class GameInputController extends InputAdapter {
         if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
             GameLogger.log(GameLogger.INPUT,
                     "Unit exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
+            AudioManager.getInstance().playSFX(SFXKeys.UNIT_CANT_MOVE);
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
             gameHUD.showTileInfo("Unit Exhausted (" + unitStats.name + ")", info.region);
             return;
         }
 
         selectedUnitEntity = foundUnit;
+        AudioManager.getInstance().playSFX(SFXKeys.UNIT_SELECT);
         GameLogger.log(GameLogger.INPUT, "Unit selected: " + unitStats.name
                 + " at " + GameLogger.pos(gridX, gridY)
                 + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
@@ -514,6 +522,7 @@ public class GameInputController extends InputAdapter {
             state.p1Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
         else
             state.p2Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
+        AudioManager.getInstance().playSFX(SFXKeys.ACTION_HUNT);
         engine.removeEntity(animal);
         hunterStats.hasActed = true;
         hunterStats.hasMoved = true;
@@ -747,6 +756,7 @@ public class GameInputController extends InputAdapter {
         this.bouncingX = x;
         this.bouncingY = y;
         this.bounceTimer = GameConfig.BOUNCE_DURATION;
+        AudioManager.getInstance().playSFX(SFXKeys.TILE_CLICK);
     }
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
@@ -770,10 +780,27 @@ public class GameInputController extends InputAdapter {
             stats.hasMoved = true;
 
             // Play Movement SFX
-            if (stats.moveType == StatsComponent.MoveType.LAND) {
-                AudioManager.getInstance().playSFX("move-land.WAV");
+            if (stats.moveType == StatsComponent.MoveType.AIR) {
+                if (stats.unitType == UnitType.APACHE) {
+                    AudioManager.getInstance().playSFX(SFXKeys.MOVE_AIR_HELICOPTER);
+                } else if (stats.unitType == UnitType.RECON_DRONE
+                        || stats.unitType == UnitType.SUICIDE_DRONE) {
+                    AudioManager.getInstance().playSFX(SFXKeys.MOVE_AIR_DRONE);
+                } else {
+                    // B2 and any future air units
+                    AudioManager.getInstance().playSFX(SFXKeys.MOVE_AIR_B2);
+                }
             } else if (stats.moveType == StatsComponent.MoveType.SEA) {
-                AudioManager.getInstance().playSFX("move-water.WAV");
+                AudioManager.getInstance().playSFX(SFXKeys.MOVE_WATER);
+            } else {
+                // LAND — each weight class has its own sound
+                if (stats.unitType == UnitType.JUGGERNAUT) {
+                    AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_HEAVY_JUGGERNAUT);
+                } else if (stats.unitType == UnitType.TANK) {
+                    AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_HEAVY_TANK);
+                } else {
+                    AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_LIGHT);
+                }
             }
         }
 
@@ -804,6 +831,9 @@ public class GameInputController extends InputAdapter {
             moveRange = 1;
         }
 
+        // Move range SFX — play once per marker reveal
+        AudioManager.getInstance().playSFX(SFXKeys.TILE_MOVE_RANGE);
+
         // --- Blue move markers ---
         // Juggernaut always jumps — skip flood fill so red attack markers aren't shadowed
         boolean isJuggernautSelected = stats.unitType == UnitType.JUGGERNAUT;
@@ -817,6 +847,7 @@ public class GameInputController extends InputAdapter {
         // --- Red attack markers ---
         // Enumerate all tiles within Chebyshev distance == attackRange.
         // Skip tiles occupied by own units or by the attacker itself.
+        int attackMarkersAdded = 0;
         for (int dx = -atkRange; dx <= atkRange; dx++) {
             for (int dy = -atkRange; dy <= atkRange; dy++) {
                 if (dx == 0 && dy == 0)
@@ -850,7 +881,13 @@ public class GameInputController extends InputAdapter {
                         continue;
                 }
                 entityFactory.createAttackMarker(tx, ty);
+                attackMarkersAdded++;
             }
+        }
+
+        // Attack range SFX — only play if at least one attack marker was actually spawned
+        if (attackMarkersAdded > 0) {
+            AudioManager.getInstance().playSFX(SFXKeys.TILE_ATTACK_RANGE);
         }
     }
 

@@ -10,6 +10,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.militopia.MilitopiaGame;
 import com.militopia.controller.GameInputController;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.HoverListener;
 
@@ -88,6 +90,7 @@ public class DisconnectPopup {
         menuBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 // For LAN, we already skip saving, so just return to menu
                 game.setScreen(new com.militopia.screen.MenuScreen(game));
             }

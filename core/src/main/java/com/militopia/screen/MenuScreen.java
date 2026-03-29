@@ -19,8 +19,10 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.managers.AssetManager;
 import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 import com.militopia.managers.VideoBackgroundManager;
 import com.militopia.utils.GameLogger;
+import com.militopia.ui.SoundSettingsPopup;
 import com.militopia.utils.HoverListener;
 
 public class MenuScreen implements Screen {
@@ -46,6 +48,9 @@ public class MenuScreen implements Screen {
         TextButton resumeBtn = new TextButton("SAVED GAMES", game.skin, "militopia-btn");
         resumeBtn.getLabel().setFontScale(1.4f);
         resumeBtn.addListener(new HoverListener());
+        TextButton soundBtn = new TextButton("SOUND SETTINGS", game.skin, "militopia-btn");
+        soundBtn.getLabel().setFontScale(1.4f);
+        soundBtn.addListener(new HoverListener());
         TextButton exitBtn = new TextButton("EXIT", game.skin, "militopia-btn");
         exitBtn.getLabel().setFontScale(1.4f);
         exitBtn.addListener(new HoverListener());
@@ -53,6 +58,7 @@ public class MenuScreen implements Screen {
         newGameBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 GameLogger.logScreen("Navigating → New Game Screen");
                 game.setScreen(new NewGameScreen(game));
             }
@@ -61,6 +67,7 @@ public class MenuScreen implements Screen {
         lanBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 GameLogger.logScreen("Navigating → LAN Lobby");
                 game.setScreen(new LobbyScreen(game));
             }
@@ -69,14 +76,24 @@ public class MenuScreen implements Screen {
         resumeBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 GameLogger.logScreen("Navigating → Load Game Screen");
                 game.setScreen(new LoadGameScreen(game));
+            }
+        });
+
+        soundBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                new SoundSettingsPopup(game, stage, null, null).show();
             }
         });
 
         exitBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 GameLogger.logScreen("Exit requested");
                 Gdx.app.exit();
             }
@@ -94,6 +111,8 @@ public class MenuScreen implements Screen {
         table.add(lanBtn).fillX().width(300).pad(10);
         table.row();
         table.add(resumeBtn).fillX().width(300).pad(10);
+        table.row();
+        table.add(soundBtn).fillX().width(300).pad(10);
         table.row();
         table.add(exitBtn).fillX().width(300).pad(10);
     }
@@ -115,7 +134,8 @@ public class MenuScreen implements Screen {
     public void show() {
         GameLogger.logScreen("Main Menu opened");
         Gdx.input.setInputProcessor(stage);
-        AudioManager.getInstance().playBGM("battle_theme.ogg", true);
+        AudioManager.getInstance().setBGMVolume(0.5f);
+        AudioManager.getInstance().playBGM("final_battle_theme.ogg", true);
         VideoBackgroundManager.getInstance().play();
     }
 

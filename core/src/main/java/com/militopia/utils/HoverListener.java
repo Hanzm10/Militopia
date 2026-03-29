@@ -6,6 +6,8 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.militopia.managers.AudioManager;
+import com.militopia.managers.SFXKeys;
 
 public class HoverListener extends ClickListener {
     
@@ -17,11 +19,16 @@ public class HoverListener extends ClickListener {
     public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
         super.enter(event, x, y, pointer, fromActor);
         
-        if (pointer == -1) { 
-            Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Hand);
-            
+        if (pointer == -1) {
+            // Skip if the mouse is moving between child actors of this button
+            // (e.g. TextButton's inner Label), not entering from outside
             Actor actor = event.getListenerActor();
-            
+            if (fromActor != null && actor.isAscendantOf(fromActor)) {
+                return;
+            }
+            AudioManager.getInstance().playSFX(SFXKeys.UI_HOVER, 0.3f);
+            Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Hand);
+
             // Validate layout to ensure width/height are correct before setting origin
             if (actor instanceof com.badlogic.gdx.scenes.scene2d.utils.Layout) {
                 ((com.badlogic.gdx.scenes.scene2d.utils.Layout) actor).validate();
