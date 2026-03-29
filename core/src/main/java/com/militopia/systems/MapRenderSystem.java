@@ -115,18 +115,23 @@ public class MapRenderSystem extends EntitySystem {
         }
 
         if (regionToDraw != null) {
+            MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+            boolean isWater = terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER;
+            float drawW = isWater ? GameConfig.DRAW_WIDTH  * GameConfig.WATER_TILE_SCALE : GameConfig.DRAW_WIDTH;
+            float drawH = isWater ? GameConfig.DRAW_HEIGHT * GameConfig.WATER_TILE_SCALE : GameConfig.DRAW_HEIGHT;
+            float drawX = isoX - xOffset - (drawW - GameConfig.DRAW_WIDTH) / 2f;
+            float drawY = isoY - yOffset - (drawH - GameConfig.DRAW_HEIGHT) / 2f;
+
             float fogLift = isFog ? 5f : 0f;
-            batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY + fogLift, GameConfig.DRAW_WIDTH,
-                    GameConfig.DRAW_HEIGHT);
+            batch.draw(regionToDraw, drawX, drawY + animY + fogLift, drawW, drawH);
             // Second fog layer at the original (non-lifted) position for depth
             if (isFog) {
-                batch.draw(regionToDraw, isoX - xOffset, isoY - yOffset + animY, GameConfig.DRAW_WIDTH,
-                        GameConfig.DRAW_HEIGHT);
+                batch.draw(regionToDraw, drawX, drawY + animY, drawW, drawH);
             }
-        }
 
-        if (x == selectedX && y == selectedY && regionToDraw != null) {
-            drawHighlight(regionToDraw, isoX - xOffset, isoY - yOffset + animY);
+            if (x == selectedX && y == selectedY) {
+                drawHighlight(regionToDraw, drawX, drawY + animY, drawW, drawH);
+            }
         }
     }
 
@@ -203,11 +208,11 @@ public class MapRenderSystem extends EntitySystem {
         return new float[] { isoX, isoY, animY };
     }
 
-    private void drawHighlight(TextureRegion t, float x, float y) {
+    private void drawHighlight(TextureRegion t, float x, float y, float w, float h) {
         Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
         batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
         batch.setColor(0.4f, 0.4f, 0.4f, 1f);
-        batch.draw(t, x, y, GameConfig.DRAW_WIDTH, GameConfig.DRAW_HEIGHT);
+        batch.draw(t, x, y, w, h);
         batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
         batch.setColor(Color.WHITE);
     }

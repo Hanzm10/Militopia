@@ -7,7 +7,9 @@
       "WebSearch",
       "Bash(python3 -c \":*)",
       "Bash(python -c \":*)",
-      "Bash(./gradlew compileJava)"
+      "Bash(./gradlew compileJava)",
+      "Bash(cp \"C:/Users/Hanz Mapua/Workspace/Militopia/assets/tiles/tile_water2.png\" \"C:/Users/Hanz Mapua/Workspace/Militopia/assets/tiles/tile_water.png\")",
+      "Bash(cp \"C:/Users/Hanz Mapua/Workspace/Militopia/assets/tiles/tile_deepwater2.png\" \"C:/Users/Hanz Mapua/Workspace/Militopia/assets/tiles/tile_deepwater.png\")"
     ]
   }
 }

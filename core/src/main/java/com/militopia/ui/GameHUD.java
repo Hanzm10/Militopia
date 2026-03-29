@@ -76,6 +76,9 @@ public class GameHUD {
     private TurnHistoryManager turnHistory;
     private boolean snapshotPanelVisible = false;
 
+    // Dev Mode panel
+    private DevPanel devPanel;
+
     public GameHUD(MilitopiaGame game) {
         this.game = game;
         this.assets = game.assets;
@@ -228,6 +231,18 @@ public class GameHUD {
         snapshotPanel.setVisible(false);
         stage.addActor(snapshotPanel);
         refreshSnapshotPanel();
+    }
+
+    public void setDevPanel(DevPanel panel) {
+        this.devPanel = panel;
+    }
+
+    public void toggleDevPanel() {
+        if (devPanel != null) devPanel.toggle();
+    }
+
+    public boolean isDevPanelVisible() {
+        return devPanel != null && devPanel.isVisible();
     }
 
     /**

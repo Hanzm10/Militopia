@@ -39,6 +39,7 @@ public class NewGameScreen implements Screen {
     SelectBox<String> modeSelectBox;
     int selectedWidth = 16;
     int selectedHeight = 16;
+    boolean devModeEnabled = false;
 
     public NewGameScreen(final MilitopiaGame game) {
         this.game = game;
@@ -126,6 +127,19 @@ public class NewGameScreen implements Screen {
         table.row().pad(10);
         table.add(modeTable).left().row();
 
+        final TextButton devModeBtn = new TextButton("DEV MODE: OFF", game.skin, "militopia-btn");
+        devModeBtn.addListener(new HoverListener());
+        devModeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                devModeEnabled = !devModeEnabled;
+                devModeBtn.setText("DEV MODE: " + (devModeEnabled ? "ON" : "OFF"));
+                devModeBtn.setColor(devModeEnabled ? Color.ORANGE : Color.WHITE);
+                AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
+            }
+        });
+        table.add(devModeBtn).width(320).pad(5).padLeft(120).left().row();
+
         Table btnRow = new Table();
         btnRow.add(backBtn).fillX().width(200).pad(10);
         btnRow.add(startBtn).fillX().width(200).pad(10);
@@ -159,6 +173,8 @@ public class NewGameScreen implements Screen {
                     String p2 = p2NameField.getText().trim();
                     newState.p1Name = p1.isEmpty() ? "Player 1" : p1;
                     newState.p2Name = p2.isEmpty() ? "Player 2" : p2;
+                    newState.isDevMode = devModeEnabled;
+                    if (devModeEnabled) GameLogger.logScreen("[DEV MODE] Starting dev session");
                     game.setScreen(new GameScreen(game, newState));
                 }
             }

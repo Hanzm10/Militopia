@@ -9,6 +9,9 @@ public class GameConfig {
     // Drawing Settings
     public static final float DRAW_WIDTH = 18f;
     public static final float DRAW_HEIGHT = 20f;
+    // Water tile scale — increase if water tiles appear smaller than other tiles,
+    // decrease if too big
+    public static final float WATER_TILE_SCALE = 1.11f;
 
     public static final float WORLD_WIDTH = 640f;
     public static final float WORLD_HEIGHT = 360f;

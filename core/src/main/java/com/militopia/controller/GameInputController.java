@@ -56,6 +56,13 @@ public class GameInputController extends InputAdapter {
     private String targetingAbilityKey = null;
     private Entity targetingUnit = null;
 
+    // Dev Mode
+    public enum DevSpawnMode { NONE, SPAWNING_UNIT, BUILDING_STRUCTURE, KILLING_UNIT, SETTING_BASE_LEVEL }
+    private DevSpawnMode devSpawnMode = DevSpawnMode.NONE;
+    private UnitType devSpawnUnitType;
+    private String devSpawnStructureType;
+    public int devSpawnOwner = 1;
+
     public GameInputController(GameScreen screen, OrthographicCamera camera, Viewport viewport,
             PooledEngine engine, MapGenerator.GameMap gameMap, UnitFactory unitFactory,
             EntityFactory entityFactory, GameHUD gameHUD, CombatSystem combatSystem) {
@@ -76,6 +83,17 @@ public class GameInputController extends InputAdapter {
             deselect();
         }
     }
+
+    public void enterDevSpawn(DevSpawnMode mode, UnitType type, int owner) {
+        devSpawnMode = mode; devSpawnUnitType = type; devSpawnOwner = owner;
+    }
+    public void enterDevBuild(String type, int owner) {
+        devSpawnMode = DevSpawnMode.BUILDING_STRUCTURE; devSpawnStructureType = type; devSpawnOwner = owner;
+    }
+    public void enterDevKill()         { devSpawnMode = DevSpawnMode.KILLING_UNIT; }
+    public void enterDevSetBaseLevel() { devSpawnMode = DevSpawnMode.SETTING_BASE_LEVEL; }
+    public void exitDevMode()          { devSpawnMode = DevSpawnMode.NONE; }
+    public DevSpawnMode getDevSpawnMode() { return devSpawnMode; }
 
     public void deselect() {
         if (selectedUnitEntity != null) {
@@ -187,6 +205,22 @@ public class GameInputController extends InputAdapter {
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
         if (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height) {
+            // Reset HUD stage scroll focus so map zoom (scroll wheel) works even
+            // after the user has interacted with the dev panel ScrollPane.
+            gameHUD.stage.setScrollFocus(null);
+
+            // Auto-retract dev panel when the user clicks the map.
+            if (screen.getGameState().isDevMode && screen.devPanel != null
+                    && screen.devPanel.isVisible()) {
+                screen.devPanel.retract();
+            }
+
+            // --- DEV MODE INTERCEPT ---
+            if (screen.getGameState().isDevMode && devSpawnMode != DevSpawnMode.NONE) {
+                handleDevTouch(gridX, gridY);
+                return true;
+            }
+
             // --- ABILITY TARGETING ---
             if (isTargetingAbility) {
                 executeTargetingAbility(gridX, gridY);
@@ -969,6 +1003,59 @@ public class GameInputController extends InputAdapter {
                 return e;
         }
         return null;
+    }
+
+    private Entity getEntityAtLayer(int x, int y, int zIndex) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class).get());
+        for (Entity e : entities) {
+            GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
+            if (pos.x == x && pos.y == y && pos.zIndex == zIndex)
+                return e;
+        }
+        return null;
+    }
+
+    private void handleDevTouch(int gridX, int gridY) {
+        switch (devSpawnMode) {
+            case SPAWNING_UNIT:
+                MapGenerator.TerrainType terrain = gameMap.terrain[gridX][gridY];
+                StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(devSpawnUnitType);
+                if (moveType == StatsComponent.MoveType.LAND &&
+                        (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER)) {
+                    GameLogger.log(GameLogger.INPUT, "[DEV] WARNING: land unit placed on water at ("
+                            + gridX + "," + gridY + ")");
+                }
+                unitFactory.createUnit(devSpawnUnitType, gridX, gridY, devSpawnOwner, false);
+                GameLogger.log(GameLogger.INPUT, "[DEV] Spawned " + devSpawnUnitType
+                        + " at (" + gridX + "," + gridY + ") for P" + devSpawnOwner);
+                break;
+            case BUILDING_STRUCTURE:
+                Entity existing = getEntityAtLayer(gridX, gridY, 1);
+                if (existing != null) engine.removeEntity(existing);
+                unitFactory.createStructure(devSpawnStructureType, gridX, gridY, devSpawnOwner, -1, -1);
+                GameLogger.log(GameLogger.INPUT, "[DEV] Built " + devSpawnStructureType
+                        + " at (" + gridX + "," + gridY + ") for P" + devSpawnOwner);
+                break;
+            case KILLING_UNIT:
+                Entity unitAtTile = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                if (unitAtTile != null) {
+                    engine.removeEntity(unitAtTile);
+                    GameLogger.log(GameLogger.INPUT, "[DEV] Killed unit at (" + gridX + "," + gridY + ")");
+                }
+                break;
+            case SETTING_BASE_LEVEL:
+                Entity baseAtTile = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
+                if (baseAtTile != null) {
+                    StatsComponent s = baseAtTile.getComponent(StatsComponent.class);
+                    if (s != null && s.level > 0) {
+                        screen.devOpenBaseLevelPicker(baseAtTile);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
 
 }

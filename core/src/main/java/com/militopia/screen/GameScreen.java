@@ -44,6 +44,7 @@ import com.militopia.systems.FloatingTextSystem;
 import com.militopia.systems.AbilityStatusSystem;
 import com.militopia.systems.StructureEconomySystem;
 import com.militopia.systems.WinConditionSystem;
+import com.militopia.ui.DevPanel;
 import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import com.militopia.net.NetworkManager;
@@ -73,6 +74,7 @@ public class GameScreen implements Screen {
     private UnitRenderSystem unitRenderSystem;
     private GameInputController inputController;
     public GameHUD gameHUD;
+    public DevPanel devPanel;
     private AbilityStatusSystem abilityStatusSystem;
     private StructureEconomySystem structureEconomySystem;
     private WinConditionSystem winConditionSystem;
@@ -259,6 +261,12 @@ public class GameScreen implements Screen {
         gameHUD.build(this, inputController, unitFactory, gameState, turnHistory);
         gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
         gameHUD.updateXP(gameState.p1XP);
+
+        if (gameState.isDevMode) {
+            devPanel = new DevPanel(game, gameHUD.stage, this, inputController, gameState);
+            devPanel.build();
+            gameHUD.setDevPanel(devPanel);
+        }
 
         int startIncome = calculateIncome(gameState.currentPlayer);
         gameHUD.updateFunding(gameState.p1Funding, startIncome);
@@ -832,6 +840,7 @@ public class GameScreen implements Screen {
     public void resize(int width, int height) {
         viewport.update(width, height, false);
         gameHUD.resize(width, height);
+        if (devPanel != null) devPanel.resize();
     }
 
     @Override
@@ -874,6 +883,90 @@ public class GameScreen implements Screen {
             GameLogger.log(GameLogger.INPUT, "LAN: Opponent disconnected");
             gameHUD.showDisconnectPopup("The opponent has disconnected.");
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Dev Mode Actions
+    // -------------------------------------------------------------------------
+
+    public void devHealAll(int owner) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(StatsComponent.class, TypeComponent.class).get());
+        for (Entity e : entities) {
+            TypeComponent t = e.getComponent(TypeComponent.class);
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (t.type == TypeComponent.Type.UNIT && s.owner == owner) {
+                s.currentHP = s.maxHP;
+            }
+        }
+        GameLogger.log(GameLogger.INPUT, "[DEV] Healed all units for P" + owner);
+    }
+
+    public void devResetActions(int owner) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(StatsComponent.class, TypeComponent.class).get());
+        for (Entity e : entities) {
+            TypeComponent t = e.getComponent(TypeComponent.class);
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (t.type == TypeComponent.Type.UNIT && s.owner == owner) {
+                s.hasActed = false;
+                s.hasMoved = false;
+            }
+        }
+        GameLogger.log(GameLogger.INPUT, "[DEV] Reset actions for P" + owner);
+    }
+
+    public void devAddFundsToPlayer(int owner, int amount) {
+        if (owner == 1) gameState.p1Funding += amount;
+        else gameState.p2Funding += amount;
+        int updated = (owner == 1) ? gameState.p1Funding : gameState.p2Funding;
+        gameHUD.updateFunding(updated, calculateIncome(gameState.currentPlayer));
+        GameLogger.log(GameLogger.INPUT, "[DEV] Added " + amount + " funds to P" + owner);
+    }
+
+    public void devAddXP(int amount, int owner) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(StatsComponent.class, TypeComponent.class).get());
+        for (Entity e : entities) {
+            TypeComponent t = e.getComponent(TypeComponent.class);
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (t.type == TypeComponent.Type.OBJECT && s.owner == owner && s.level > 0) {
+                s.currentBaseXP += amount;
+            }
+        }
+        GameLogger.log(GameLogger.INPUT, "[DEV] Added " + amount + " XP to P" + owner + " bases");
+    }
+
+    public void devSetBaseLevel(Entity base, int targetLevel) {
+        StatsComponent s = base.getComponent(StatsComponent.class);
+        GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
+        if (s == null || pos == null) return;
+        com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig.getLevel(targetLevel);
+        float prevXP = targetLevel > 1 ? com.militopia.config.BaseLevelConfig.getLevel(targetLevel - 1).maxXP : 0;
+        s.level = targetLevel;
+        s.income = data.income;
+        s.currentBaseXP = prevXP;
+        s.maxBaseXP = data.maxXP;
+        GameLogger.log(GameLogger.INPUT, "[DEV] Set base at (" + pos.x + "," + pos.y + ") to level " + targetLevel);
+    }
+
+    public void devResetNukeCooldowns() {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(com.militopia.components.AbilitiesComponent.class).get());
+        for (Entity e : entities) {
+            com.militopia.components.AbilitiesComponent ab = e.getComponent(com.militopia.components.AbilitiesComponent.class);
+            ab.nukeCooldown = 0;
+        }
+        GameLogger.log(GameLogger.INPUT, "[DEV] Reset all nuke cooldowns");
+    }
+
+    public void devToggleWinCondition(boolean enabled) {
+        winConditionSystem.setPlaying(enabled);
+        GameLogger.log(GameLogger.INPUT, "[DEV] WinCondition: " + (enabled ? "enabled" : "disabled"));
+    }
+
+    public void devOpenBaseLevelPicker(Entity base) {
+        if (devPanel != null) devPanel.showBaseLevelPicker(base);
     }
 
     /**

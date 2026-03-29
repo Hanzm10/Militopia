@@ -39,6 +39,9 @@ public class GameState {
     public boolean isLanGame = false;
     public int localPlayerID = 1; // 1 or 2. In hotseat, matches currentPlayer.
 
+    // --- Dev Mode ---
+    public boolean isDevMode = false;
+
     public GameState() {
     }
 
