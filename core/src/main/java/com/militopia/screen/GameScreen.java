@@ -130,7 +130,7 @@ public class GameScreen implements Screen {
         for (int x = 0; x < gameMap.width; x++) {
             for (int y = 0; y < gameMap.height; y++) {
                 MapGenerator.ObjectType type = gameMap.objects[x][y];
-                if (type != MapGenerator.ObjectType.NONE) {
+                if (type != null && type != MapGenerator.ObjectType.NONE) {
                     unitFactory.createObjectEntity(x, y, type, gameState);
 
                     if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {

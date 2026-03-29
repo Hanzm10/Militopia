@@ -207,7 +207,7 @@ public class HudBottomBar {
 
         menuBox.add(title).pad(20).row();
         if (!screen.getGameState().isLanGame) {
-            menuBox.add(fogBtn).fillX().width(240).pad(10).row();
+            menuBox.add(fogBtn).fillX().width(340).pad(10).row();
         }
         TextButton soundSettingsBtn = new TextButton("Sound Settings", game.skin, "militopia-btn");
         soundSettingsBtn.addListener(new HoverListener());
@@ -220,11 +220,11 @@ public class HudBottomBar {
             }
         });
 
-        menuBox.add(undoRedoBtn).fillX().width(240).pad(10).row();
-        menuBox.add(soundSettingsBtn).fillX().width(240).pad(10).row();
-        menuBox.add(saveExitBtn).fillX().width(240).pad(10).row();
-        menuBox.add(resumeBtn).fillX().width(240).pad(10);
-        settingsOverlay.add(menuBox).width(300);
+        menuBox.add(undoRedoBtn).fillX().width(340).pad(10).row();
+        menuBox.add(soundSettingsBtn).fillX().width(340).pad(10).row();
+        menuBox.add(saveExitBtn).fillX().width(340).pad(10).row();
+        menuBox.add(resumeBtn).fillX().width(340).pad(10);
+        settingsOverlay.add(menuBox).width(400);
         stage.addActor(settingsOverlay);
     }
 

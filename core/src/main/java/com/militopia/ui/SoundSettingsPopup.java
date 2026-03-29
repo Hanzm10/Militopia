@@ -50,6 +50,7 @@ public class SoundSettingsPopup {
 
         popupTable = new Table();
         popupTable.setFillParent(true);
+        popupTable.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
         popupTable.setBackground(game.skin.newDrawable("white", new Color(0, 0, 0, 0.85f)));
         popupTable.addListener(new InputListener() {
             @Override public boolean touchDown(InputEvent e, float x, float y, int p, int b) { return true; }

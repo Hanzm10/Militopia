@@ -106,15 +106,15 @@ public class MenuScreen implements Screen {
 
         table.add(logoImage).width(800).height(300).padBottom(30);
         table.row();
-        table.add(newGameBtn).fillX().width(300).pad(10);
+        table.add(newGameBtn).fillX().width(400).pad(10);
         table.row();
-        table.add(lanBtn).fillX().width(300).pad(10);
+        table.add(lanBtn).fillX().width(400).pad(10);
         table.row();
-        table.add(resumeBtn).fillX().width(300).pad(10);
+        table.add(resumeBtn).fillX().width(400).pad(10);
         table.row();
-        table.add(soundBtn).fillX().width(300).pad(10);
+        table.add(soundBtn).fillX().width(400).pad(10);
         table.row();
-        table.add(exitBtn).fillX().width(300).pad(10);
+        table.add(exitBtn).fillX().width(400).pad(10);
     }
 
     @Override
