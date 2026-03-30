@@ -233,8 +233,7 @@ public class InfoPanel {
             final UnitFactory factory,
             final GameScreen screen) {
         showBaseInfo(base, base.getComponent(StatsComponent.class).name,
-                factory.getHudIcon(screen.getGameMap().objects[base.getComponent(GridPositionComponent.class).x][base
-                        .getComponent(GridPositionComponent.class).y]),
+                base.getComponent(com.militopia.components.TextureComponent.class).region,
                 controller, factory, screen, true);
 
         // Populate summons in the abilityTable (Center)

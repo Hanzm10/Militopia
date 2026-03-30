@@ -6,12 +6,10 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Interpolation;
-import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -50,20 +48,15 @@ public class DevPanel {
     private Label statusLabel;
     private TextButton p1Btn, p2Btn;
 
-    private Table unitList;
-    private Table structureList;
-    private boolean unitListVisible = false;
-    private boolean structureListVisible = false;
-    private Cell<?> unitListCell;
-    private Cell<?> structureListCell;
-    private Table contentRef; // reference for invalidateHierarchy
-
     private static final float PANEL_WIDTH  = 360;
     private static final float SLIDE_DURATION = 0.18f;
 
     private static final String[] STRUCTURE_TYPES = {
-        "MUNITION_FACTORY", "PORT", "HOSPITAL", "SOLAR",
+        "BASE", "TOWN", "MUNITION_FACTORY", "PORT", "HOSPITAL", "SOLAR",
         "RADAR", "OIL_DERRICK", "JAMMER", "NUCLEAR"
+    };
+    private static final String[] MAP_OBJ_TYPES = {
+        "MOUNTAIN", "OIL", "RUINS", "CACTUS", "TREE", "HORSE", "FISH", "DEER", "ZEBRA"
     };
 
     public DevPanel(MilitopiaGame game, Stage stage, GameScreen screen,
@@ -80,6 +73,7 @@ public class DevPanel {
         float sw = stage.getWidth();
 
         card = new Table();
+        card.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
         card.setBackground(makeSolidDrawable(0.07f, 0.07f, 0.07f, 0.96f));
         card.top();
 
@@ -105,7 +99,6 @@ public class DevPanel {
 
         // ── Scrollable content fills remaining height ─────────────────────
         Table content = new Table();
-        contentRef = content;
         content.top().padLeft(14).padRight(14).padBottom(12);
 
         buildPlayerSelector(content);
@@ -119,19 +112,35 @@ public class DevPanel {
         addSectionHeader(content, "TOGGLES", new Color(0.8f, 0.45f, 0.9f, 1f));
         buildTogglesSection(content);
 
-        ScrollPane scroll = new ScrollPane(content, game.skin);
+        final ScrollPane scroll = new ScrollPane(content, game.skin);
         scroll.setScrollingDisabled(true, false);
         scroll.setFadeScrollBars(false);
         scroll.setOverscroll(false, false);
         card.add(scroll).growX().growY().row();
 
+        scroll.addListener(new InputListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                stage.setScrollFocus(scroll);
+            }
+        });
+
         // Consume touch events on the card background so clicks on empty panel
-        // space don't fall through to the map. Scroll events are NOT consumed so
-        // the map camera zoom still works.
+        // space don't fall through to the map.
         card.addListener(new InputListener() {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                return true; // consume — prevent click-through to map
+                stage.setScrollFocus(scroll);
+                return true;
+            }
+        });
+        card.addListener(new com.badlogic.gdx.scenes.scene2d.EventListener() {
+            @Override
+            public boolean handle(com.badlogic.gdx.scenes.scene2d.Event e) {
+                if (e instanceof InputEvent && ((InputEvent) e).getType() == InputEvent.Type.scrolled) {
+                    return true;
+                }
+                return false;
             }
         });
 
@@ -197,105 +206,31 @@ public class DevPanel {
     }
 
     private void buildSpawnSection(Table content) {
-        final TextButton header = makeCollapsibleHeader("Spawn Unit");
-        content.add(header).growX().padBottom(2).row();
-
-        unitList = new Table();
-        unitList.top();
-        for (final UnitType type : UnitType.values()) {
-            final TextButton btn = makeItemBtn(toNice(type.name()));
-            btn.setColor(new Color(0.7f, 1f, 1f, 1f));
-            btn.addListener(new ClickListener() {
-                @Override public void clicked(InputEvent e, float x, float y) {
-                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
-                    inputController.enterDevSpawn(
-                            GameInputController.DevSpawnMode.SPAWNING_UNIT, type, selectedOwner);
-                    setStatus("Placing: " + toNice(type.name()));
-                }
-            });
-            unitList.add(btn).growX().padBottom(2).row();
-        }
-        unitList.setVisible(false);
-        unitListCell = content.add(unitList).growX().padLeft(14).padBottom(0).height(0);
-        content.row();
-
-        header.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent e, float x, float y) {
-                AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
-                unitListVisible = !unitListVisible;
-                unitList.setVisible(unitListVisible);
-                if (unitListVisible) {
-                    unitListCell.height(-1).padLeft(14).padBottom(2);
-                } else {
-                    unitListCell.height(0).padLeft(0).padBottom(0);
-                }
-                header.setText(unitListVisible ? "SPAWN UNIT  ▾" : "SPAWN UNIT  ▸");
-                contentRef.invalidateHierarchy();
-                if (unitListVisible && structureListVisible) {
-                    structureListVisible = false;
-                    structureList.setVisible(false);
-                    structureListCell.height(0).padLeft(0).padBottom(0);
-                    contentRef.invalidateHierarchy();
-                }
-            }
+        addActionBtn(content, "SPAWN UNIT", new Color(0.7f, 1f, 1f, 1f), new Runnable() {
+            @Override public void run() { showUnitPicker(); }
         });
     }
 
     private void buildBuildSection(Table content) {
-        final TextButton header = makeCollapsibleHeader("Build Structure");
-        content.add(header).growX().padBottom(2).row();
-
-        structureList = new Table();
-        structureList.top();
-        for (final String type : STRUCTURE_TYPES) {
-            final TextButton btn = makeItemBtn(toNice(type));
-            btn.setColor(new Color(0.7f, 1f, 0.7f, 1f));
-            btn.addListener(new ClickListener() {
-                @Override public void clicked(InputEvent e, float x, float y) {
-                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
-                    inputController.enterDevBuild(type, selectedOwner);
-                    setStatus("Placing: " + toNice(type));
-                }
-            });
-            structureList.add(btn).growX().padBottom(2).row();
-        }
-        structureList.setVisible(false);
-        structureListCell = content.add(structureList).growX().padLeft(14).padBottom(0).height(0);
-        content.row();
-
-        header.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent e, float x, float y) {
-                AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
-                structureListVisible = !structureListVisible;
-                structureList.setVisible(structureListVisible);
-                if (structureListVisible) {
-                    structureListCell.height(-1).padLeft(14).padBottom(4);
-                } else {
-                    structureListCell.height(0).padLeft(0).padBottom(0);
-                }
-                header.setText(structureListVisible ? "BUILD STRUCTURE  ▾" : "BUILD STRUCTURE  ▸");
-                contentRef.invalidateHierarchy();
-                if (structureListVisible && unitListVisible) {
-                    unitListVisible = false;
-                    unitList.setVisible(false);
-                    unitListCell.height(0).padLeft(0).padBottom(0);
-                    contentRef.invalidateHierarchy();
-                }
-            }
+        addActionBtn(content, "BUILD STRUCTURE", new Color(0.7f, 1f, 0.7f, 1f), new Runnable() {
+            @Override public void run() { showStructurePicker(); }
+        });
+        addActionBtn(content, "BUILD MAP OBJ", new Color(0.8f, 0.9f, 0.6f, 1f), new Runnable() {
+            @Override public void run() { showMapObjPicker(); }
         });
     }
 
     private void buildActionsSection(Table content) {
-        addActionBtn(content, "HEAL ALL",                Color.WHITE,                    () -> { screen.devHealAll(selectedOwner);      setStatus("Healed all — P" + selectedOwner); });
-        addActionBtn(content, "RESET ACTIONS",          Color.WHITE,                    () -> { screen.devResetActions(selectedOwner); setStatus("Actions reset — P" + selectedOwner); });
-        addActionBtn(content, "KILL UNIT  [CLICK MAP]", new Color(1f,0.5f,0.5f,1f),    () -> { inputController.enterDevKill();         setStatus("Click unit to kill"); });
-        addActionBtn(content, "SET BASE LEVEL  [CLICK]",new Color(1f,0.85f,0.4f,1f),  () -> { inputController.enterDevSetBaseLevel(); setStatus("Click base to set level"); });
-        addActionBtn(content, "RESET NUKE CDS",         Color.WHITE,                    () -> { screen.devResetNukeCooldowns();         setStatus("Nuke CDs reset"); });
-        addActionBtn(content, "✕  CANCEL MODE",         new Color(0.65f,0.65f,0.65f,1f),() -> { inputController.exitDevMode();         setStatus("Idle"); });
+        addActionBtn(content, "HEAL ALL",                Color.WHITE,                    new Runnable() { @Override public void run() { screen.devHealAll(selectedOwner);      setStatus("Healed all — P" + selectedOwner); }});
+        addActionBtn(content, "RESET ACTIONS",          Color.WHITE,                    new Runnable() { @Override public void run() { screen.devResetActions(selectedOwner); setStatus("Actions reset — P" + selectedOwner); }});
+        addActionBtn(content, "KILL UNIT  [CLICK MAP]", new Color(1f,0.5f,0.5f,1f),    new Runnable() { @Override public void run() { inputController.enterDevKill();         setStatus("Click unit to kill"); }});
+        addActionBtn(content, "REMOVE OBJ [CLICK MAP]", new Color(1f,0.4f,0.4f,1f),    new Runnable() { @Override public void run() { inputController.enterDevRemove();       setStatus("Click object to remove"); }});
+        addActionBtn(content, "SET BASE LEVEL  [CLICK]",new Color(1f,0.85f,0.4f,1f),   new Runnable() { @Override public void run() { inputController.enterDevSetBaseLevel(); setStatus("Click base to set level"); }});
+        addActionBtn(content, "RESET NUKE CDS",         Color.WHITE,                    new Runnable() { @Override public void run() { screen.devResetNukeCooldowns();         setStatus("Nuke CDs reset"); }});
+        addActionBtn(content, "✕  CANCEL MODE",         new Color(0.65f,0.65f,0.65f,1f),new Runnable() { @Override public void run() { inputController.exitDevMode();         setStatus("Idle"); }});
     }
 
     private void buildEconomySection(Table content) {
-        // Funds row
         Table fundRow = new Table();
         Label fl = new Label("Funds:", game.skin); fl.setFontScale(0.52f); fl.setColor(Color.LIGHT_GRAY);
         final TextButton f100  = makeSmallBtn("+100");
@@ -307,7 +242,6 @@ public class DevPanel {
         fundRow.add(f1000).growX();
         content.add(fundRow).growX().padBottom(4).row();
 
-        // XP row
         Table xpRow = new Table();
         Label xl = new Label("XP:", game.skin); xl.setFontScale(0.52f); xl.setColor(Color.LIGHT_GRAY);
         final TextButton x500  = makeSmallBtn("+500");
@@ -344,13 +278,267 @@ public class DevPanel {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Spawn / Build picker popups
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void showUnitPicker() {
+        final Table modal = new Table();
+        modal.setFillParent(true);
+        modal.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+        modal.setBackground(makeSolidDrawable(0f, 0f, 0f, 0.72f));
+        modal.addListener(new InputListener() {
+            @Override public boolean touchDown(InputEvent e, float x, float y, int p, int b) { return true; }
+        });
+        modal.addListener(new com.badlogic.gdx.scenes.scene2d.EventListener() {
+            @Override
+            public boolean handle(com.badlogic.gdx.scenes.scene2d.Event e) {
+                if (e instanceof InputEvent && ((InputEvent) e).getType() == InputEvent.Type.scrolled) {
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        Table box = new Table();
+        box.setBackground(makeSolidDrawable(0.06f, 0.10f, 0.12f, 1f));
+
+        Table strip = new Table();
+        strip.setBackground(makeSolidDrawable(0.05f, 0.20f, 0.25f, 1f));
+        Label title = new Label("SPAWN UNIT", game.skin);
+        title.setFontScale(0.72f);
+        title.setColor(new Color(0.2f, 0.85f, 0.95f, 1f));
+        title.setAlignment(Align.center);
+        strip.add(title).growX().pad(8);
+        box.add(strip).growX().row();
+
+        Table list = new Table();
+        list.top().padLeft(10).padRight(10).padTop(6).padBottom(6);
+        for (final UnitType type : UnitType.values()) {
+            final TextButton btn = new TextButton(toNice(type.name()), game.skin, "militopia-btn");
+            btn.getLabel().setFontScale(0.6f);
+            btn.setColor(new Color(0.7f, 1f, 1f, 1f));
+            btn.addListener(new HoverListener());
+            btn.addListener(new ClickListener() {
+                @Override public void clicked(InputEvent e, float x, float y) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                    inputController.enterDevSpawn(GameInputController.DevSpawnMode.SPAWNING_UNIT, type, selectedOwner);
+                    setStatus("Placing: " + toNice(type.name()));
+                    modal.remove();
+                }
+            });
+            list.add(btn).growX().padBottom(3).row();
+        }
+
+        final ScrollPane scroll = new ScrollPane(list, game.skin);
+        scroll.setScrollingDisabled(true, false);
+        scroll.setFadeScrollBars(false);
+        scroll.setOverscroll(false, false);
+        box.add(scroll).growX().maxHeight(380).row();
+
+        scroll.addListener(new InputListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                stage.setScrollFocus(scroll);
+            }
+        });
+
+        TextButton cancelBtn = new TextButton("CANCEL", game.skin, "militopia-btn");
+        cancelBtn.getLabel().setFontScale(0.6f);
+        cancelBtn.setColor(new Color(0.65f, 0.65f, 0.65f, 1f));
+        cancelBtn.addListener(new HoverListener());
+        cancelBtn.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent e, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
+                modal.remove();
+            }
+        });
+        box.add(cancelBtn).width(220).pad(6).padBottom(10).row();
+
+        modal.add(box).width(280);
+        stage.addActor(modal);
+        modal.toFront();
+        stage.setScrollFocus(scroll);
+    }
+
+    private void showStructurePicker() {
+        final Table modal = new Table();
+        modal.setFillParent(true);
+        modal.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+        modal.setBackground(makeSolidDrawable(0f, 0f, 0f, 0.72f));
+        modal.addListener(new InputListener() {
+            @Override public boolean touchDown(InputEvent e, float x, float y, int p, int b) { return true; }
+        });
+        modal.addListener(new com.badlogic.gdx.scenes.scene2d.EventListener() {
+            @Override
+            public boolean handle(com.badlogic.gdx.scenes.scene2d.Event e) {
+                if (e instanceof InputEvent && ((InputEvent) e).getType() == InputEvent.Type.scrolled) {
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        Table box = new Table();
+        box.setBackground(makeSolidDrawable(0.06f, 0.10f, 0.06f, 1f));
+
+        Table strip = new Table();
+        strip.setBackground(makeSolidDrawable(0.05f, 0.18f, 0.05f, 1f));
+        Label title = new Label("BUILD STRUCTURE", game.skin);
+        title.setFontScale(0.72f);
+        title.setColor(new Color(0.7f, 1f, 0.7f, 1f));
+        title.setAlignment(Align.center);
+        strip.add(title).growX().pad(8);
+        box.add(strip).growX().row();
+
+        Table list = new Table();
+        list.top().padLeft(10).padRight(10).padTop(6).padBottom(6);
+        for (final String type : STRUCTURE_TYPES) {
+            final TextButton btn = new TextButton(toNice(type), game.skin, "militopia-btn");
+            btn.getLabel().setFontScale(0.6f);
+            btn.setColor(new Color(0.7f, 1f, 0.7f, 1f));
+            btn.addListener(new HoverListener());
+            btn.addListener(new ClickListener() {
+                @Override public void clicked(InputEvent e, float x, float y) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                    inputController.enterDevBuild(type, selectedOwner);
+                    setStatus("Placing: " + toNice(type));
+                    modal.remove();
+                }
+            });
+            list.add(btn).growX().padBottom(3).row();
+        }
+
+        final ScrollPane scroll = new ScrollPane(list, game.skin);
+        scroll.setScrollingDisabled(true, false);
+        scroll.setFadeScrollBars(false);
+        scroll.setOverscroll(false, false);
+        box.add(scroll).growX().maxHeight(300).row();
+
+        scroll.addListener(new InputListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                stage.setScrollFocus(scroll);
+            }
+        });
+
+        TextButton cancelBtn = new TextButton("CANCEL", game.skin, "militopia-btn");
+        cancelBtn.getLabel().setFontScale(0.6f);
+        cancelBtn.setColor(new Color(0.65f, 0.65f, 0.65f, 1f));
+        cancelBtn.addListener(new HoverListener());
+        cancelBtn.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent e, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
+                modal.remove();
+            }
+        });
+        box.add(cancelBtn).width(220).pad(6).padBottom(10).row();
+
+        modal.add(box).width(280);
+        stage.addActor(modal);
+        modal.toFront();
+        stage.setScrollFocus(scroll);
+    }
+
+    private void showMapObjPicker() {
+        final Table modal = new Table();
+        modal.setFillParent(true);
+        modal.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
+        modal.setBackground(makeSolidDrawable(0f, 0f, 0f, 0.72f));
+        modal.addListener(new InputListener() {
+            @Override public boolean touchDown(InputEvent e, float x, float y, int p, int b) { return true; }
+        });
+        modal.addListener(new com.badlogic.gdx.scenes.scene2d.EventListener() {
+            @Override
+            public boolean handle(com.badlogic.gdx.scenes.scene2d.Event e) {
+                if (e instanceof InputEvent && ((InputEvent) e).getType() == InputEvent.Type.scrolled) {
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        Table box = new Table();
+        box.setBackground(makeSolidDrawable(0.10f, 0.10f, 0.05f, 1f));
+
+        Table strip = new Table();
+        strip.setBackground(makeSolidDrawable(0.18f, 0.18f, 0.03f, 1f));
+        Label title = new Label("BUILD MAP OBJ", game.skin);
+        title.setFontScale(0.72f);
+        title.setColor(new Color(0.9f, 0.9f, 0.5f, 1f));
+        title.setAlignment(Align.center);
+        strip.add(title).growX().pad(8);
+        box.add(strip).growX().row();
+
+        Table list = new Table();
+        list.top().padLeft(10).padRight(10).padTop(6).padBottom(6);
+        for (final String type : MAP_OBJ_TYPES) {
+            final TextButton btn = new TextButton(toNice(type), game.skin, "militopia-btn");
+            btn.getLabel().setFontScale(0.6f);
+            btn.setColor(new Color(0.9f, 0.9f, 0.6f, 1f));
+            btn.addListener(new HoverListener());
+            btn.addListener(new ClickListener() {
+                @Override public void clicked(InputEvent e, float x, float y) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                    inputController.enterDevBuildMapObj(type, selectedOwner);
+                    setStatus("Placing: " + toNice(type));
+                    modal.remove();
+                }
+            });
+            list.add(btn).growX().padBottom(3).row();
+        }
+
+        final ScrollPane scroll = new ScrollPane(list, game.skin);
+        scroll.setScrollingDisabled(true, false);
+        scroll.setFadeScrollBars(false);
+        scroll.setOverscroll(false, false);
+        box.add(scroll).growX().maxHeight(300).row();
+
+        scroll.addListener(new InputListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, com.badlogic.gdx.scenes.scene2d.Actor fromActor) {
+                stage.setScrollFocus(scroll);
+            }
+        });
+
+        TextButton cancelBtn = new TextButton("CANCEL", game.skin, "militopia-btn");
+        cancelBtn.getLabel().setFontScale(0.6f);
+        cancelBtn.setColor(new Color(0.65f, 0.65f, 0.65f, 1f));
+        cancelBtn.addListener(new HoverListener());
+        cancelBtn.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent e, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
+                modal.remove();
+            }
+        });
+        box.add(cancelBtn).width(220).pad(6).padBottom(10).row();
+
+        modal.add(box).width(280);
+        stage.addActor(modal);
+        modal.toFront();
+        stage.setScrollFocus(scroll);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Base level picker modal
     // ─────────────────────────────────────────────────────────────────────────
 
     public void showBaseLevelPicker(final Entity base) {
         final Table modal = new Table();
         modal.setFillParent(true);
+        modal.setTouchable(com.badlogic.gdx.scenes.scene2d.Touchable.enabled);
         modal.setBackground(makeSolidDrawable(0f, 0f, 0f, 0.65f));
+        modal.addListener(new InputListener() {
+            @Override public boolean touchDown(InputEvent e, float x, float y, int p, int b) { return true; }
+        });
+        modal.addListener(new com.badlogic.gdx.scenes.scene2d.EventListener() {
+            @Override
+            public boolean handle(com.badlogic.gdx.scenes.scene2d.Event e) {
+                if (e instanceof InputEvent && ((InputEvent) e).getType() == InputEvent.Type.scrolled) {
+                    return true;
+                }
+                return false;
+            }
+        });
 
         Table box = new Table();
         box.setBackground(makeSolidDrawable(0.12f, 0.08f, 0.02f, 1f));
@@ -470,21 +658,6 @@ public class DevPanel {
             }
         });
         content.add(btn).growX().padBottom(4).row();
-    }
-
-    private TextButton makeCollapsibleHeader(String label) {
-        TextButton btn = new TextButton(label + "  ▸", game.skin, "militopia-btn");
-        btn.getLabel().setFontScale(0.6f);
-        btn.setColor(new Color(0.85f, 0.85f, 0.85f, 1f));
-        btn.addListener(new HoverListener());
-        return btn;
-    }
-
-    private TextButton makeItemBtn(String label) {
-        TextButton btn = new TextButton(label, game.skin, "militopia-btn");
-        btn.getLabel().setFontScale(0.55f);
-        btn.addListener(new HoverListener());
-        return btn;
     }
 
     private TextButton makeSmallBtn(String label) {
