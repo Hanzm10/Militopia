@@ -76,30 +76,31 @@ public class CombatSystemTest {
 
     @Test
     public void testBasicDamageFormula() {
-        // TANK (atk=12) vs TITAN (def=10, hp=60) on GRASS = 12-10 = 2 dmg, TITAN survives
+        // TANK (atk=12) vs JUGGERNAUT (def=10, hp=60) on GRASS = 12-10 = 2 dmg,
+        // JUGGERNAUT survives
         Entity tank = createUnit(UnitType.TANK, 0, 0, 1);
-        Entity titan = createUnit(UnitType.TITAN, 1, 0, 2); // adjacent, within range
+        Entity JUGGERNAUT = createUnit(UnitType.JUGGERNAUT, 1, 0, 2); // adjacent, within range
 
-        StatsComponent dStats = titan.getComponent(StatsComponent.class);
+        StatsComponent dStats = JUGGERNAUT.getComponent(StatsComponent.class);
         int initialHP = dStats.currentHP;
 
-        combatSystem.resolveAttack(tank, titan);
+        combatSystem.resolveAttack(tank, JUGGERNAUT);
 
         int expectedDmg = Math.max(0,
-                UnitStatConfig.get(UnitType.TANK).atk - UnitStatConfig.get(UnitType.TITAN).def);
+                UnitStatConfig.get(UnitType.TANK).atk - UnitStatConfig.get(UnitType.JUGGERNAUT).def);
         assertEquals(initialHP - expectedDmg, dStats.currentHP);
     }
 
     @Test
     public void testDamageNeverNegative() {
-        // RECRUIT (atk=3) vs TITAN (def=10) — would be negative without the floor
+        // RECRUIT (atk=3) vs JUGGERNAUT (def=10) — would be negative without the floor
         Entity recruit = createUnit(UnitType.RECRUIT, 0, 0, 1);
-        Entity titan = createUnit(UnitType.TITAN, 1, 1, 2);
+        Entity JUGGERNAUT = createUnit(UnitType.JUGGERNAUT, 1, 1, 2);
 
-        StatsComponent dStats = titan.getComponent(StatsComponent.class);
+        StatsComponent dStats = JUGGERNAUT.getComponent(StatsComponent.class);
         int initialHP = dStats.currentHP;
 
-        combatSystem.resolveAttack(recruit, titan);
+        combatSystem.resolveAttack(recruit, JUGGERNAUT);
 
         assertEquals(initialHP, dStats.currentHP, "HP should be unchanged when attack < defense");
     }
@@ -122,20 +123,21 @@ public class CombatSystemTest {
 
     @Test
     public void testMaxRangePenalty() {
-        // SNIPER (atk=15, rng=3) vs TITAN (def=10, hp=60) — penalty distinguishes the result
+        // SNIPER (atk=15, rng=3) vs JUGGERNAUT (def=10, hp=60) — penalty distinguishes
+        // the result
         // At max range (dist=3): 15-10-1 = 4 dmg
-        // Without penalty:       15-10   = 5 dmg
+        // Without penalty: 15-10 = 5 dmg
         Entity sniper = createUnit(UnitType.SNIPER, 0, 0, 1);
-        Entity titan  = createUnit(UnitType.TITAN,  3, 0, 2);
+        Entity JUGGERNAUT = createUnit(UnitType.JUGGERNAUT, 3, 0, 2);
 
-        StatsComponent dStats = titan.getComponent(StatsComponent.class);
+        StatsComponent dStats = JUGGERNAUT.getComponent(StatsComponent.class);
         int initialHP = dStats.currentHP;
 
-        combatSystem.resolveAttack(sniper, titan);
+        combatSystem.resolveAttack(sniper, JUGGERNAUT);
 
         int expectedDmg = Math.max(0,
                 UnitStatConfig.get(UnitType.SNIPER).atk
-                        - UnitStatConfig.get(UnitType.TITAN).def
+                        - UnitStatConfig.get(UnitType.JUGGERNAUT).def
                         - CombatConstants.MAX_RANGE_ATTACK_PENALTY);
         assertEquals(initialHP - expectedDmg, dStats.currentHP, "Max range penalty should apply at distance = range");
     }
@@ -178,7 +180,8 @@ public class CombatSystemTest {
 
     @Test
     public void testNoCounterWhenDefenderOutOfRange() {
-        // SNIPER (rng=3) attacks RECRUIT (rng=1) from distance 3 — recruit can't counter
+        // SNIPER (rng=3) attacks RECRUIT (rng=1) from distance 3 — recruit can't
+        // counter
         Entity sniper = createUnit(UnitType.SNIPER, 0, 0, 1);
         Entity recruit = createUnit(UnitType.RECRUIT, 3, 0, 2);
 
@@ -242,7 +245,7 @@ public class CombatSystemTest {
 
     @Test
     public void testOilDerrickIsIndestructible() {
-        Entity attacker = createUnit(UnitType.TITAN, 0, 0, 1);
+        Entity attacker = createUnit(UnitType.JUGGERNAUT, 0, 0, 1);
         Entity oilDerrick = createStructure(StructureType.OIL_DERRICK.getDisplayName(), 1, 0, 2);
 
         StatsComponent dStats = oilDerrick.getComponent(StatsComponent.class);
@@ -255,7 +258,7 @@ public class CombatSystemTest {
 
     @Test
     public void testNuclearPlantIsIndestructible() {
-        Entity attacker = createUnit(UnitType.TITAN, 0, 0, 1);
+        Entity attacker = createUnit(UnitType.JUGGERNAUT, 0, 0, 1);
         Entity nuclearPlant = createStructure(StructureType.NUCLEAR_PLANT.getDisplayName(), 1, 0, 2);
 
         StatsComponent dStats = nuclearPlant.getComponent(StatsComponent.class);

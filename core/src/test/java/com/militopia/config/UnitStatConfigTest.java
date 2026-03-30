@@ -43,7 +43,6 @@ public class UnitStatConfigTest {
         assertEquals(StatsComponent.MoveType.AIR, UnitStatConfig.get(UnitType.SUICIDE_DRONE).moveType);
         assertEquals(StatsComponent.MoveType.AIR, UnitStatConfig.get(UnitType.APACHE).moveType);
         assertEquals(StatsComponent.MoveType.AIR, UnitStatConfig.get(UnitType.B2).moveType);
-        assertEquals(StatsComponent.MoveType.AIR, UnitStatConfig.get(UnitType.WRAITH).moveType);
     }
 
     @Test
@@ -52,14 +51,13 @@ public class UnitStatConfigTest {
         assertEquals(StatsComponent.MoveType.SEA, UnitStatConfig.get(UnitType.DESTROYER).moveType);
         assertEquals(StatsComponent.MoveType.SEA, UnitStatConfig.get(UnitType.CARRIER).moveType);
         assertEquals(StatsComponent.MoveType.SEA, UnitStatConfig.get(UnitType.SUBMARINE).moveType);
-        assertEquals(StatsComponent.MoveType.SEA, UnitStatConfig.get(UnitType.DREADNOUGHT).moveType);
     }
 
     @Test
     public void testLandUnitsHaveLandMoveType() {
         assertEquals(StatsComponent.MoveType.LAND, UnitStatConfig.get(UnitType.RECRUIT).moveType);
         assertEquals(StatsComponent.MoveType.LAND, UnitStatConfig.get(UnitType.TANK).moveType);
-        assertEquals(StatsComponent.MoveType.LAND, UnitStatConfig.get(UnitType.TITAN).moveType);
+        assertEquals(StatsComponent.MoveType.LAND, UnitStatConfig.get(UnitType.JUGGERNAUT).moveType);
     }
 
     @Test
@@ -84,14 +82,14 @@ public class UnitStatConfigTest {
         // Regression guard — if someone accidentally edits the config, these catch it
         UnitStatConfig.UnitStatData recruit = UnitStatConfig.get(UnitType.RECRUIT);
         assertEquals(10, recruit.hp);
-        assertEquals(3,  recruit.atk);
-        assertEquals(1,  recruit.def);
-        assertEquals(1,  recruit.rng);
+        assertEquals(3, recruit.atk);
+        assertEquals(1, recruit.def);
+        assertEquals(1, recruit.rng);
 
         UnitStatConfig.UnitStatData tank = UnitStatConfig.get(UnitType.TANK);
         assertEquals(30, tank.hp);
         assertEquals(12, tank.atk);
-        assertEquals(5,  tank.def);
-        assertEquals(3,  tank.rng);
+        assertEquals(5, tank.def);
+        assertEquals(3, tank.rng);
     }
 }
