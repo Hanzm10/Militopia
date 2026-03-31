@@ -51,8 +51,8 @@ public class UnitStatConfig {
         m.put(UnitType.APACHE,        new UnitStatData(20,  15,   2,   3,   2,   3,  18,  StatsComponent.MoveType.AIR));
         m.put(UnitType.B2,            new UnitStatData(45,  18,   3,   3,   3,   3,   0,  StatsComponent.MoveType.AIR));
 
-        m.put(UnitType.GUNBOAT,       new UnitStatData(10,   5,   2,   2,   2,   2,   6,  StatsComponent.MoveType.SEA));
-        m.put(UnitType.DESTROYER,     new UnitStatData(30,  15,   3,   3,   3,   3,  13,  StatsComponent.MoveType.SEA));
+        m.put(UnitType.GUNBOAT,       new UnitStatData(12,   5,   1,   1,   2,   2,   5,  StatsComponent.MoveType.SEA));
+        m.put(UnitType.DESTROYER,     new UnitStatData(30,  12,   5,   2,   3,   3,  15,  StatsComponent.MoveType.SEA));
         m.put(UnitType.CARRIER,       new UnitStatData(45,   5,   4,   3,   3,   3,  25,  StatsComponent.MoveType.SEA));
         m.put(UnitType.SUBMARINE,     new UnitStatData(40,  25,   3,   4,   4,   3,   0,  StatsComponent.MoveType.SEA));
 

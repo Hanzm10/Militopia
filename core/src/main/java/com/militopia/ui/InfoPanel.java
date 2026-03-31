@@ -55,6 +55,7 @@ public class InfoPanel {
     private com.badlogic.gdx.scenes.scene2d.ui.Image tileInfoImage;
     private Label tileInfoLabel;
     private Label hpLabel;
+    private Label fuelLabel;
     private Label abilityDescLabel;
     private Table abilityTable;
     private ScrollPane abilityScroll;
@@ -111,6 +112,10 @@ public class InfoPanel {
             hpLabel.setVisible(false);
             infoStack.getCell(hpLabel).height(0);
         }
+        if (fuelLabel != null) {
+            fuelLabel.setVisible(false);
+            infoStack.getCell(fuelLabel).height(0);
+        }
         if (abilityDescLabel != null) {
             abilityDescLabel.setVisible(false);
             infoStack.getCell(abilityDescLabel).height(0);
@@ -140,6 +145,10 @@ public class InfoPanel {
         if (hpLabel != null) {
             hpLabel.setVisible(false);
             infoStack.getCell(hpLabel).height(0);
+        }
+        if (fuelLabel != null) {
+            fuelLabel.setVisible(false);
+            infoStack.getCell(fuelLabel).height(0);
         }
         if (abilityDescLabel != null) {
             abilityDescLabel.setVisible(false);
@@ -317,6 +326,24 @@ public class InfoPanel {
             infoStack.getCell(hpLabel).height(20);
         }
 
+        // Fuel indicator: only for Apache
+        AbilitiesComponent abilitiesForFuel = unit.getComponent(AbilitiesComponent.class);
+        StatsComponent statsForFuel = unit.getComponent(StatsComponent.class);
+        if (fuelLabel != null) {
+            if (statsForFuel != null && statsForFuel.unitType == UnitType.APACHE
+                    && abilitiesForFuel != null && abilitiesForFuel.fuel >= 0) {
+                int f = abilitiesForFuel.fuel;
+                int fm = abilitiesForFuel.fuelMax;
+                fuelLabel.setText("Fuel: " + f + " / " + fm);
+                fuelLabel.setColor(f > 2 ? new Color(1f, 0.65f, 0f, 1f) : Color.RED);
+                fuelLabel.setVisible(true);
+                infoStack.getCell(fuelLabel).height(20);
+            } else {
+                fuelLabel.setVisible(false);
+                infoStack.getCell(fuelLabel).height(0);
+            }
+        }
+
         StatsComponent stats = unit.getComponent(StatsComponent.class);
         if (stats != null && statsTable != null) {
             // Reset label colors for units
@@ -395,7 +422,7 @@ public class InfoPanel {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
-                            screen.getGameMap().objects[unitPos.x][unitPos.y] = null;
+                            screen.getGameMap().objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
                             // Remove the tree entity from the engine so it disappears visually
                             ImmutableArray<Entity> objs = screen.getEngine().getEntitiesFor(
                                     Family.all(GridPositionComponent.class, TypeComponent.class).get());
@@ -435,7 +462,7 @@ public class InfoPanel {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
-                            screen.getGameMap().objects[unitPos.x][unitPos.y] = null;
+                            screen.getGameMap().objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
                             // Remove the cactus entity from the engine so it disappears visually
                             ImmutableArray<Entity> objs = screen.getEngine().getEntitiesFor(
                                     Family.all(GridPositionComponent.class, TypeComponent.class).get());
@@ -540,6 +567,11 @@ public class InfoPanel {
         hpLabel.setFontScale(0.65f);
         hpLabel.setVisible(false);
         infoStack.add(hpLabel).left().height(0).row();
+
+        fuelLabel = new Label("", game.skin, "default-font", new Color(1f, 0.65f, 0f, 1f));
+        fuelLabel.setFontScale(0.65f);
+        fuelLabel.setVisible(false);
+        infoStack.add(fuelLabel).left().height(0).row();
 
         abilityDescLabel = new Label("", game.skin, "default-font", new Color(0.6f, 0.85f, 1f, 1f));
         abilityDescLabel.setFontScale(0.55f);

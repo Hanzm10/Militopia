@@ -53,6 +53,14 @@ public class EntityFactory {
         engine.addEntity(entity);
     }
 
+    public void createTransformMarker(int x, int y) {
+        Entity entity = engine.createEntity();
+        entity.add(new GridPositionComponent(x, y, 3));
+        entity.add(new TextureComponent(markerRegion));
+        entity.add(new TypeComponent(TypeComponent.Type.TRANSFORM_MARKER));
+        engine.addEntity(entity);
+    }
+
     /**
      * Red attack-range marker. Rendered by UnitRenderSystem.
      * Uses the new enemy_marker texture.

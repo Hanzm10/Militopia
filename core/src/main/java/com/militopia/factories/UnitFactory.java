@@ -247,22 +247,35 @@ public class UnitFactory {
             GridPositionComponent p = e.getComponent(GridPositionComponent.class);
 
             if (type.type == TypeComponent.Type.UNIT) {
+                AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
+                boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isInvincible = false;
+                int fuel = -1, nukeCooldown = 0;
+                if (a != null) {
+                    isDiggingIn = a.isDiggingIn;
+                    hasUsedDigIn = a.hasUsedDigIn;
+                    isOverwatchActive = a.isOverwatchActive;
+                    isCloaked = a.isCloaked;
+                    pendingSkirmishMove = a.pendingSkirmishMove;
+                    isInvincible = a.isInvincible;
+                    fuel = a.fuel;
+                    nukeCooldown = a.nukeCooldown;
+                }
+
                 unitSnaps.add(new UnitSnapshot(
                         s.unitTypeKey, p.x, p.y, s.owner,
-                        s.currentHP, s.hasActed, s.hasMoved, s.moveType));
+                        s.currentHP, s.hasActed, s.hasMoved, s.moveType,
+                        isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked,
+                        pendingSkirmishMove, isInvincible, fuel, nukeCooldown));
 
-            } else if (type.type == TypeComponent.Type.OBJECT && s.owner >= 0
-                    && (s.income > 0 || s.maxBaseXP > 0 || e.getComponent(AnimalComponent.class) == null)) {
-                // Only snapshot income-generating structures: bases (income >= 2) and towns
-                // (income = 1)
-                // Exclude decorative objects (trees, ruins, oil, etc.) — they don't need
-                // restoration
-                if (s.income > 0) {
-                    structSnaps.add(new StructureSnapshot(
-                            p.x, p.y, s.owner, s.level,
-                            s.currentBaseXP, s.income, s.name, s.baseOrdinal,
-                            s.chosenSuperUnit));
-                }
+            } else if (type.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
+                // Capture ALL non-animal static objects/structures so they can be restored
+                structSnaps.add(new StructureSnapshot(
+                        p.x, p.y, s != null ? s.owner : 0, s != null ? s.level : 1,
+                        s != null ? s.currentBaseXP : 0f, s != null ? s.income : 0,
+                        s != null ? s.name : "", s != null ? s.baseOrdinal : "",
+                        s != null ? s.chosenSuperUnit : "", s != null ? s.unitTypeKey : "",
+                        s != null ? s.xpGain : 0, s != null ? s.parentBaseX : -1,
+                        s != null ? s.parentBaseY : -1));
             }
         }
 
@@ -558,22 +571,25 @@ public class UnitFactory {
         stats.xpGain = data.xpGain;
         stats.chosenSuperUnit = data.chosenSuperUnit;
 
+        // --- FIX 3: Only update base-specific stats/texture for actual BASE entities ---
+        // isTown check is not sufficient — Oil Derricks and other non-base owned structures
+        // would pass the isTown=false branch and have their stats and texture overwritten.
         boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
-
-        // --- NEW: Sync Base Stats after load ---
-        if (!isTown) {
+        boolean isBase = StructureType.fromDisplayName(stats.name) == StructureType.BASE;
+        if (isBase) {
             com.militopia.config.BaseLevelConfig.LevelData levelData = com.militopia.config.BaseLevelConfig
                     .getLevel(stats.level);
             stats.maxBaseXP = levelData.maxXP;
             stats.income = levelData.income;
             stats.vision = levelData.borderRadius;
             updateBaseTexture(entity, stats);
-        } else {
+        } else if (isTown) {
             // Towns have fixed stats
             stats.maxBaseXP = 2000;
             stats.income = 1;
             stats.vision = 1;
         }
+        // Other structures (Oil Derrick, etc.) keep their stats as-is from the save data.
     }
 
     /**
@@ -602,6 +618,7 @@ public class UnitFactory {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
             state.p1BaseCount++;
             stats.owner = 1;
+            stats.unitTypeKey = "BASE_P1"; // Fix 2: ensure key reflects new base type
 
             // Update Old Owner
             if (wasBase && oldOwner == 2) {
@@ -623,6 +640,7 @@ public class UnitFactory {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             state.p2BaseCount++;
             stats.owner = 2;
+            stats.unitTypeKey = "BASE_P2"; // Fix 2: ensure key reflects new base type
 
             // Update Old Owner
             if (wasBase && oldOwner == 1) {

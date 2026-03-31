@@ -8,7 +8,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
@@ -249,6 +248,13 @@ public class GameInputController extends InputAdapter {
                 return true;
             }
 
+            // --- TRANSFORMATION: click on a transform-marker ---
+            Entity clickedTransformMarker = getEntityAt(gridX, gridY, TypeComponent.Type.TRANSFORM_MARKER);
+            if (clickedTransformMarker != null && selectedUnitEntity != null) {
+                transformUnit(selectedUnitEntity, gridX, gridY);
+                return true;
+            }
+
             // --- ATTACK: click on a red attack-marker tile ---
             Entity clickedAttackMarker = getEntityAt(gridX, gridY, TypeComponent.Type.ATTACK_MARKER);
             if (clickedAttackMarker != null && selectedUnitEntity != null) {
@@ -320,7 +326,6 @@ public class GameInputController extends InputAdapter {
                     if (type.type == TypeComponent.Type.UNIT) {
                         foundUnit = e;
                     } else if (type.type == TypeComponent.Type.OBJECT) {
-                        StatsComponent s = e.getComponent(StatsComponent.class);
                         if (pos.zIndex == 2 || e.getComponent(AnimalComponent.class) != null) {
                             foundAnimal = e;
                         } else {
@@ -848,6 +853,43 @@ public class GameInputController extends InputAdapter {
             abilities.isDiggingIn = false;
             abilities.pendingSkirmishMove = false;
         }
+        clearMarkers();
+        selectedUnitEntity = null;
+    }
+
+    private void transformUnit(Entity unit, int targetX, int targetY) {
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        if (stats == null) return;
+
+        UnitType targetType = null;
+        if (stats.unitType == UnitType.GUNBOAT) targetType = UnitType.RANGER;
+        else if (stats.unitType == UnitType.DESTROYER) targetType = UnitType.TANK;
+
+        if (targetType == null) return;
+
+        int owner = stats.owner;
+        int currentHP = stats.currentHP;
+        String oldName = stats.name;
+
+        GameLogger.log(GameLogger.MOVE, owner,
+                oldName + " transforms into " + targetType.name() + " at " + GameLogger.pos(targetX, targetY));
+
+        // Remove old unit
+        engine.removeEntity(unit);
+
+        // Create new unit
+        unitFactory.createUnit(targetType, targetX, targetY, owner, true);
+
+        // Update HP to match old unit
+        Entity newUnit = getEntityAt(targetX, targetY, TypeComponent.Type.UNIT);
+        if (newUnit != null) {
+            StatsComponent newStats = newUnit.getComponent(StatsComponent.class);
+            if (newStats != null) {
+                newStats.currentHP = currentHP;
+            }
+        }
+
+        AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
         gameHUD.hideSummonMenu();
         gameHUD.hideTileInfo();
         clearMarkers();
@@ -927,6 +969,24 @@ public class GameInputController extends InputAdapter {
         // Attack range SFX — only play if at least one attack marker was actually spawned
         if (attackMarkersAdded > 0) {
             AudioManager.getInstance().playSFX(SFXKeys.TILE_ATTACK_RANGE);
+        }
+
+        // --- Transformation markers: Gunboat/Destroyer near land ---
+        if (!stats.hasMoved && (stats.unitType == UnitType.GUNBOAT || stats.unitType == UnitType.DESTROYER)) {
+            int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
+            for (int[] d : dirs) {
+                int nx = startX + d[0];
+                int ny = startY + d[1];
+                if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) {
+                    MapGenerator.TerrainType t = gameMap.terrain[nx][ny];
+                    // If it's land and no unit is there
+                    if (t != MapGenerator.TerrainType.WATER && t != MapGenerator.TerrainType.DEEP_WATER) {
+                        if (getEntityAt(nx, ny, TypeComponent.Type.UNIT) == null) {
+                            entityFactory.createTransformMarker(nx, ny);
+                        }
+                    }
+                }
+            }
         }
     }
 

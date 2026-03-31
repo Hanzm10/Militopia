@@ -16,6 +16,16 @@ public class UnitSnapshot {
     public boolean hasMoved;
     public StatsComponent.MoveType moveType;
 
+    // --- Ability States ---
+    public boolean isDiggingIn;
+    public boolean hasUsedDigIn;
+    public boolean isOverwatchActive;
+    public boolean isCloaked;
+    public boolean pendingSkirmishMove;
+    public boolean isInvincible;
+    public int fuel;
+    public int nukeCooldown;
+
     /** No-arg constructor for LibGDX Json serialization */
     public UnitSnapshot() {
         this.unitTypeKey = "";
@@ -26,11 +36,22 @@ public class UnitSnapshot {
         this.hasActed = false;
         this.hasMoved = false;
         this.moveType = null;
+        this.isDiggingIn = false;
+        this.hasUsedDigIn = false;
+        this.isOverwatchActive = false;
+        this.isCloaked = false;
+        this.pendingSkirmishMove = false;
+        this.isInvincible = false;
+        this.fuel = -1;
+        this.nukeCooldown = 0;
     }
 
     public UnitSnapshot(String unitTypeKey, int x, int y, int owner,
             int currentHP, boolean hasActed, boolean hasMoved,
-            StatsComponent.MoveType moveType) {
+            StatsComponent.MoveType moveType, boolean isDiggingIn,
+            boolean hasUsedDigIn, boolean isOverwatchActive,
+            boolean isCloaked, boolean pendingSkirmishMove,
+            boolean isInvincible, int fuel, int nukeCooldown) {
         this.unitTypeKey = unitTypeKey;
         this.x = x;
         this.y = y;
@@ -39,5 +60,13 @@ public class UnitSnapshot {
         this.hasActed = hasActed;
         this.hasMoved = hasMoved;
         this.moveType = moveType;
+        this.isDiggingIn = isDiggingIn;
+        this.hasUsedDigIn = hasUsedDigIn;
+        this.isOverwatchActive = isOverwatchActive;
+        this.isCloaked = isCloaked;
+        this.pendingSkirmishMove = pendingSkirmishMove;
+        this.isInvincible = isInvincible;
+        this.fuel = fuel;
+        this.nukeCooldown = nukeCooldown;
     }
 }

@@ -91,5 +91,19 @@ public class UnitStatConfigTest {
         assertEquals(12, tank.atk);
         assertEquals(5, tank.def);
         assertEquals(3, tank.rng);
+
+        UnitStatConfig.UnitStatData destroyer = UnitStatConfig.get(UnitType.DESTROYER);
+        assertEquals(tank.hp, destroyer.hp);
+        assertEquals(tank.atk, destroyer.atk);
+        assertEquals(tank.def, destroyer.def);
+        assertEquals(tank.rng, destroyer.rng);
+
+        UnitStatConfig.UnitStatData ranger = UnitStatConfig.get(UnitType.RANGER);
+        UnitStatConfig.UnitStatData gunboat = UnitStatConfig.get(UnitType.GUNBOAT);
+        assertEquals(ranger.hp, gunboat.hp);
+        assertEquals(ranger.atk, gunboat.atk);
+        assertEquals(ranger.def, gunboat.def);
+        assertEquals(ranger.rng, gunboat.rng);
+        assertEquals(ranger.cost, gunboat.cost);
     }
 }

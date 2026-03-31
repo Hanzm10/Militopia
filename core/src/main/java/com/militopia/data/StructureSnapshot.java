@@ -14,6 +14,10 @@ public class StructureSnapshot {
     public String name;
     public String baseOrdinal;
     public String chosenSuperUnit;
+    public String unitTypeKey;
+    public int xpGain;
+    public int parentBaseX;
+    public int parentBaseY;
 
     /** No-arg constructor for LibGDX Json serialization */
     public StructureSnapshot() {
@@ -26,11 +30,16 @@ public class StructureSnapshot {
         this.name = "";
         this.baseOrdinal = "";
         this.chosenSuperUnit = "";
+        this.unitTypeKey = "";
+        this.xpGain = 0;
+        this.parentBaseX = -1;
+        this.parentBaseY = -1;
     }
 
     public StructureSnapshot(int x, int y, int owner, int level,
             float currentBaseXP, int income,
-            String name, String baseOrdinal, String chosenSuperUnit) {
+            String name, String baseOrdinal, String chosenSuperUnit,
+            String unitTypeKey, int xpGain, int parentBaseX, int parentBaseY) {
         this.x = x;
         this.y = y;
         this.owner = owner;
@@ -40,5 +49,9 @@ public class StructureSnapshot {
         this.name = name;
         this.baseOrdinal = baseOrdinal;
         this.chosenSuperUnit = chosenSuperUnit;
+        this.unitTypeKey = unitTypeKey;
+        this.xpGain = xpGain;
+        this.parentBaseX = parentBaseX;
+        this.parentBaseY = parentBaseY;
     }
 }
