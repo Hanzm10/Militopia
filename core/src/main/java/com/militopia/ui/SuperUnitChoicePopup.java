@@ -100,11 +100,16 @@ public class SuperUnitChoicePopup {
         modal.add(sub).padBottom(24).row();
 
         Table choicesRow = new Table();
+        int baseOwner = baseEntity.getComponent(com.militopia.components.StatsComponent.class).owner;
+        boolean hasPort = hasAnyPort(baseOwner, factory);
+
         for (int i = 0; i < SUPER_UNITS.length; i++) {
             final String unitType = SUPER_UNITS[i];
             final String flavor = FLAVOR[i];
+
+            boolean disabled = unitType.equals("SUBMARINE") && !hasPort;
             choicesRow.add(buildChoiceCard(unitType, flavor, factory,
-                    baseEntity, state, map)).pad(16);
+                    baseEntity, state, map, disabled)).pad(16);
         }
         modal.add(choicesRow).row();
 
@@ -114,10 +119,13 @@ public class SuperUnitChoicePopup {
     private Table buildChoiceCard(final String unitType, String flavor,
             final UnitFactory factory,
             final Entity baseEntity, final GameState state,
-            final MapGenerator.GameMap map) {
+            final MapGenerator.GameMap map, boolean disabled) {
 
         Table card = new Table();
         card.setBackground(game.skin.newDrawable("white", new Color(0.15f, 0.15f, 0.15f, 1f)));
+        if (disabled) {
+            card.getColor().a = 0.5f;
+        }
 
         // Unit icon
         TextureRegion icon = factory.getTextureForPopup(unitType);
@@ -151,18 +159,30 @@ public class SuperUnitChoicePopup {
         flavorLabel.setAlignment(Align.center);
         card.add(flavorLabel).width(130).padTop(4).padBottom(10).row();
 
+        if (disabled) {
+            Label note = new Label("no ports available.\nplease build one", game.skin, "default-font", Color.ORANGE);
+            note.setFontScale(0.45f);
+            note.setAlignment(Align.center);
+            card.add(note).padBottom(8).row();
+        }
+
         // Choose button
+        String btnText = disabled ? "No Ports Available" : "Choose";
         com.badlogic.gdx.scenes.scene2d.ui.TextButton chooseBtn =
-                new com.badlogic.gdx.scenes.scene2d.ui.TextButton("Choose", game.skin, "militopia-btn");
-        chooseBtn.addListener(new HoverListener());
-        chooseBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
-                factory.chooseSuperUnit(baseEntity, unitType, state, map);
-                dismiss();
-            }
-        });
+                new com.badlogic.gdx.scenes.scene2d.ui.TextButton(btnText, game.skin, "militopia-btn");
+        if (disabled) {
+            chooseBtn.setDisabled(true);
+        } else {
+            chooseBtn.addListener(new HoverListener());
+            chooseBtn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                    factory.chooseSuperUnit(baseEntity, unitType, state, map);
+                    dismiss();
+                }
+            });
+        }
         card.add(chooseBtn).fillX().width(140).padBottom(14);
 
         return card;
@@ -172,5 +192,18 @@ public class SuperUnitChoicePopup {
         if (popupTable != null) popupTable.remove();
         inputController.setInputEnabled(true);
         bottomBar.setBlocked(false);
+    }
+
+    private boolean hasAnyPort(int owner, UnitFactory factory) {
+        com.badlogic.ashley.core.Engine engine = factory.getEngine();
+        com.badlogic.ashley.utils.ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                com.badlogic.ashley.core.Family.all(com.militopia.components.StatsComponent.class).get());
+        for (Entity e : entities) {
+            com.militopia.components.StatsComponent stats = e.getComponent(com.militopia.components.StatsComponent.class);
+            if (stats.owner == owner && "PORT".equals(stats.unitTypeKey)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

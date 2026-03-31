@@ -987,6 +987,7 @@ public class GameScreen implements Screen {
         s.income = data.income;
         s.currentBaseXP = prevXP;
         s.maxBaseXP = data.maxXP;
+        unitFactory.updateBaseTexture(base, s);
         GameLogger.log(GameLogger.INPUT, "[DEV] Set base at (" + pos.x + "," + pos.y + ") to level " + targetLevel);
     }
 

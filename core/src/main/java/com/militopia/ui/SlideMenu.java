@@ -8,7 +8,6 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.militopia.MilitopiaGame;
 import com.militopia.components.GridPositionComponent;
@@ -56,7 +55,6 @@ public class SlideMenu {
     // References kept alive for button callbacks
     private GameInputController inputController;
     private UnitFactory unitFactory;
-    private GameState lastState;
 
     private static final float PANEL_HEIGHT = 140f;
     private static final Color BG_COLOR = new Color(0.1f, 0.1f, 0.1f, 0.95f);
@@ -91,7 +89,6 @@ public class SlideMenu {
     public void openSummonMenu(int owner, GameState state, int level, String producerType) {
         this.currentBaseOwner = owner;
         this.currentBaseLevel = level;
-        this.lastState = state;
         populateSummonMenu(state, producerType);
         GameLogger.log(GameLogger.UI,
                 "SlideMenu: Open Summon Menu | Owner: P" + owner + " | Lvl: " + level + " | Type: " + producerType);
@@ -227,7 +224,6 @@ public class SlideMenu {
         this.currentBaseOwner = owner;
         this.buildParentX = parentX;
         this.buildParentY = parentY;
-        this.lastState = state;
         boolean hasItems = populateBuildMenu(state, maxLevel, isWater, isCoastalWater, isCoastalLand);
         if (hasItems) {
             GameLogger.log(GameLogger.UI, "SlideMenu: Open Build Menu | At: " + GameLogger.pos(x, y) + " | Owner: P"
@@ -334,19 +330,73 @@ public class SlideMenu {
                     });
         }
 
+        // --- NEW: Add Chosen Super Units from all friendly bases ---
+        com.badlogic.ashley.core.Engine engine = unitFactory.getEngine();
+        com.badlogic.ashley.utils.ImmutableArray<Entity> allBases = engine.getEntitiesFor(
+                com.badlogic.ashley.core.Family.all(StatsComponent.class).get());
+        java.util.Set<String> superUnitsAdded = new java.util.HashSet<>();
+
+        for (Entity base : allBases) {
+            StatsComponent bs = base.getComponent(StatsComponent.class);
+            if (bs.owner == currentBaseOwner && bs.chosenSuperUnit != null && !bs.chosenSuperUnit.isEmpty()) {
+                if (superUnitsAdded.contains(bs.chosenSuperUnit)) continue;
+
+                final UnitType superUnit = UnitType.fromKey(bs.chosenSuperUnit);
+                if (superUnit == null) continue;
+
+                StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(superUnit);
+                boolean show = producerType.equals("PORT")
+                        ? moveType == StatsComponent.MoveType.SEA
+                        : moveType == StatsComponent.MoveType.LAND || moveType == StatsComponent.MoveType.AIR;
+
+                if (!show) continue;
+
+                superUnitsAdded.add(bs.chosenSuperUnit);
+                UnitFactory.UiInfo info = unitFactory.getUnitUi(superUnit);
+                final int cost = UnitFactory.getUnitCost(superUnit);
+
+                SummonButton.addTo(content, info.region, info.name + " (" + cost + ")", game, assets,
+                        new ClickListener() {
+                            @Override
+                            public void clicked(InputEvent event, float x, float y) {
+                                int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                                if (funds < cost) {
+                                    AudioManager.getInstance().playSFX(SFXKeys.RESOURCE_INSUFFICIENT);
+                                    return;
+                                }
+                                int tx = inputController.getLastClickedX();
+                                int ty = inputController.getLastClickedY();
+                                if (tx == -1 || ty == -1) return;
+
+                                int[] spawn = unitFactory.findValidSpawnPoint(tx, ty, moveType, gameScreen.getGameMap());
+                                if (spawn == null) return;
+
+                                if (currentBaseOwner == 1) state.p1Funding -= cost;
+                                else state.p2Funding -= cost;
+
+                                unitFactory.createUnit(superUnit, spawn[0], spawn[1], currentBaseOwner, true);
+                                AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
+                                int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                                int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+                                gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                                hide();
+                                inputController.resetLastClicked();
+                            }
+                        });
+            }
+        }
+
         // Cancel button
         com.badlogic.gdx.scenes.scene2d.ui.TextButton closeBtn = new com.badlogic.gdx.scenes.scene2d.ui.TextButton(
                 "Cancel", game.skin);
         closeBtn.addListener(new HoverListener());
         closeBtn.addListener(new ClickListener() {
-
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 hide();
                 inputController.resetLastClicked();
             }
-
         });
         content.add(closeBtn).pad(10);
     }

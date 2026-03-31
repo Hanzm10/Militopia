@@ -59,6 +59,10 @@ public class UnitFactory {
     private final TextureRegion deerRegion;
     private final TextureRegion zebraRegion;
 
+    public PooledEngine getEngine() {
+        return engine;
+    }
+
     public UnitFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
         this.assets = assets;
@@ -513,11 +517,24 @@ public class UnitFactory {
         if (stats == null || pos == null) return;
 
         stats.chosenSuperUnit = superUnitType;
-
-        // Spawn one immediately adjacent to the base
         UnitType superType = UnitType.fromKey(superUnitType);
         if (superType == null) return;
-        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superType), map);
+
+        int spawnX = pos.x;
+        int spawnY = pos.y;
+
+        // --- SUBMARINE SPECIAL LOGIC: Priority Spawning at Ports ---
+        if (superType == UnitType.SUBMARINE) {
+            Entity bestPort = findBestPortForSuperUnit(stats.owner, pos.x, pos.y);
+            if (bestPort != null) {
+                GridPositionComponent pPos = bestPort.getComponent(GridPositionComponent.class);
+                spawnX = pPos.x;
+                spawnY = pPos.y;
+            }
+        }
+
+        // Spawn unit
+        int[] spawn = findValidSpawnPoint(spawnX, spawnY, getUnitMoveType(superType), map);
         if (spawn != null) {
             createUnit(superType, spawn[0], spawn[1], stats.owner, false);
             GameLogger.log(GameLogger.SUMMON, stats.owner,
@@ -526,8 +543,73 @@ public class UnitFactory {
         } else {
             GameLogger.log(GameLogger.SUMMON, stats.owner,
                     stats.name + " chose super unit: " + superUnitType
-                            + " — no valid spawn point near base, available via summon menu");
+                            + " — no valid spawn point found nearby, available via summon menu");
         }
+    }
+
+    /**
+     * Finds the best Port to spawn a Submarine based on priority:
+     * 1. Port in current base territory
+     * 2. Port in nearest adjacent base territory
+     * 3. Any available Port
+     */
+    private Entity findBestPortForSuperUnit(int owner, int baseX, int baseY) {
+        ImmutableArray<Entity> all = engine.getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
+        List<Entity> myPorts = new ArrayList<>();
+        List<Entity> myBases = new ArrayList<>();
+
+        for (Entity e : all) {
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (s.owner != owner) continue;
+
+            if ("PORT".equals(s.unitTypeKey)) {
+                myPorts.add(e);
+            } else if (StructureType.fromDisplayName(s.name) == StructureType.BASE) {
+                myBases.add(e);
+            }
+        }
+
+        if (myPorts.isEmpty()) return null;
+
+        // Priority 1: Local territory
+        for (Entity port : myPorts) {
+            StatsComponent ps = port.getComponent(StatsComponent.class);
+            if (ps.parentBaseX == baseX && ps.parentBaseY == baseY) {
+                return port;
+            }
+        }
+
+        // Priority 2: Nearest adjacent base territory
+        myBases.sort((b1, b2) -> {
+            GridPositionComponent p1 = b1.getComponent(GridPositionComponent.class);
+            GridPositionComponent p2 = b2.getComponent(GridPositionComponent.class);
+            float d1 = (float) Math.hypot(p1.x - baseX, p1.y - baseY);
+            float d2 = (float) Math.hypot(p2.x - baseX, p2.y - baseY);
+            return Float.compare(d1, d2);
+        });
+
+        for (Entity otherBase : myBases) {
+            GridPositionComponent obPos = otherBase.getComponent(GridPositionComponent.class);
+            if (obPos.x == baseX && obPos.y == baseY) continue; // Skip self
+
+            for (Entity port : myPorts) {
+                StatsComponent ps = port.getComponent(StatsComponent.class);
+                if (ps.parentBaseX == obPos.x && ps.parentBaseY == obPos.y) {
+                    return port;
+                }
+            }
+        }
+
+        // Priority 3: Global (Any port, nearest to this base)
+        myPorts.sort((p1, p2) -> {
+            GridPositionComponent pos1 = p1.getComponent(GridPositionComponent.class);
+            GridPositionComponent pos2 = p2.getComponent(GridPositionComponent.class);
+            float d1 = (float) Math.hypot(pos1.x - baseX, pos1.y - baseY);
+            float d2 = (float) Math.hypot(pos2.x - baseX, pos2.y - baseY);
+            return Float.compare(d1, d2);
+        });
+
+        return myPorts.get(0);
     }
 
     /**

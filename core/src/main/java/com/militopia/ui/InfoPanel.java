@@ -82,7 +82,7 @@ public class InfoPanel {
     }
 
     // Base specific labels
-    private Label levelLabel, xpLabel, incomeLabel, rewardsLabel;
+    private Label levelLabel, xpLabel;
 
     private static final float PANEL_HEIGHT = 120f;
 
@@ -306,6 +306,46 @@ public class InfoPanel {
                             controller.resetLastClicked();
                         }
                     });
+        }
+
+        // --- NEW: Add Chosen Super Unit to Summon Menu ---
+        if (bs.chosenSuperUnit != null && !bs.chosenSuperUnit.isEmpty()) {
+            final UnitType superUnit = UnitType.fromKey(bs.chosenSuperUnit);
+            if (superUnit != null) {
+                StatsComponent.MoveType moveType = factory.getUnitMoveType(superUnit);
+                // Standard Bases only show non-SEA units (SEA units in PORT)
+                if (moveType != StatsComponent.MoveType.SEA) {
+                    UnitFactory.UiInfo info = factory.getUnitUi(superUnit);
+                    final int cost = UnitFactory.getUnitCost(superUnit);
+
+                    SummonButton.addTo(abilityTable, info.region, info.name + " (" + cost + ")", game, assets,
+                            new ClickListener() {
+                                @Override
+                                public void clicked(InputEvent event, float x, float y) {
+                                    int funds = (bs.owner == 1) ? state.p1Funding : state.p2Funding;
+                                    if (funds < cost) {
+                                        AudioManager.getInstance().playSFX(SFXKeys.RESOURCE_INSUFFICIENT);
+                                        return;
+                                    }
+                                    int tx = controller.getLastClickedX();
+                                    int ty = controller.getLastClickedY();
+                                    if (tx == -1 || ty == -1) return;
+
+                                    int[] spawn = factory.findValidSpawnPoint(tx, ty, moveType, screen.getGameMap());
+                                    if (spawn == null) return;
+
+                                    if (bs.owner == 1) state.p1Funding -= cost;
+                                    else state.p2Funding -= cost;
+
+                                    factory.createUnit(superUnit, spawn[0], spawn[1], bs.owner, true);
+                                    AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
+                                    screen.gameHUD.updateFunding((bs.owner == 1) ? state.p1Funding : state.p2Funding, bs.income);
+                                    hideTileInfo();
+                                    controller.resetLastClicked();
+                                }
+                            });
+                }
+            }
         }
     }
 
