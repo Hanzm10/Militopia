@@ -99,6 +99,7 @@ public class AssetManager {
     public static final String BACKGROUND    = "game-system/militopia_background.png";
     public static final String LOGO          = "game-system/militopia-logo.png";
     public static final String TEXT_LOGO     = "game-system/militopia-text-logo.png";
+    public static final String SPLASH_SCREEN = "game-system/militopia-splash-screen.png";
 
     // Attack Animations
     public static final String[] ATTACK_RECRUIT_FRAMES = {
@@ -257,6 +258,7 @@ public class AssetManager {
         manager.load(BACKGROUND, Texture.class);
         manager.load(LOGO, Texture.class);
         manager.load(TEXT_LOGO, Texture.class);
+        manager.load(SPLASH_SCREEN, Texture.class);
 
         // Attack animations
         for (String frame : ATTACK_RECRUIT_FRAMES)

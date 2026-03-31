@@ -19,7 +19,7 @@ Militopia is a 2-player turn-based strategy game. This roadmap tracks the develo
 - [x] **Phase 5: Specialized Structures** - Construction system and building logic
 - [x] **Phase 6: Win / Loss Conditions** - Win conditions and game over state
 - [x] **Phase 7: Exploration & Persistence** - Ruins mechanics, Oil extraction, and move persistence
-- [/] **Phase 8: Polish & UX** - UI overhaul, unit animations, text popups, and sound effects (Gap Closure)
+- [x] **Phase 8: Polish & UX** - UI overhaul, unit animations, text popups, and sound effects (Gap Closure)
 - [ ] **Phase 9: Advanced Mechanics** - Railways infrastructure
 
 ## Phase Details
@@ -128,7 +128,7 @@ Plans:
 - [x] 08-01-PLAN.md — UI overhaul with PNG assets and sliding info panel
 - [x] 08-02-PLAN.md — Combat animations, audio infrastructure, and action undo
 - [x] 08-03-PLAN.md — UI logic verification
-- [ ] 08-04-PLAN.md — Gap closure: defend SFX, BGM wiring, missing audio files
+- [x] 08-04-PLAN.md — Gap closure: defend SFX, BGM wiring, missing audio files
 
 ### Phase 9: Advanced Mechanics
 **Goal**: Implement advanced mobility and infrastructure.
@@ -149,5 +149,5 @@ Plans:
 | 5. Specialized Structures | 4/4 | Complete | 2026-03-23 |
 | 6. Win / Loss | 2/2 | Complete   | 2026-03-27 |
 | 7. Exploration | 1/1 | Complete | 2026-03-24 |
-| 8. Polish & UX | 3/4 | Gap Closure | 2026-03-27 |
+| 8. Polish & UX | 4/4 | Complete | 2026-03-31 |
 | 9. Adv. Mechanics | 0/1 | Planned | - |

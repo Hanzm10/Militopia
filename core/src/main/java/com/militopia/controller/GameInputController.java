@@ -859,7 +859,8 @@ public class GameInputController extends InputAdapter {
 
     private void transformUnit(Entity unit, int targetX, int targetY) {
         StatsComponent stats = unit.getComponent(StatsComponent.class);
-        if (stats == null) return;
+        GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+        if (stats == null || pos == null) return;
 
         UnitType targetType = null;
         if (stats.unitType == UnitType.GUNBOAT) targetType = UnitType.RANGER;
@@ -869,23 +870,35 @@ public class GameInputController extends InputAdapter {
 
         int owner = stats.owner;
         int currentHP = stats.currentHP;
-        String oldName = stats.name;
+        int oldX = pos.x;
+        int oldY = pos.y;
 
         GameLogger.log(GameLogger.MOVE, owner,
-                oldName + " transforms into " + targetType.name() + " at " + GameLogger.pos(targetX, targetY));
+                stats.name + " transforms into " + targetType.name() + " at " + GameLogger.pos(targetX, targetY));
 
         // Remove old unit
         engine.removeEntity(unit);
 
-        // Create new unit
+        // Create new unit at target position
         unitFactory.createUnit(targetType, targetX, targetY, owner, true);
 
-        // Update HP to match old unit
+        // Update HP to match old unit and add movement animation
         Entity newUnit = getEntityAt(targetX, targetY, TypeComponent.Type.UNIT);
         if (newUnit != null) {
             StatsComponent newStats = newUnit.getComponent(StatsComponent.class);
             if (newStats != null) {
                 newStats.currentHP = currentHP;
+                newStats.hasActed = true;
+                newStats.hasMoved = true;
+            }
+            // Add movement animation from old water tile to new land tile
+            newUnit.add(new MovementComponent(oldX, oldY, targetX, targetY));
+
+            // SFX for the new unit type move
+            if (targetType == UnitType.TANK) {
+                AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_HEAVY_TANK);
+            } else {
+                AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_LIGHT);
             }
         }
 
@@ -1044,7 +1057,7 @@ public class GameInputController extends InputAdapter {
         Array<Entity> toRemove = new Array<>();
         for (Entity e : all) {
             TypeComponent.Type t = e.getComponent(TypeComponent.class).type;
-            if (t == TypeComponent.Type.MARKER || t == TypeComponent.Type.ATTACK_MARKER) {
+            if (t == TypeComponent.Type.MARKER || t == TypeComponent.Type.ATTACK_MARKER || t == TypeComponent.Type.TRANSFORM_MARKER) {
                 toRemove.add(e);
             }
         }

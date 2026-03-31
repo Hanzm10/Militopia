@@ -19,7 +19,7 @@ public class CombatConstants {
     // -----------------------------------------------------------------------
     // Jump animation (Juggernaut)
     // -----------------------------------------------------------------------
-    public static final float JUMP_ARC_HEIGHT = 50f;
+    public static final float JUMP_ARC_HEIGHT = 25f;
     public static final float JUMP_DURATION = 0.7f;
 
     // -----------------------------------------------------------------------

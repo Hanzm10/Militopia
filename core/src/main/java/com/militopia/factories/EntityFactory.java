@@ -132,7 +132,50 @@ public class EntityFactory {
 
     public void createNuclearAttack(int x, int y) {
         // Nuclear (Super Units) is much larger: 40x40
-        createEffect(x, y, nuclearAttackAnim, 0.9f, 30f, 30f, 0f, 10f);
+        createEffect(x, y, nuclearAttackAnim, 0.9f, 30f, 30f, 0f, 13f);
+    }
+
+    public void createDramaticExplosion(int x, int y) {
+        // 1. Main large explosion on target tile
+        createNuclearAttack(x, y);
+
+        // 2. Adjacent little explosions on THE SAME TILE (approx 0.4s delay)
+        // Lowered y-offsets as requested (from 10f base to 6f base)
+        float[][] offsets = {
+                { -4f, -2f }, { 4f, -2f }, { -4f, 2f }, { 4f, 2f }
+        };
+        for (float[] off : offsets) {
+            createDelayedSmallExplosion(x, y, off[0], off[1] + 6f);
+        }
+
+        // 3. Surrounding tile explosions (all 8 neighbors in the 3x3 damage scope)
+        int[][] neighbors = {
+                { x + 1, y }, { x - 1, y }, { x, y + 1 }, { x, y - 1 },
+                { x + 1, y + 1 }, { x + 1, y - 1 }, { x - 1, y + 1 }, { x - 1, y - 1 }
+        };
+        for (int[] n : neighbors) {
+            // Smaller explosions on surrounding tiles with same delay
+            createDelayedSmallExplosion(n[0], n[1], 0, 6f);
+        }
+    }
+
+    private void createDelayedSmallExplosion(int x, int y, float offsetX, float offsetY) {
+        Entity e = engine.createEntity();
+        e.add(new GridPositionComponent(x, y, 4));
+        e.add(new TypeComponent(TypeComponent.Type.OBJECT));
+
+        SpriteAnimationComponent anim = new SpriteAnimationComponent();
+        anim.animation = nuclearAttackAnim;
+        anim.duration = 0.9f;
+        anim.drawWidth = 12f; // Smaller scale (40%)
+        anim.drawHeight = 12f;
+        anim.worldOffsetX = offsetX;
+        anim.worldOffsetY = offsetY;
+        anim.stateTime = -0.4f; // 0.4s delay
+        anim.autoRemove = true;
+        e.add(anim);
+
+        engine.addEntity(e);
     }
 
     public void createMuzzleFlash(int x, int y, float offsetX, float offsetY) {
