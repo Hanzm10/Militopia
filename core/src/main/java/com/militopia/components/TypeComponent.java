@@ -10,6 +10,7 @@ public class TypeComponent implements Component {
         TERRAIN,
         MARKER,
         ATTACK_MARKER,
+        TRANSFORM_MARKER,
         OBJECT
     }
 

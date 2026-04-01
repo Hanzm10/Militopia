@@ -59,6 +59,10 @@ public class UnitFactory {
     private final TextureRegion deerRegion;
     private final TextureRegion zebraRegion;
 
+    public PooledEngine getEngine() {
+        return engine;
+    }
+
     public UnitFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
         this.assets = assets;
@@ -247,22 +251,35 @@ public class UnitFactory {
             GridPositionComponent p = e.getComponent(GridPositionComponent.class);
 
             if (type.type == TypeComponent.Type.UNIT) {
+                AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
+                boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isInvincible = false;
+                int fuel = -1, nukeCooldown = 0;
+                if (a != null) {
+                    isDiggingIn = a.isDiggingIn;
+                    hasUsedDigIn = a.hasUsedDigIn;
+                    isOverwatchActive = a.isOverwatchActive;
+                    isCloaked = a.isCloaked;
+                    pendingSkirmishMove = a.pendingSkirmishMove;
+                    isInvincible = a.isInvincible;
+                    fuel = a.fuel;
+                    nukeCooldown = a.nukeCooldown;
+                }
+
                 unitSnaps.add(new UnitSnapshot(
                         s.unitTypeKey, p.x, p.y, s.owner,
-                        s.currentHP, s.hasActed, s.hasMoved, s.moveType));
+                        s.currentHP, s.hasActed, s.hasMoved, s.moveType,
+                        isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked,
+                        pendingSkirmishMove, isInvincible, fuel, nukeCooldown));
 
-            } else if (type.type == TypeComponent.Type.OBJECT && s.owner >= 0
-                    && (s.income > 0 || s.maxBaseXP > 0 || e.getComponent(AnimalComponent.class) == null)) {
-                // Only snapshot income-generating structures: bases (income >= 2) and towns
-                // (income = 1)
-                // Exclude decorative objects (trees, ruins, oil, etc.) — they don't need
-                // restoration
-                if (s.income > 0) {
-                    structSnaps.add(new StructureSnapshot(
-                            p.x, p.y, s.owner, s.level,
-                            s.currentBaseXP, s.income, s.name, s.baseOrdinal,
-                            s.chosenSuperUnit));
-                }
+            } else if (type.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
+                // Capture ALL non-animal static objects/structures so they can be restored
+                structSnaps.add(new StructureSnapshot(
+                        p.x, p.y, s != null ? s.owner : 0, s != null ? s.level : 1,
+                        s != null ? s.currentBaseXP : 0f, s != null ? s.income : 0,
+                        s != null ? s.name : "", s != null ? s.baseOrdinal : "",
+                        s != null ? s.chosenSuperUnit : "", s != null ? s.unitTypeKey : "",
+                        s != null ? s.xpGain : 0, s != null ? s.parentBaseX : -1,
+                        s != null ? s.parentBaseY : -1));
             }
         }
 
@@ -500,11 +517,24 @@ public class UnitFactory {
         if (stats == null || pos == null) return;
 
         stats.chosenSuperUnit = superUnitType;
-
-        // Spawn one immediately adjacent to the base
         UnitType superType = UnitType.fromKey(superUnitType);
         if (superType == null) return;
-        int[] spawn = findValidSpawnPoint(pos.x, pos.y, getUnitMoveType(superType), map);
+
+        int spawnX = pos.x;
+        int spawnY = pos.y;
+
+        // --- SUBMARINE SPECIAL LOGIC: Priority Spawning at Ports ---
+        if (superType == UnitType.SUBMARINE) {
+            Entity bestPort = findBestPortForSuperUnit(stats.owner, pos.x, pos.y);
+            if (bestPort != null) {
+                GridPositionComponent pPos = bestPort.getComponent(GridPositionComponent.class);
+                spawnX = pPos.x;
+                spawnY = pPos.y;
+            }
+        }
+
+        // Spawn unit
+        int[] spawn = findValidSpawnPoint(spawnX, spawnY, getUnitMoveType(superType), map);
         if (spawn != null) {
             createUnit(superType, spawn[0], spawn[1], stats.owner, false);
             GameLogger.log(GameLogger.SUMMON, stats.owner,
@@ -513,8 +543,73 @@ public class UnitFactory {
         } else {
             GameLogger.log(GameLogger.SUMMON, stats.owner,
                     stats.name + " chose super unit: " + superUnitType
-                            + " — no valid spawn point near base, available via summon menu");
+                            + " — no valid spawn point found nearby, available via summon menu");
         }
+    }
+
+    /**
+     * Finds the best Port to spawn a Submarine based on priority:
+     * 1. Port in current base territory
+     * 2. Port in nearest adjacent base territory
+     * 3. Any available Port
+     */
+    private Entity findBestPortForSuperUnit(int owner, int baseX, int baseY) {
+        ImmutableArray<Entity> all = engine.getEntitiesFor(Family.all(StatsComponent.class, GridPositionComponent.class).get());
+        List<Entity> myPorts = new ArrayList<>();
+        List<Entity> myBases = new ArrayList<>();
+
+        for (Entity e : all) {
+            StatsComponent s = e.getComponent(StatsComponent.class);
+            if (s.owner != owner) continue;
+
+            if ("PORT".equals(s.unitTypeKey)) {
+                myPorts.add(e);
+            } else if (StructureType.fromDisplayName(s.name) == StructureType.BASE) {
+                myBases.add(e);
+            }
+        }
+
+        if (myPorts.isEmpty()) return null;
+
+        // Priority 1: Local territory
+        for (Entity port : myPorts) {
+            StatsComponent ps = port.getComponent(StatsComponent.class);
+            if (ps.parentBaseX == baseX && ps.parentBaseY == baseY) {
+                return port;
+            }
+        }
+
+        // Priority 2: Nearest adjacent base territory
+        myBases.sort((b1, b2) -> {
+            GridPositionComponent p1 = b1.getComponent(GridPositionComponent.class);
+            GridPositionComponent p2 = b2.getComponent(GridPositionComponent.class);
+            float d1 = (float) Math.hypot(p1.x - baseX, p1.y - baseY);
+            float d2 = (float) Math.hypot(p2.x - baseX, p2.y - baseY);
+            return Float.compare(d1, d2);
+        });
+
+        for (Entity otherBase : myBases) {
+            GridPositionComponent obPos = otherBase.getComponent(GridPositionComponent.class);
+            if (obPos.x == baseX && obPos.y == baseY) continue; // Skip self
+
+            for (Entity port : myPorts) {
+                StatsComponent ps = port.getComponent(StatsComponent.class);
+                if (ps.parentBaseX == obPos.x && ps.parentBaseY == obPos.y) {
+                    return port;
+                }
+            }
+        }
+
+        // Priority 3: Global (Any port, nearest to this base)
+        myPorts.sort((p1, p2) -> {
+            GridPositionComponent pos1 = p1.getComponent(GridPositionComponent.class);
+            GridPositionComponent pos2 = p2.getComponent(GridPositionComponent.class);
+            float d1 = (float) Math.hypot(pos1.x - baseX, pos1.y - baseY);
+            float d2 = (float) Math.hypot(pos2.x - baseX, pos2.y - baseY);
+            return Float.compare(d1, d2);
+        });
+
+        return myPorts.get(0);
     }
 
     /**
@@ -558,22 +653,25 @@ public class UnitFactory {
         stats.xpGain = data.xpGain;
         stats.chosenSuperUnit = data.chosenSuperUnit;
 
+        // --- FIX 3: Only update base-specific stats/texture for actual BASE entities ---
+        // isTown check is not sufficient — Oil Derricks and other non-base owned structures
+        // would pass the isTown=false branch and have their stats and texture overwritten.
         boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
-
-        // --- NEW: Sync Base Stats after load ---
-        if (!isTown) {
+        boolean isBase = StructureType.fromDisplayName(stats.name) == StructureType.BASE;
+        if (isBase) {
             com.militopia.config.BaseLevelConfig.LevelData levelData = com.militopia.config.BaseLevelConfig
                     .getLevel(stats.level);
             stats.maxBaseXP = levelData.maxXP;
             stats.income = levelData.income;
             stats.vision = levelData.borderRadius;
             updateBaseTexture(entity, stats);
-        } else {
+        } else if (isTown) {
             // Towns have fixed stats
             stats.maxBaseXP = 2000;
             stats.income = 1;
             stats.vision = 1;
         }
+        // Other structures (Oil Derrick, etc.) keep their stats as-is from the save data.
     }
 
     /**
@@ -602,6 +700,7 @@ public class UnitFactory {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P1;
             state.p1BaseCount++;
             stats.owner = 1;
+            stats.unitTypeKey = "BASE_P1"; // Fix 2: ensure key reflects new base type
 
             // Update Old Owner
             if (wasBase && oldOwner == 2) {
@@ -623,6 +722,7 @@ public class UnitFactory {
             map.objects[pos.x][pos.y] = MapGenerator.ObjectType.BASE_P2;
             state.p2BaseCount++;
             stats.owner = 2;
+            stats.unitTypeKey = "BASE_P2"; // Fix 2: ensure key reflects new base type
 
             // Update Old Owner
             if (wasBase && oldOwner == 1) {

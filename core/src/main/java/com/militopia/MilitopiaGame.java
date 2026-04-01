@@ -3,7 +3,7 @@ package com.militopia;
 import com.militopia.managers.AssetManager;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.VideoBackgroundManager;
-import com.militopia.screen.MenuScreen;
+import com.militopia.screen.SplashScreen;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -171,7 +171,7 @@ public class MilitopiaGame extends Game {
         sliderStyle.knob = knobDrawable;
         skin.add("default-horizontal", sliderStyle);
 
-        this.setScreen(new MenuScreen(this));
+        this.setScreen(new SplashScreen(this));
     }
 
     /** Helper to create a rounded rectangle Pixmap with a border */

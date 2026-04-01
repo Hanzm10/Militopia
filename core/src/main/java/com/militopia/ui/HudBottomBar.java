@@ -102,11 +102,9 @@ public class HudBottomBar {
 
         actionTable.add(createIconGroup(settingsBtn, "Settings")).expandX().padLeft(20).padRight(30);
         actionTable.add(createIconGroup(statsBtn, "Game Stats")).expandX().padLeft(30).padRight(30);
-        actionTable.add(createIconGroup(endTurnBtn, "End Turn")).expandX().padLeft(30).padRight(20);
 
         if (screen.getGameState().isDevMode) {
-            com.badlogic.gdx.scenes.scene2d.ui.ImageButton devBtn =
-                    createCircleButton(AssetManager.ICON_SETTINGS);
+            com.badlogic.gdx.scenes.scene2d.ui.ImageButton devBtn = createCircleButton(AssetManager.ICON_SETTINGS);
             devBtn.setColor(new Color(1f, 0.45f, 0f, 1f));
             devBtn.addListener(new HoverListener());
             devBtn.addListener(new ClickListener() {
@@ -116,8 +114,10 @@ public class HudBottomBar {
                     gameHud.toggleDevPanel();
                 }
             });
-            actionTable.add(createIconGroup(devBtn, "DEV")).expandX().padLeft(10).padRight(10);
+            actionTable.add(createIconGroup(devBtn, "DEV")).expandX().padLeft(30).padRight(30);
         }
+
+        actionTable.add(createIconGroup(endTurnBtn, "End Turn")).expandX().padLeft(30).padRight(20);
 
         float barWidth = screen.getGameState().isDevMode ? GameConfig.UI_WIDTH + 80 : GameConfig.UI_WIDTH;
         bottomContainer = new Table();

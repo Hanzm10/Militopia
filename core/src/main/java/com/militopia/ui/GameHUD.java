@@ -72,7 +72,6 @@ public class GameHUD {
     // Right panel: turn history overlay (shown only when enabled from settings)
     private Table snapshotPanel;
     private Table snapshotList;
-    private Table snapshotRedoList;
     private TurnHistoryManager turnHistory;
     private boolean snapshotPanelVisible = false;
 
@@ -167,66 +166,17 @@ public class GameHUD {
         title.setColor(Color.WHITE);
         title.setAlignment(Align.center);
 
-        // Redo section
-        Label redoLabel = new Label("↪ Redo", game.skin);
-        redoLabel.setFontScale(0.5f);
-        redoLabel.setColor(Color.CYAN);
-
-        snapshotRedoList = new Table();
-        snapshotRedoList.top().left();
-        ScrollPane redoScrollPane = new ScrollPane(snapshotRedoList, game.skin);
-        redoScrollPane.setScrollingDisabled(true, false);
-        redoScrollPane.setFadeScrollBars(true);
-
-        // Undo section
-        Label undoLabel = new Label("↩ Undo", game.skin);
-        undoLabel.setFontScale(0.5f);
-        undoLabel.setColor(Color.LIGHT_GRAY);
-
         snapshotList = new Table();
         snapshotList.top().left();
-        ScrollPane undoScrollPane = new ScrollPane(snapshotList, game.skin);
-        undoScrollPane.setScrollingDisabled(true, false);
-        undoScrollPane.setFadeScrollBars(true);
-
-        // Buttons
-        final TextButton undoBtn = new TextButton("↩ Undo", game.skin);
-        undoBtn.getLabel().setFontScale(0.6f);
-        undoBtn.getLabel().setColor(Color.YELLOW);
-        undoBtn.pad(6, 8, 6, 8);
-        undoBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                screen.undoTurn();
-                refreshSnapshotPanel();
-            }
-        });
-
-        final TextButton redoBtn = new TextButton("↪ Redo", game.skin);
-        redoBtn.getLabel().setFontScale(0.6f);
-        redoBtn.getLabel().setColor(Color.CYAN);
-        redoBtn.pad(6, 8, 6, 8);
-        redoBtn.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                screen.redoTurn();
-                refreshSnapshotPanel();
-            }
-        });
-
-        Table btnRow = new Table();
-        btnRow.add(undoBtn).growX().pad(4);
-        btnRow.add(redoBtn).growX().pad(4);
+        ScrollPane historyScrollPane = new ScrollPane(snapshotList, game.skin);
+        historyScrollPane.setScrollingDisabled(true, false);
+        historyScrollPane.setFadeScrollBars(true);
 
         card.add(title).growX().padTop(8).padBottom(4).row();
-        card.add(redoLabel).left().padLeft(6).padTop(4).row();
-        card.add(redoScrollPane).growX().growY().pad(4).row();
-        card.add(undoLabel).left().padLeft(6).padTop(4).row();
-        card.add(undoScrollPane).growX().growY().pad(4).row();
-        card.add(btnRow).growX().padBottom(8);
+        card.add(historyScrollPane).growX().growY().pad(10).row();
 
         snapshotPanel.right();
-        snapshotPanel.add(card).right().growY().width(130);
+        snapshotPanel.add(card).right().growY().width(280);
 
         snapshotPanel.setVisible(false);
         stage.addActor(snapshotPanel);
@@ -261,60 +211,62 @@ public class GameHUD {
      * Refreshes both undo and redo lists. Call after any undo/redo or turn transition.
      */
     public void refreshSnapshotPanel() {
-        if (snapshotList == null || snapshotRedoList == null) return;
+        if (snapshotList == null) return;
 
-        // --- Undo list ---
         snapshotList.clear();
+
         java.util.List<com.militopia.data.TurnSnapshot> undoSnaps =
                 (turnHistory != null) ? turnHistory.getSnapshots() : java.util.Collections.emptyList();
+        java.util.List<com.militopia.data.TurnSnapshot> redoSnaps =
+                (turnHistory != null) ? turnHistory.getRedoSnapshots() : java.util.Collections.emptyList();
 
-        if (undoSnaps.isEmpty()) {
+        if (undoSnaps.isEmpty() && redoSnaps.isEmpty()) {
             Label empty = new Label("No history", game.skin);
             empty.setFontScale(0.45f);
             empty.setColor(Color.DARK_GRAY);
             snapshotList.add(empty).left().padLeft(6);
-        } else {
-            for (int i = 0; i < undoSnaps.size(); i++) {
-                com.militopia.data.TurnSnapshot snap = undoSnaps.get(i);
-                final int index = i;
-                TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
-                btn.getLabel().setFontScale(0.55f);
-                btn.getLabel().setColor(Color.LIGHT_GRAY);
-                btn.addListener(new ClickListener() {
-                    @Override
-                    public void clicked(InputEvent event, float x, float y) {
-                        screen.undoToSnapshot(index);
-                    }
-                });
-                snapshotList.add(btn).growX().padLeft(4).padRight(4).padBottom(2).row();
-            }
+            return;
         }
 
-        // --- Redo list ---
-        snapshotRedoList.clear();
-        java.util.List<com.militopia.data.TurnSnapshot> redoSnaps =
-                (turnHistory != null) ? turnHistory.getRedoSnapshots() : java.util.Collections.emptyList();
+        // Oldest undo snaps at top (reverse iterate)
+        for (int i = undoSnaps.size() - 1; i >= 0; i--) {
+            com.militopia.data.TurnSnapshot snap = undoSnaps.get(i);
+            final int index = i;
+            TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
+            btn.getLabel().setFontScale(0.55f);
+            btn.getLabel().setColor(snap.currentPlayer == 1 ? Color.SKY : Color.SALMON);
+            btn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    screen.undoToSnapshot(index);
+                    refreshSnapshotPanel();
+                }
+            });
+            snapshotList.add(btn).width(180).center().padBottom(2).row();
+        }
 
-        if (redoSnaps.isEmpty()) {
-            Label empty = new Label("Nothing to redo", game.skin);
-            empty.setFontScale(0.45f);
-            empty.setColor(Color.DARK_GRAY);
-            snapshotRedoList.add(empty).left().padLeft(6);
-        } else {
-            for (int i = 0; i < redoSnaps.size(); i++) {
-                com.militopia.data.TurnSnapshot snap = redoSnaps.get(i);
-                final int index = i;
-                TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
-                btn.getLabel().setFontScale(0.55f);
-                btn.getLabel().setColor(Color.CYAN);
-                btn.addListener(new ClickListener() {
-                    @Override
-                    public void clicked(InputEvent event, float x, float y) {
-                        screen.redoToSnapshot(index);
-                    }
-                });
-                snapshotRedoList.add(btn).growX().padLeft(4).padRight(4).padBottom(2).row();
-            }
+        // Current turn marker
+        Label currentLbl = new Label("── CURRENT ──", game.skin);
+        currentLbl.setFontScale(0.5f);
+        currentLbl.setColor(Color.YELLOW);
+        currentLbl.setAlignment(Align.center);
+        snapshotList.add(currentLbl).growX().padTop(6).padBottom(6).row();
+
+        // Forward redo snaps (forward iterate)
+        for (int i = 0; i < redoSnaps.size(); i++) {
+            com.militopia.data.TurnSnapshot snap = redoSnaps.get(i);
+            final int index = i;
+            TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
+            btn.getLabel().setFontScale(0.55f);
+            btn.getLabel().setColor(Color.DARK_GRAY);
+            btn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    screen.redoToSnapshot(index);
+                    refreshSnapshotPanel();
+                }
+            });
+            snapshotList.add(btn).width(180).center().padBottom(2).row();
         }
     }
 

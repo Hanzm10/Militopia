@@ -14,6 +14,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.militopia.MilitopiaGame;
+import com.militopia.components.AbilitiesComponent;
+import com.militopia.components.AnimalComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
@@ -481,14 +483,17 @@ public class GameScreen implements Screen {
     }
 
     private void restoreSnapshot(TurnSnapshot snap) {
-        // 1. Remove all UNIT entities from the engine
+        // 1. Remove all UNIT entities and non-animal OBJECT entities from the engine
         List<Entity> toRemove = new ArrayList<>();
         ImmutableArray<Entity> all = engine.getEntitiesFor(
                 Family.all(TypeComponent.class).get());
         for (Entity e : all) {
             TypeComponent t = e.getComponent(TypeComponent.class);
-            if (t.type == TypeComponent.Type.UNIT)
+            if (t.type == TypeComponent.Type.UNIT) {
                 toRemove.add(e);
+            } else if (t.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
+                toRemove.add(e);
+            }
         }
         for (Entity e : toRemove)
             engine.removeEntity(e);
@@ -508,14 +513,35 @@ public class GameScreen implements Screen {
             System.arraycopy(snap.mapObjects[x], 0, gameMap.objects[x], 0, gameMap.height);
         }
 
-        // 4. Restore structures in-place
-        ImmutableArray<Entity> objects = engine.getEntitiesFor(
-                Family.all(GridPositionComponent.class, TypeComponent.class, StatsComponent.class).get());
+        // 4. Recreate structures from snapshot
         for (StructureSnapshot ss : snap.structures) {
+            boolean isMapGenObject = false;
+            MapGenerator.ObjectType objType = null;
+            try {
+                if (ss.unitTypeKey != null && !ss.unitTypeKey.isEmpty()) {
+                    objType = MapGenerator.ObjectType.valueOf(ss.unitTypeKey);
+                    isMapGenObject = true;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Not a MapGenerator ObjectType, likely a built structure
+            }
+
+            if (isMapGenObject && objType != null) {
+                unitFactory.createObjectEntity(ss.x, ss.y, objType, gameState);
+                // createObjectEntity increments base counts, but we already set them directly in step 2.
+                // We MUST undo the auto-increment here so we don't double count:
+                if (objType == MapGenerator.ObjectType.BASE_P1) gameState.p1BaseCount--;
+                if (objType == MapGenerator.ObjectType.BASE_P2) gameState.p2BaseCount--;
+            } else {
+                unitFactory.createStructure(ss.unitTypeKey, ss.x, ss.y, ss.owner, ss.parentBaseX, ss.parentBaseY);
+            }
+
+            // After creation, find the entity and apply the snapshot stats
+            ImmutableArray<Entity> objects = engine.getEntitiesFor(
+                    Family.all(GridPositionComponent.class, TypeComponent.class, StatsComponent.class).get());
             for (Entity e : objects) {
                 TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.OBJECT)
-                    continue;
+                if (t.type != TypeComponent.Type.OBJECT) continue;
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
                 if (pos.x == ss.x && pos.y == ss.y) {
                     com.militopia.data.StructureData sd = new com.militopia.data.StructureData();
@@ -527,9 +553,8 @@ public class GameScreen implements Screen {
                     sd.baseName = ss.name;
                     sd.baseOrdinal = ss.baseOrdinal;
                     sd.chosenSuperUnit = ss.chosenSuperUnit;
+                    sd.xpGain = ss.xpGain;
                     unitFactory.updateStructureFromSave(e, sd, gameMap);
-                    // Override income with snapshotted value — updateStructureFromSave
-                    // recalculates from BaseLevelConfig which doesn't know built-structure rates.
                     e.getComponent(StatsComponent.class).income = ss.income;
                     break;
                 }
@@ -554,6 +579,18 @@ public class GameScreen implements Screen {
                     s.currentHP = us.currentHP;
                     s.hasActed = us.hasActed;
                     s.hasMoved = us.hasMoved;
+                    
+                    AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
+                    if (a != null) {
+                        a.isDiggingIn = us.isDiggingIn;
+                        a.hasUsedDigIn = us.hasUsedDigIn;
+                        a.isOverwatchActive = us.isOverwatchActive;
+                        a.isCloaked = us.isCloaked;
+                        a.pendingSkirmishMove = us.pendingSkirmishMove;
+                        a.isInvincible = us.isInvincible;
+                        a.fuel = us.fuel;
+                        a.nukeCooldown = us.nukeCooldown;
+                    }
                     break;
                 }
             }
@@ -845,6 +882,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void dispose() {
+        if (font != null) {
+            font.getData().setScale(1.0f);
+        }
         engine.clearPools();
         gameHUD.dispose();
         shapeRenderer.dispose();
@@ -947,6 +987,7 @@ public class GameScreen implements Screen {
         s.income = data.income;
         s.currentBaseXP = prevXP;
         s.maxBaseXP = data.maxXP;
+        unitFactory.updateBaseTexture(base, s);
         GameLogger.log(GameLogger.INPUT, "[DEV] Set base at (" + pos.x + "," + pos.y + ") to level " + targetLevel);
     }
 
@@ -994,5 +1035,8 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {
+        if (font != null) {
+            font.getData().setScale(1.0f);
+        }
     }
 }

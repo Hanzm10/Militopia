@@ -242,7 +242,7 @@ public class CombatSystem extends EntitySystem {
                 entityFactory.createTankAttack(dPos.x, dPos.y);
             } else if (unitType == UnitType.JUGGERNAUT || unitType == UnitType.B2
                     || unitType == UnitType.SUBMARINE) {
-                entityFactory.createNuclearAttack(dPos.x, dPos.y);
+                entityFactory.createDramaticExplosion(dPos.x, dPos.y);
             }
         }
 
@@ -568,8 +568,8 @@ public class CombatSystem extends EntitySystem {
         // 2. AoE damage to adjacent enemies on landing
         resolveJumpLandingAoE(jumper, landPos.x, landPos.y, jlc.primaryTarget);
 
-        // 3. Nuclear sprite exactly on landing
-        entityFactory.createNuclearAttack(landPos.x, landPos.y);
+        // 3. Dramatic explosion sequence exactly on landing
+        entityFactory.createDramaticExplosion(landPos.x, landPos.y);
 
         // 4. SFX on landing
         AudioManager.getInstance().playSFX(SFXKeys.ATTACK_JUGGERNAUT);

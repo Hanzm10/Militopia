@@ -119,7 +119,7 @@ public class UnitRenderSystem extends EntitySystem {
         DeathAnimComponent death = e.getComponent(DeathAnimComponent.class);
         SpriteAnimationComponent spriteAnim = e.getComponent(SpriteAnimationComponent.class);
 
-        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER);
+        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER || typeC.type == TypeComponent.Type.TRANSFORM_MARKER);
         boolean isAttackMarker = (typeC.type == TypeComponent.Type.ATTACK_MARKER);
 
         // Fog and Stealth culling
@@ -275,8 +275,7 @@ public class UnitRenderSystem extends EntitySystem {
                     drawW, drawH);
         }
         
-        // --- Sprite Animation (Overlay) ---
-        if (spriteAnim != null && spriteAnim.animation != null) {
+        if (spriteAnim != null && spriteAnim.animation != null && spriteAnim.stateTime >= 0) {
             com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime, spriteAnim.loop);
             if (frame != null) {
                 float dW = (spriteAnim.drawWidth > 0) ? spriteAnim.drawWidth : GameConfig.DRAW_WIDTH;
@@ -300,7 +299,7 @@ public class UnitRenderSystem extends EntitySystem {
 
         // Selection glow
         if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {
-            Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
+            Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
             batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
             batch.setColor(0.4f, 0.4f, 0.4f, 1f);
             batch.draw(tex.region,
@@ -397,8 +396,8 @@ public class UnitRenderSystem extends EntitySystem {
     }
 
     private void drawXPBar(float x, float y, StatsComponent stats) {
-        Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
-        Gdx.gl.glBlendFunc(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+        Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         float width = 32f, height = 4f, radius = 2f;

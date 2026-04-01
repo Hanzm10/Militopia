@@ -8,7 +8,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
@@ -57,10 +56,11 @@ public class GameInputController extends InputAdapter {
     private Entity targetingUnit = null;
 
     // Dev Mode
-    public enum DevSpawnMode { NONE, SPAWNING_UNIT, BUILDING_STRUCTURE, KILLING_UNIT, SETTING_BASE_LEVEL }
+    public enum DevSpawnMode { NONE, SPAWNING_UNIT, BUILDING_STRUCTURE, KILLING_UNIT, REMOVING_OBJECT, BUILDING_MAP_OBJ, SETTING_BASE_LEVEL }
     private DevSpawnMode devSpawnMode = DevSpawnMode.NONE;
     private UnitType devSpawnUnitType;
     private String devSpawnStructureType;
+    private String devSpawnMapObjType;
     public int devSpawnOwner = 1;
 
     public GameInputController(GameScreen screen, OrthographicCamera camera, Viewport viewport,
@@ -90,7 +90,11 @@ public class GameInputController extends InputAdapter {
     public void enterDevBuild(String type, int owner) {
         devSpawnMode = DevSpawnMode.BUILDING_STRUCTURE; devSpawnStructureType = type; devSpawnOwner = owner;
     }
+    public void enterDevBuildMapObj(String type, int owner) {
+        devSpawnMode = DevSpawnMode.BUILDING_MAP_OBJ; devSpawnMapObjType = type; devSpawnOwner = owner;
+    }
     public void enterDevKill()         { devSpawnMode = DevSpawnMode.KILLING_UNIT; }
+    public void enterDevRemove()       { devSpawnMode = DevSpawnMode.REMOVING_OBJECT; }
     public void enterDevSetBaseLevel() { devSpawnMode = DevSpawnMode.SETTING_BASE_LEVEL; }
     public void exitDevMode()          { devSpawnMode = DevSpawnMode.NONE; }
     public DevSpawnMode getDevSpawnMode() { return devSpawnMode; }
@@ -244,6 +248,13 @@ public class GameInputController extends InputAdapter {
                 return true;
             }
 
+            // --- TRANSFORMATION: click on a transform-marker ---
+            Entity clickedTransformMarker = getEntityAt(gridX, gridY, TypeComponent.Type.TRANSFORM_MARKER);
+            if (clickedTransformMarker != null && selectedUnitEntity != null) {
+                transformUnit(selectedUnitEntity, gridX, gridY);
+                return true;
+            }
+
             // --- ATTACK: click on a red attack-marker tile ---
             Entity clickedAttackMarker = getEntityAt(gridX, gridY, TypeComponent.Type.ATTACK_MARKER);
             if (clickedAttackMarker != null && selectedUnitEntity != null) {
@@ -315,7 +326,6 @@ public class GameInputController extends InputAdapter {
                     if (type.type == TypeComponent.Type.UNIT) {
                         foundUnit = e;
                     } else if (type.type == TypeComponent.Type.OBJECT) {
-                        StatsComponent s = e.getComponent(StatsComponent.class);
                         if (pos.zIndex == 2 || e.getComponent(AnimalComponent.class) != null) {
                             foundAnimal = e;
                         } else {
@@ -510,7 +520,7 @@ public class GameInputController extends InputAdapter {
             }
             // Enemy Base or unit on top: Show standard InfoPanel scouting
             // Use specialized name and icon
-            gameHUD.showBaseInfo(foundStructure, structName, unitFactory.getHudIcon(objType), true);
+            gameHUD.showBaseInfo(foundStructure, structName, foundStructure.getComponent(com.militopia.components.TextureComponent.class).region, true);
             return;
         }
 
@@ -843,6 +853,56 @@ public class GameInputController extends InputAdapter {
             abilities.isDiggingIn = false;
             abilities.pendingSkirmishMove = false;
         }
+        clearMarkers();
+        selectedUnitEntity = null;
+    }
+
+    private void transformUnit(Entity unit, int targetX, int targetY) {
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+        if (stats == null || pos == null) return;
+
+        UnitType targetType = null;
+        if (stats.unitType == UnitType.GUNBOAT) targetType = UnitType.RANGER;
+        else if (stats.unitType == UnitType.DESTROYER) targetType = UnitType.TANK;
+
+        if (targetType == null) return;
+
+        int owner = stats.owner;
+        int currentHP = stats.currentHP;
+        int oldX = pos.x;
+        int oldY = pos.y;
+
+        GameLogger.log(GameLogger.MOVE, owner,
+                stats.name + " transforms into " + targetType.name() + " at " + GameLogger.pos(targetX, targetY));
+
+        // Remove old unit
+        engine.removeEntity(unit);
+
+        // Create new unit at target position
+        unitFactory.createUnit(targetType, targetX, targetY, owner, true);
+
+        // Update HP to match old unit and add movement animation
+        Entity newUnit = getEntityAt(targetX, targetY, TypeComponent.Type.UNIT);
+        if (newUnit != null) {
+            StatsComponent newStats = newUnit.getComponent(StatsComponent.class);
+            if (newStats != null) {
+                newStats.currentHP = currentHP;
+                newStats.hasActed = true;
+                newStats.hasMoved = true;
+            }
+            // Add movement animation from old water tile to new land tile
+            newUnit.add(new MovementComponent(oldX, oldY, targetX, targetY));
+
+            // SFX for the new unit type move
+            if (targetType == UnitType.TANK) {
+                AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_HEAVY_TANK);
+            } else {
+                AudioManager.getInstance().playSFX(SFXKeys.MOVE_LAND_LIGHT);
+            }
+        }
+
+        AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
         gameHUD.hideSummonMenu();
         gameHUD.hideTileInfo();
         clearMarkers();
@@ -923,6 +983,24 @@ public class GameInputController extends InputAdapter {
         if (attackMarkersAdded > 0) {
             AudioManager.getInstance().playSFX(SFXKeys.TILE_ATTACK_RANGE);
         }
+
+        // --- Transformation markers: Gunboat/Destroyer near land ---
+        if (!stats.hasMoved && (stats.unitType == UnitType.GUNBOAT || stats.unitType == UnitType.DESTROYER)) {
+            int[][] dirs = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } };
+            for (int[] d : dirs) {
+                int nx = startX + d[0];
+                int ny = startY + d[1];
+                if (nx >= 0 && nx < gameMap.width && ny >= 0 && ny < gameMap.height) {
+                    MapGenerator.TerrainType t = gameMap.terrain[nx][ny];
+                    // If it's land and no unit is there
+                    if (t != MapGenerator.TerrainType.WATER && t != MapGenerator.TerrainType.DEEP_WATER) {
+                        if (getEntityAt(nx, ny, TypeComponent.Type.UNIT) == null) {
+                            entityFactory.createTransformMarker(nx, ny);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /** Flood-fill BFS for movement range (unchanged logic). */
@@ -979,7 +1057,7 @@ public class GameInputController extends InputAdapter {
         Array<Entity> toRemove = new Array<>();
         for (Entity e : all) {
             TypeComponent.Type t = e.getComponent(TypeComponent.class).type;
-            if (t == TypeComponent.Type.MARKER || t == TypeComponent.Type.ATTACK_MARKER) {
+            if (t == TypeComponent.Type.MARKER || t == TypeComponent.Type.ATTACK_MARKER || t == TypeComponent.Type.TRANSFORM_MARKER) {
                 toRemove.add(e);
             }
         }
@@ -1018,31 +1096,181 @@ public class GameInputController extends InputAdapter {
 
     private void handleDevTouch(int gridX, int gridY) {
         switch (devSpawnMode) {
-            case SPAWNING_UNIT:
+            case SPAWNING_UNIT: {
+                Entity existingUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                if (existingUnit != null) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                    return;
+                }
+
+                Entity existingObj = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
+                if (existingObj != null) {
+                    StatsComponent s = existingObj.getComponent(StatsComponent.class);
+                    if (s != null && s.owner > 0 && s.owner != devSpawnOwner) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        return;
+                    }
+                }
+
                 MapGenerator.TerrainType terrain = gameMap.terrain[gridX][gridY];
                 StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(devSpawnUnitType);
-                if (moveType == StatsComponent.MoveType.LAND &&
-                        (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER)) {
-                    GameLogger.log(GameLogger.INPUT, "[DEV] WARNING: land unit placed on water at ("
-                            + gridX + "," + gridY + ")");
+                boolean isWater = (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER);
+
+                if (moveType == StatsComponent.MoveType.LAND && isWater) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                    return;
+                } else if (moveType == StatsComponent.MoveType.SEA && !isWater) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                    return;
                 }
+
                 unitFactory.createUnit(devSpawnUnitType, gridX, gridY, devSpawnOwner, false);
                 GameLogger.log(GameLogger.INPUT, "[DEV] Spawned " + devSpawnUnitType
                         + " at (" + gridX + "," + gridY + ") for P" + devSpawnOwner);
                 break;
-            case BUILDING_STRUCTURE:
-                Entity existing = getEntityAtLayer(gridX, gridY, 1);
-                if (existing != null) engine.removeEntity(existing);
-                unitFactory.createStructure(devSpawnStructureType, gridX, gridY, devSpawnOwner, -1, -1);
+            }
+            case BUILDING_STRUCTURE: {
+                Entity existingStructure = getEntityAtLayer(gridX, gridY, 1);
+                MapGenerator.ObjectType existingMapObj = gameMap.objects[gridX][gridY];
+                boolean isOilTile = (existingMapObj == MapGenerator.ObjectType.OIL);
+
+                if (existingStructure != null) {
+                    StatsComponent stats = existingStructure.getComponent(StatsComponent.class);
+                    boolean isOilRes = (stats != null && stats.name.equals("Oil Reservoir"));
+                    if (!(devSpawnStructureType.equals("OIL_DERRICK") && isOilRes)) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        return;
+                    }
+                } else if (existingMapObj != null && existingMapObj != MapGenerator.ObjectType.NONE && !isOilTile) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                    return;
+                }
+
+                MapGenerator.TerrainType buildTerrain = gameMap.terrain[gridX][gridY];
+                boolean buildIsWater = (buildTerrain == MapGenerator.TerrainType.WATER || buildTerrain == MapGenerator.TerrainType.DEEP_WATER);
+                boolean buildIsCoastalWater = buildIsWater && hasAdjacentLand(gridX, gridY);
+                boolean buildIsCoastalLand = !buildIsWater && hasAdjacentWater(gridX, gridY);
+
+                if (devSpawnStructureType.equals("PORT")) {
+                    if (!buildIsWater || !buildIsCoastalWater) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        return;
+                    }
+                } else if (devSpawnStructureType.equals("NUCLEAR")) {
+                    if (buildIsWater || !buildIsCoastalLand) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        return;
+                    }
+                } else if (devSpawnStructureType.equals("OIL_DERRICK")) {
+                    if (!isOilTile) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        return;
+                    }
+                } else {
+                    if (buildIsWater) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        return;
+                    }
+                }
+
+                if (devSpawnStructureType.equals("OIL_DERRICK") && isOilTile) {
+                    gameMap.objects[gridX][gridY] = MapGenerator.ObjectType.NONE;
+                    if (existingStructure != null) {
+                        engine.removeEntity(existingStructure);
+                    }
+                }
+
+                if (devSpawnStructureType.equals("BASE")) {
+                    MapGenerator.ObjectType baseType = (devSpawnOwner == 1) ? MapGenerator.ObjectType.BASE_P1 : MapGenerator.ObjectType.BASE_P2;
+                    gameMap.objects[gridX][gridY] = baseType;
+                    unitFactory.createObjectEntity(gridX, gridY, baseType, screen.getGameState());
+                } else if (devSpawnStructureType.equals("TOWN")) {
+                    gameMap.objects[gridX][gridY] = MapGenerator.ObjectType.TOWN;
+                    unitFactory.createObjectEntity(gridX, gridY, MapGenerator.ObjectType.TOWN, screen.getGameState());
+                } else {
+                    unitFactory.createStructure(devSpawnStructureType, gridX, gridY, devSpawnOwner, -1, -1);
+                }
+
                 GameLogger.log(GameLogger.INPUT, "[DEV] Built " + devSpawnStructureType
                         + " at (" + gridX + "," + gridY + ") for P" + devSpawnOwner);
                 break;
+            }
             case KILLING_UNIT:
                 Entity unitAtTile = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
                 if (unitAtTile != null) {
                     engine.removeEntity(unitAtTile);
                     GameLogger.log(GameLogger.INPUT, "[DEV] Killed unit at (" + gridX + "," + gridY + ")");
                 }
+                break;
+            case REMOVING_OBJECT:
+                boolean removedSomething = false;
+                Entity unitToRemove = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                if (unitToRemove != null) {
+                    engine.removeEntity(unitToRemove);
+                    removedSomething = true;
+                }
+                Entity objToRemove = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
+                if (objToRemove != null) {
+                    engine.removeEntity(objToRemove);
+                    removedSomething = true;
+                }
+                // Always clear the tile's object layer in the map data, even if it's just a tree
+                if (gameMap.objects[gridX][gridY] != MapGenerator.ObjectType.NONE) {
+                    gameMap.objects[gridX][gridY] = MapGenerator.ObjectType.NONE;
+                    removedSomething = true;
+                }
+                if (removedSomething) {
+                    GameLogger.log(GameLogger.INPUT, "[DEV] Removed object/unit at (" + gridX + "," + gridY + ")");
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                }
+                break;
+            case BUILDING_MAP_OBJ:
+                // Check terrain validation
+                boolean objIsWater = devSpawnMapObjType.equals("FISH") || devSpawnMapObjType.equals("OIL") || devSpawnMapObjType.equals("RUINS");
+                boolean tileIsWater = (gameMap.terrain[gridX][gridY] == MapGenerator.TerrainType.WATER || gameMap.terrain[gridX][gridY] == MapGenerator.TerrainType.DEEP_WATER);
+
+                if (objIsWater != tileIsWater) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                    break;
+                }
+
+                boolean isAnimal = (com.militopia.config.AnimalType.fromKey(devSpawnMapObjType) != null);
+
+                // Check stacking rules: non-animals cannot be placed if there's already any object (static or animal)
+                if (!isAnimal) {
+                    Entity animalAtTile = getEntityAtLayer(gridX, gridY, 2);
+                    if (gameMap.objects[gridX][gridY] != MapGenerator.ObjectType.NONE || animalAtTile != null) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        break;
+                    }
+                }
+
+                if (isAnimal) {
+                    // Prevent animal stacking: cannot place an animal if one already exists
+                    Entity existAnimal = getEntityAtLayer(gridX, gridY, 2);
+                    if (existAnimal != null) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        break;
+                    }
+                }
+
+                if (devSpawnMapObjType.equals("MOUNTAIN")) {
+                    gameMap.terrain[gridX][gridY] = MapGenerator.TerrainType.MOUNTAIN;
+                    gameMap.objects[gridX][gridY] = MapGenerator.ObjectType.MOUNTAIN_OBJ;
+                    unitFactory.createObjectEntity(gridX, gridY, MapGenerator.ObjectType.MOUNTAIN_OBJ, screen.getGameState());
+                } else {
+                    MapGenerator.ObjectType objType = MapGenerator.ObjectType.valueOf(devSpawnMapObjType);
+                    
+                    if (!isAnimal) {
+                        gameMap.objects[gridX][gridY] = objType;
+                    }
+                    
+                    unitFactory.createObjectEntity(gridX, gridY, objType, screen.getGameState());
+                }
+                
+                GameLogger.log(GameLogger.INPUT, "[DEV] Built Map Obj " + devSpawnMapObjType
+                        + " at (" + gridX + "," + gridY + ")");
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 break;
             case SETTING_BASE_LEVEL:
                 Entity baseAtTile = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);
