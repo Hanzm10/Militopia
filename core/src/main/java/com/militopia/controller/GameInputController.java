@@ -27,6 +27,7 @@ import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
+import com.militopia.managers.TutorialManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -176,6 +177,11 @@ public class GameInputController extends InputAdapter {
         camera.update();
         if (oldZoom != camera.zoom) {
             GameLogger.log(GameLogger.CAMERA, String.format("Camera zoom: %.2f (delta: %.2f)", camera.zoom, amountY));
+
+            // Tutorial Hook: Camera / Zoom
+            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CAMERA) {
+                com.militopia.managers.TutorialManager.getInstance().nextStep();
+            }
         }
         return true;
     }
@@ -380,6 +386,12 @@ public class GameInputController extends InputAdapter {
         if (aStats != null && aStats.currentHP > 0) {
             gameHUD.snapHP(aStats.currentHP, aStats.maxHP);
         }
+
+        // Tutorial Hook: Attack Enemy
+        if (TutorialManager.getInstance().isActive() && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.ATTACK_ENEMY) {
+            TutorialManager.getInstance().nextStep();
+        }
+
         clearMarkers();
         selectedUnitEntity = null;
         gameHUD.hideTileInfo();
@@ -425,6 +437,12 @@ public class GameInputController extends InputAdapter {
                             + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
             gameHUD.showUnitInfo(foundUnit, unitStats.name + " (Enemy)", info.region, unitStats.currentHP,
                     unitStats.maxHP);
+
+            // Tutorial Hook: Check Stats (Enemy Unit)
+            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CHECK_STATS) {
+                com.militopia.managers.TutorialManager.getInstance().nextStep();
+            }
+
             return;
         }
 
@@ -445,6 +463,11 @@ public class GameInputController extends InputAdapter {
         showRangeMarkers(gridX, gridY);
         UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
         gameHUD.showUnitInfo(foundUnit, info.name, info.region, unitStats.currentHP, unitStats.maxHP);
+
+        // Tutorial Hook: Select Unit
+        if (TutorialManager.getInstance().isActive() && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.SELECT_UNIT) {
+            TutorialManager.getInstance().nextStep();
+        }
 
         if (foundAnimal != null) {
             String animName = foundAnimal.getComponent(StatsComponent.class).name;
@@ -515,12 +538,23 @@ public class GameInputController extends InputAdapter {
                     int level = structStats.level;
                     // --- UNIQUE: Unified Base Menu (Stats + Summons) ---
                     gameHUD.showBaseInfoUnified(foundStructure, screen.getGameState(), level, "BASE");
+                    
+                    // Tutorial Hook: Select Base
+                    if (TutorialManager.getInstance().isActive() && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.SELECT_BASE) {
+                        TutorialManager.getInstance().nextStep();
+                    }
                     return;
                 }
             }
             // Enemy Base or unit on top: Show standard InfoPanel scouting
             // Use specialized name and icon
             gameHUD.showBaseInfo(foundStructure, structName, foundStructure.getComponent(com.militopia.components.TextureComponent.class).region, true);
+
+            // Tutorial Hook: Check Stats (Enemy Base)
+            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CHECK_STATS) {
+                com.militopia.managers.TutorialManager.getInstance().nextStep();
+            }
+
             return;
         }
 
@@ -853,8 +887,16 @@ public class GameInputController extends InputAdapter {
             abilities.isDiggingIn = false;
             abilities.pendingSkirmishMove = false;
         }
+        AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
+        gameHUD.hideSummonMenu();
+        triggerBounce(targetX, targetY);
         clearMarkers();
         selectedUnitEntity = null;
+
+        // Tutorial Hook: Move Unit
+        if (TutorialManager.getInstance().isActive() && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_UNIT) {
+            TutorialManager.getInstance().nextStep();
+        }
     }
 
     private void transformUnit(Entity unit, int targetX, int targetY) {
@@ -1270,7 +1312,6 @@ public class GameInputController extends InputAdapter {
                 
                 GameLogger.log(GameLogger.INPUT, "[DEV] Built Map Obj " + devSpawnMapObjType
                         + " at (" + gridX + "," + gridY + ")");
-                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 break;
             case SETTING_BASE_LEVEL:
                 Entity baseAtTile = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);

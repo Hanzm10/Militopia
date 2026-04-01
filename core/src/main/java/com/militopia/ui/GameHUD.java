@@ -78,6 +78,9 @@ public class GameHUD {
     // Dev Mode panel
     private DevPanel devPanel;
 
+    // Tutorial Overlay
+    private TutorialOverlay tutorialOverlay;
+
     public GameHUD(MilitopiaGame game) {
         this.game = game;
         this.assets = game.assets;
@@ -128,6 +131,9 @@ public class GameHUD {
         gameStatsPopup = new GameStatsPopup(game, stage, inputController, bottomBar);
         economyPopup = new EconomyPopup(game, stage, inputController, bottomBar);
         disconnectPopup = new DisconnectPopup(game, screen, stage, inputController, bottomBar);
+
+        // 1.5. Initialize Tutorial Overlay
+        tutorialOverlay = new TutorialOverlay(game, stage);
 
         // Expose summonMenu for callers that still reference gameHUD.summonMenu
         summonMenu = slideMenu.menuTable;
@@ -276,6 +282,9 @@ public class GameHUD {
 
     public void render(float delta) {
         stage.act(delta);
+        if (tutorialOverlay != null) {
+            tutorialOverlay.update();
+        }
         stage.draw();
     }
 

@@ -165,6 +165,12 @@ public class SlideMenu {
                         int newIncome = gameScreen.calculateIncome(newOwner);
                         gameScreen.gameHUD.updateXP(newXP);
                         gameScreen.gameHUD.updateFunding(curFunds, newIncome);
+
+                        // Tutorial Hook: Capture Town
+                        if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CAPTURE_TOWN) {
+                            com.militopia.managers.TutorialManager.getInstance().nextStep();
+                        }
+
                         hide();
                         controller.deselect();
                     }
@@ -210,6 +216,11 @@ public class SlideMenu {
         // needs snap)
         gameScreen.gameHUD.updateXP((owner == 1) ? state.p1XP : state.p2XP);
         gameScreen.gameHUD.updateFunding((owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
+
+        // Tutorial Hook: Scavenge Ruins
+        if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SCAVENGE_RUINS) {
+            com.militopia.managers.TutorialManager.getInstance().nextStep();
+        }
 
         hide();
         controller.deselect();
@@ -324,6 +335,12 @@ public class SlideMenu {
                             // Use fresh income calculation for HUD update
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
                             gameScreen.gameHUD.updateFunding(remaining, newIncome);
+
+                            // Tutorial Hook: Summon Unit
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SUMMON_UNIT) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
+
                             hide();
                             inputController.resetLastClicked();
                         }
@@ -457,6 +474,12 @@ public class SlideMenu {
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
                             gameScreen.gameHUD.updateFunding(remaining, newIncome);
+
+                            // Tutorial Hook: Build Structure
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.BUILD_STRUCTURE) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
+
                             hide();
                             inputController.resetLastClicked();
                         }

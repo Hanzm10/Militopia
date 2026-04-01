@@ -22,7 +22,6 @@ import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.HoverListener;
-import com.militopia.ui.SoundSettingsPopup;
 
 /**
  * Bottom gradient bar: Settings, Game Stats, (Undo in testing), End Turn
@@ -136,6 +135,11 @@ public class HudBottomBar {
             public void clicked(InputEvent event, float x, float y) {
                 AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 gameHud.showGameStats(screen.getGameState());
+
+                // Tutorial Hook: Check Stats (Game Stats Panel)
+                if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CHECK_STATS) {
+                    com.militopia.managers.TutorialManager.getInstance().nextStep();
+                }
             }
         });
 
@@ -155,6 +159,11 @@ public class HudBottomBar {
             public void clicked(InputEvent event, float x, float y) {
                 screen.endTurnAction();
                 // Note: endTurnAction plays TURN_END_PLAYER internally
+
+                // Tutorial Hook: End Turn
+                if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.END_TURN) {
+                    com.militopia.managers.TutorialManager.getInstance().nextStep();
+                }
             }
         });
     }
@@ -195,6 +204,11 @@ public class HudBottomBar {
             public void clicked(InputEvent event, float x, float y) {
                 AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
                 screen.saveAndExit();
+
+                // Tutorial Hook: Save & Exit
+                if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SAVE_EXIT) {
+                    com.militopia.managers.TutorialManager.getInstance().nextStep();
+                }
             }
         });
 

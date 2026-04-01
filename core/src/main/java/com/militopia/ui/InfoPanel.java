@@ -82,7 +82,7 @@ public class InfoPanel {
     }
 
     // Base specific labels
-    private Label levelLabel, xpLabel;
+    private Label levelLabel;
 
     private static final float PANEL_HEIGHT = 120f;
 
@@ -224,6 +224,12 @@ public class InfoPanel {
                     GameLogger.log(GameLogger.UI, "InfoPanel: Demolish | " + stats.name
                             + (pos != null ? " at (" + pos.x + "," + pos.y + ")" : "")
                             + " | refund=" + demolishRefund);
+
+                    // Tutorial Hook: Demolish Structure
+                    if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.DEMOLISH_STRUCT) {
+                        com.militopia.managers.TutorialManager.getInstance().nextStep();
+                    }
+
                     hideTileInfo();
                 }
             });
@@ -487,6 +493,12 @@ public class InfoPanel {
                             GameLogger.log(GameLogger.UI, "InfoPanel: Cut Tree at ("
                                     + unitPos.x + "," + unitPos.y + ") | +"
                                     + com.militopia.config.CombatConstants.TREE_CUT_FUNDING + " funding");
+
+                            // Tutorial Hook: Cut Tree
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CUT_TREE) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
+
                             hideTileInfo();
                         }
                     });
@@ -550,6 +562,12 @@ public class InfoPanel {
                                 screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
                                 GameLogger.log(GameLogger.UI, "InfoPanel: Disband " + stats.name
                                         + " | refund=" + disbandRefund);
+
+                                // Tutorial Hook: Disband Unit
+                                if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.DISBAND_UNIT) {
+                                    com.militopia.managers.TutorialManager.getInstance().nextStep();
+                                }
+
                                 hideTileInfo();
                             }
                         });

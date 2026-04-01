@@ -220,9 +220,15 @@ When a unit is on a Ruins tile, it can perform an explicit **Scavenge** action v
 
 ---
 
-## 12. Fog of War
+## 12. Visibility and Information Warfare (Jamming Mask)
 
-- Each player sees only tiles within the vision range of their own units and structures.
+The game employs a dynamic **Jamming Algorithm** to manage the Fog of War. The visibility state of a tile is calculated as follows:
+
+1.  **Reset:** Global visibility is cleared at the start of each turn calculation.
+2.  **Jamming (Enemy EW):** A **Jamming Mask** is generated around enemy Electronic Warfare units (e.g., Signal Jammers) within a 4-tile radius.
+3.  **Vision Calculation (Ally Units):** Vision radii are calculated for all allied units. A tile is revealed only if it is outside the jammer mask, or if it is within a 1-tile "suppressed vision" radius of an allied unit (overriding the mask for immediate proximity).
+4.  **Suppression:** Units positioned inside a jammed zone have their own vision radius forcibly reduced to 1 tile.
+
 - `FogSystem` recomputes visibility on every turn change.
 - `FogToggle` button in HUD for debugging.
 

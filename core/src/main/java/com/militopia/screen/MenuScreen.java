@@ -1,6 +1,5 @@
 package com.militopia.screen;
 
-import com.militopia.screen.LoadGameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Cursor;
@@ -45,6 +44,9 @@ public class MenuScreen implements Screen {
         TextButton lanBtn = new TextButton("MULTIPLAYER", game.skin, "militopia-btn");
         lanBtn.getLabel().setFontScale(1.4f);
         lanBtn.addListener(new HoverListener());
+        TextButton tutorialBtn = new TextButton("TUTORIAL", game.skin, "militopia-btn");
+        tutorialBtn.getLabel().setFontScale(1.4f);
+        tutorialBtn.addListener(new HoverListener());
         TextButton resumeBtn = new TextButton("SAVED GAMES", game.skin, "militopia-btn");
         resumeBtn.getLabel().setFontScale(1.4f);
         resumeBtn.addListener(new HoverListener());
@@ -70,6 +72,15 @@ public class MenuScreen implements Screen {
                 AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 GameLogger.logScreen("Navigating → LAN Lobby");
                 game.setScreen(new LobbyScreen(game));
+            }
+        });
+
+        tutorialBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                GameLogger.logScreen("Navigating → Tutorial Screen");
+                game.setScreen(new TutorialScreen(game));
             }
         });
 
@@ -107,6 +118,8 @@ public class MenuScreen implements Screen {
         table.add(logoImage).width(800).height(300).padBottom(30);
         table.row();
         table.add(newGameBtn).fillX().width(400).pad(10);
+        table.row();
+        table.add(tutorialBtn).fillX().width(400).pad(10);
         table.row();
         table.add(lanBtn).fillX().width(400).pad(10);
         table.row();

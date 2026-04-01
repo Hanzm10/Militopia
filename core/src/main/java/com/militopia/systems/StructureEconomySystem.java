@@ -15,6 +15,7 @@ import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
 import com.militopia.ui.GameHUD;
+import com.militopia.utils.CountingSort;
 import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -319,7 +320,7 @@ public class StructureEconomySystem extends EntitySystem {
             Integer existing = map.get(stats.name);
             map.put(stats.name, (existing != null ? existing : 0) + inc);
         }
-        return map;
+        return CountingSort.sortEconomyMap(map);
     }
 
     /**
@@ -351,6 +352,6 @@ public class StructureEconomySystem extends EntitySystem {
                 map.put(stats.name, (existing != null ? existing : 0) + stats.xpGain);
             }
         }
-        return map;
+        return CountingSort.sortEconomyMap(map);
     }
 }
