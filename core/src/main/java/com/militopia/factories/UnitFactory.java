@@ -203,7 +203,7 @@ public class UnitFactory {
             abilities.isCloaked = true;
         }
         if (stats.unitType == UnitType.RECON_DRONE) {
-            abilities.isInvincible = true; // High Altitude: immune to melee land attacks
+            abilities.isUnreachable = true; // High Altitude: immune to melee land attacks
         }
 
         entity.add(stats);
@@ -252,7 +252,7 @@ public class UnitFactory {
 
             if (type.type == TypeComponent.Type.UNIT) {
                 AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
-                boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isInvincible = false;
+                boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isUnreachable = false;
                 int fuel = -1, nukeCooldown = 0;
                 if (a != null) {
                     isDiggingIn = a.isDiggingIn;
@@ -260,7 +260,7 @@ public class UnitFactory {
                     isOverwatchActive = a.isOverwatchActive;
                     isCloaked = a.isCloaked;
                     pendingSkirmishMove = a.pendingSkirmishMove;
-                    isInvincible = a.isInvincible;
+                    isUnreachable = a.isUnreachable;
                     fuel = a.fuel;
                     nukeCooldown = a.nukeCooldown;
                 }
@@ -269,7 +269,7 @@ public class UnitFactory {
                         s.unitTypeKey, p.x, p.y, s.owner,
                         s.currentHP, s.hasActed, s.hasMoved, s.moveType,
                         isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked,
-                        pendingSkirmishMove, isInvincible, fuel, nukeCooldown));
+                        pendingSkirmishMove, isUnreachable, fuel, nukeCooldown));
 
             } else if (type.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
                 // Capture ALL non-animal static objects/structures so they can be restored

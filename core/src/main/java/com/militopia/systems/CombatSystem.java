@@ -139,6 +139,7 @@ public class CombatSystem extends EntitySystem {
 
         aStats.hasActed = true;
         aStats.hasMoved = true;
+        aAbilities.isCloakBroken = true;
         aAbilities.nukeCooldown = CombatConstants.NUKE_COOLDOWN_TURNS;
     }
 
@@ -341,7 +342,26 @@ public class CombatSystem extends EntitySystem {
             if (entityFactory != null) entityFactory.createHit(dPos.x, dPos.y);
         }
 
-        // --- 3. Counterattack (range-gated) ---
+        // --- 3. Counterattack (ignore if attacker is cloaked) ---
+        AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);
+        boolean attackerIsCloaked = (aAbilities != null && aAbilities.isCloaked);
+
+        // Sniper Dynamic Stealth check (matches UnitRenderSystem)
+        if (!aStats.hasActed && aStats.unitType == UnitType.SNIPER) {
+            MapGenerator.TerrainType terrain = gameMap.terrain[aPos.x][aPos.y];
+            MapGenerator.ObjectType obj = gameMap.objects[aPos.x][aPos.y];
+            if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                    || obj == MapGenerator.ObjectType.RUINS) {
+                attackerIsCloaked = true;
+            }
+        }
+
+        if (attackerIsCloaked) {
+            GameLogger.log(GameLogger.ATTACK, aStats.owner, aStats.name + " strikes from stealth | No Counter");
+            exhaustAttacker(attacker, aStats, false);
+            return;
+        }
+
         // RECON DRONE: High Altitude (Immune to Range-1 Land attacks)
         boolean isHighAltitude = aStats.unitType == UnitType.RECON_DRONE;
         boolean isLandAttacker = dStats.moveType == StatsComponent.MoveType.LAND;
@@ -529,6 +549,11 @@ public class CombatSystem extends EntitySystem {
     private void exhaustAttacker(Entity attacker, StatsComponent aStats, boolean targetDied) {
         aStats.hasActed = true;
         aStats.hasMoved = true;
+
+        AbilitiesComponent abilities = attacker.getComponent(AbilitiesComponent.class);
+        if (abilities != null) {
+            abilities.isCloakBroken = true;
+        }
 
         // TANK: Blitz (Move again if attack kills target)
         if (targetDied && aStats.unitType == UnitType.TANK) {

@@ -208,6 +208,10 @@ public class GameScreen implements Screen {
         unitRenderSystem.setPlayer(gameState.currentPlayer);
         unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(
                 game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
+        unitRenderSystem.setInvincibleRegions(
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_RED)),
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_BLUE))
+        );
         engine.addSystem(unitRenderSystem);
 
         engine.addSystem(new FloatingTextSystem());
@@ -427,8 +431,15 @@ public class GameScreen implements Screen {
         ImmutableArray<Entity> units = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
         for (Entity entity : units) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
-            stats.hasActed = false;
-            stats.hasMoved = false;
+            if (stats.owner == gameState.currentPlayer) {
+                stats.hasActed = false;
+                stats.hasMoved = false;
+
+                AbilitiesComponent ab = entity.getComponent(AbilitiesComponent.class);
+                if (ab != null) {
+                    ab.isCloakBroken = false;
+                }
+            }
         }
     }
 
@@ -587,7 +598,7 @@ public class GameScreen implements Screen {
                         a.isOverwatchActive = us.isOverwatchActive;
                         a.isCloaked = us.isCloaked;
                         a.pendingSkirmishMove = us.pendingSkirmishMove;
-                        a.isInvincible = us.isInvincible;
+                        a.isUnreachable = us.isUnreachable;
                         a.fuel = us.fuel;
                         a.nukeCooldown = us.nukeCooldown;
                     }

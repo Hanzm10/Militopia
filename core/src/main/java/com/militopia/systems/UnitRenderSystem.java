@@ -43,6 +43,13 @@ public class UnitRenderSystem extends EntitySystem {
     private float bounceTimer = 0;
 
     private com.badlogic.gdx.graphics.g2d.TextureRegion shadowRegion;
+    private com.badlogic.gdx.graphics.g2d.TextureRegion invincibleRed, invincibleBlue;
+
+    public void setInvincibleRegions(com.badlogic.gdx.graphics.g2d.TextureRegion red,
+            com.badlogic.gdx.graphics.g2d.TextureRegion blue) {
+        this.invincibleRed = red;
+        this.invincibleBlue = blue;
+    }
 
     public void setShadowRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
         this.shadowRegion = r;
@@ -119,7 +126,8 @@ public class UnitRenderSystem extends EntitySystem {
         DeathAnimComponent death = e.getComponent(DeathAnimComponent.class);
         SpriteAnimationComponent spriteAnim = e.getComponent(SpriteAnimationComponent.class);
 
-        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER || typeC.type == TypeComponent.Type.TRANSFORM_MARKER);
+        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER
+                || typeC.type == TypeComponent.Type.TRANSFORM_MARKER);
         boolean isAttackMarker = (typeC.type == TypeComponent.Type.ATTACK_MARKER);
 
         // Fog and Stealth culling
@@ -151,7 +159,7 @@ public class UnitRenderSystem extends EntitySystem {
                 }
 
                 // If unit has already acted/attacked, it is revealed
-                if (stats.hasActed) {
+                if (stats.hasActed || (abilities != null && abilities.isCloakBroken)) {
                     isStealth = false;
                 }
 
@@ -185,7 +193,8 @@ public class UnitRenderSystem extends EntitySystem {
             DisplayAssetConfig.AssetData deathCfg = DisplayAssetConfig.get(deathKey);
             float xOff = (deathCfg.width - GameConfig.TILE_WIDTH) / 2f;
             float yOff = (deathCfg.height - GameConfig.TILE_HEIGHT) / 2f;
-            batch.draw(tex.region, isoX - xOff + deathCfg.offsetX, isoY - yOff + deathCfg.offsetY, deathCfg.width, deathCfg.height);
+            batch.draw(tex.region, isoX - xOff + deathCfg.offsetX, isoY - yOff + deathCfg.offsetY, deathCfg.width,
+                    deathCfg.height);
             batch.setColor(Color.WHITE);
             return;
         }
@@ -220,8 +229,8 @@ public class UnitRenderSystem extends EntitySystem {
             assetKey = "BASE_" + Math.min(stats.level, 10);
         }
         DisplayAssetConfig.AssetData cfg = DisplayAssetConfig.get(assetKey);
-        float drawW   = cfg.width;
-        float drawH   = cfg.height;
+        float drawW = cfg.width;
+        float drawH = cfg.height;
         float xOffset = (drawW - GameConfig.TILE_WIDTH) / 2f;
         float yOffset = (drawH - GameConfig.TILE_HEIGHT) / 2f;
         float verticalOff = isMarker || isAttackMarker ? 5f : cfg.offsetY;
@@ -241,8 +250,8 @@ public class UnitRenderSystem extends EntitySystem {
 
         // --- Colour tinting ---
         AbilitiesComponent unitAbilities = e.getComponent(AbilitiesComponent.class);
-        boolean invincible = (unitAbilities != null && unitAbilities.isInvincible);
-        float tintAlpha = invincible ? CombatConstants.INVINCIBLE_TINT_ALPHA : 1.0f;
+        boolean unreachable = (unitAbilities != null && unitAbilities.isUnreachable);
+        float tintAlpha = unreachable ? CombatConstants.UNREACHABLE_TINT_ALPHA : 1.0f;
 
         if (isAttackMarker) {
             // New enemy marker (draw with original colours)
@@ -274,9 +283,10 @@ public class UnitRenderSystem extends EntitySystem {
                     isoY - yOffset + verticalOff + animY,
                     drawW, drawH);
         }
-        
+
         if (spriteAnim != null && spriteAnim.animation != null && spriteAnim.stateTime >= 0) {
-            com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime, spriteAnim.loop);
+            com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime,
+                    spriteAnim.loop);
             if (frame != null) {
                 float dW = (spriteAnim.drawWidth > 0) ? spriteAnim.drawWidth : GameConfig.DRAW_WIDTH;
                 float dH = (spriteAnim.drawHeight > 0) ? spriteAnim.drawHeight : GameConfig.DRAW_HEIGHT;
@@ -308,6 +318,39 @@ public class UnitRenderSystem extends EntitySystem {
                     drawW, drawH);
             batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
             batch.setColor(Color.WHITE);
+        }
+
+        // --- Invincibility/Cloaking Indicator ---
+        boolean isMyUnit = (stats != null && stats.owner == activePlayer);
+        if (isMyUnit && tex != null && stats != null && (stats.unitType == UnitType.SNIPER
+                || stats.unitType == UnitType.B2 || stats.unitType == UnitType.SUBMARINE)) {
+            com.badlogic.gdx.graphics.g2d.TextureRegion indicator = (stats.owner == 1) ? invincibleBlue : invincibleRed;
+            if (indicator != null) {
+                AbilitiesComponent abilities = e.getComponent(AbilitiesComponent.class);
+                boolean isCurrentlyCloaked = (abilities != null && abilities.isCloaked);
+
+                // Sniper dynamic stealth check
+                if (stats.unitType == UnitType.SNIPER && !stats.hasActed && (abilities == null || !abilities.isCloakBroken)) {
+                    MapGenerator.TerrainType terrain = gameMap.terrain[pos.x][pos.y];
+                    MapGenerator.ObjectType obj = gameMap.objects[pos.x][pos.y];
+                    if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                            || obj == MapGenerator.ObjectType.RUINS) {
+                        isCurrentlyCloaked = true;
+                    }
+                }
+
+                // Opacity: 100% if cloaked, 50% if not
+                float alpha = isCurrentlyCloaked ? 1.0f : 0.5f;
+
+                // Position: upper right of the unit sprite
+                float indicatorSize = 2.5f;
+                float indicatorX = isoX - xOffset + cfg.offsetX + drawW; // Shifted right
+                float indicatorY = isoY - yOffset + verticalOff + animY + drawH - 1f; // Shifted higher
+
+                batch.setColor(1f, 1f, 1f, alpha);
+                batch.draw(indicator, indicatorX, indicatorY, indicatorSize, indicatorSize);
+                batch.setColor(Color.WHITE);
+            }
         }
     }
 
@@ -397,7 +440,8 @@ public class UnitRenderSystem extends EntitySystem {
 
     private void drawXPBar(float x, float y, StatsComponent stats) {
         Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA,
+                com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         float width = 32f, height = 4f, radius = 2f;

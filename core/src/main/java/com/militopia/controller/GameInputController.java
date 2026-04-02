@@ -265,7 +265,7 @@ public class GameInputController extends InputAdapter {
             Entity clickedAttackMarker = getEntityAt(gridX, gridY, TypeComponent.Type.ATTACK_MARKER);
             if (clickedAttackMarker != null && selectedUnitEntity != null) {
                 StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
-                Entity targetUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                Entity targetUnit = getVisibleUnitAt(gridX, gridY);
                 Entity enemy = null;
                 if (targetUnit != null) {
                     StatsComponent tStats = targetUnit.getComponent(StatsComponent.class);
@@ -286,7 +286,7 @@ public class GameInputController extends InputAdapter {
 
             // --- ATTACK: directly click enemy unit tile within range (no marker needed) ---
             if (selectedUnitEntity != null) {
-                Entity directTarget = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                Entity directTarget = getVisibleUnitAt(gridX, gridY);
                 if (directTarget != null) {
                     StatsComponent tStats = directTarget.getComponent(StatsComponent.class);
                     StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
@@ -330,7 +330,10 @@ public class GameInputController extends InputAdapter {
                 if (pos.x == gridX && pos.y == gridY) {
                     TypeComponent type = e.getComponent(TypeComponent.class);
                     if (type.type == TypeComponent.Type.UNIT) {
-                        foundUnit = e;
+                        Entity visibleUnit = getVisibleUnitAt(gridX, gridY);
+                        if (visibleUnit != null) {
+                            foundUnit = visibleUnit;
+                        }
                     } else if (type.type == TypeComponent.Type.OBJECT) {
                         if (pos.zIndex == 2 || e.getComponent(AnimalComponent.class) != null) {
                             foundAnimal = e;
@@ -403,11 +406,18 @@ public class GameInputController extends InputAdapter {
         // Block jump onto water terrain
         MapGenerator.TerrainType terrain = gameMap.terrain[tx][ty];
         if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER) return;
-        // Block jump onto a friendly unit tile
         Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
         if (tileUnit != null) {
             StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
-            if (ts != null && ts.owner == screen.getActiveLocalPlayer()) return;
+            if (ts != null) {
+                if (ts.owner == screen.getActiveLocalPlayer()) return;
+                
+                // Stealth Rule: Block jump onto cloaked units silently (unresponsive)
+                AbilitiesComponent ab = tileUnit.getComponent(AbilitiesComponent.class);
+                if (ab != null && ab.isCloaked) {
+                    return; // Swallow click
+                }
+            }
         }
         combatSystem.resolveJumperAttack(attacker, target, tx, ty);
         if (aStats != null && aStats.currentHP > 0) {
@@ -850,6 +860,13 @@ public class GameInputController extends InputAdapter {
     }
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
+        // --- Stealth Rule: Block movement into cloaked units silently ---
+        Entity tileUnit = getEntityAt(targetX, targetY, TypeComponent.Type.UNIT);
+        if (tileUnit != null) {
+            // Unresponsive: just return without clearing selection or markers
+            return;
+        }
+
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         if (pos == null)
             return;
@@ -1012,7 +1029,7 @@ public class GameInputController extends InputAdapter {
                     continue;
                 // Only show attack markers on tiles occupied by enemies OR empty
                 // enemy-reachable tiles
-                Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
+                Entity tileUnit = getVisibleUnitAt(tx, ty);
                 if (tileUnit != null) {
                     StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
                     if (ts != null && ts.owner == screen.getActiveLocalPlayer())
@@ -1098,8 +1115,11 @@ public class GameInputController extends InputAdapter {
             if (terrain != MapGenerator.TerrainType.WATER && terrain != MapGenerator.TerrainType.DEEP_WATER)
                 return false;
         }
-        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null)
-            return false;
+        // Stealth Rule: Invisible enemies do not block movement range markers (information hiding)
+        Entity existingUnit = getVisibleUnitAt(x, y);
+        if (existingUnit != null) {
+            return false; // Blocks move
+        }
         return true;
     }
 
@@ -1123,6 +1143,38 @@ public class GameInputController extends InputAdapter {
     public void clearMarkersPublic() {
         clearMarkers();
         selectedUnitEntity = null;
+    }
+
+    private Entity getVisibleUnitAt(int x, int y) {
+        Entity unit = getEntityAt(x, y, TypeComponent.Type.UNIT);
+        if (unit != null) {
+            StatsComponent stats = unit.getComponent(StatsComponent.class);
+            AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
+            if (stats != null && stats.owner != screen.getActiveLocalPlayer()) {
+                // 1. Permanent Cloak
+                boolean isStealth = (abilities != null && abilities.isCloaked);
+                
+                // 2. Sniper Dynamic Stealth
+                if (stats.unitType == UnitType.SNIPER && !stats.hasActed) {
+                    MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+                    MapGenerator.ObjectType obj = gameMap.objects[x][y];
+                    if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                            || obj == MapGenerator.ObjectType.RUINS) {
+                        isStealth = true;
+                    }
+                }
+                
+                // 3. Reveal overrides (attacked or detected)
+                if (stats.hasActed || (abilities != null && abilities.isCloakBroken)) {
+                    isStealth = false;
+                }
+                
+                if (isStealth && !gameMap.detectedTiles[x][y]) {
+                    return null; // Hidden enemy!
+                }
+            }
+        }
+        return unit;
     }
 
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
