@@ -674,8 +674,20 @@ public class GameInputController extends InputAdapter {
     private void handleTerrainSelection(int x, int y, MapGenerator.TerrainType terrain) {
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
 
-        // If there's a blocking object that isn't Oil, just show terrain info
-        if (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL) {
+        // Check for existing built structures not tracked in gameMap.objects
+        Entity existingStruct = getEntityAt(x, y, TypeComponent.Type.OBJECT);
+        boolean isOccupied = (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL);
+
+        if (existingStruct != null) {
+            StatsComponent stats = existingStruct.getComponent(StatsComponent.class);
+            // Allow building ONLY if it's an Oil Reservoir (allows Oil Derrick)
+            if (stats == null || !stats.name.equals("Oil Reservoir")) {
+                isOccupied = true;
+            }
+        }
+
+        // If there's a blocking object or structure, just show terrain info
+        if (isOccupied) {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
             return;

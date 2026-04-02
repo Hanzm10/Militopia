@@ -430,13 +430,25 @@ public class SlideMenu {
         Table content = new Table();
 
         java.util.Set<String> unlocked = unlockedForLevel(maxLevel, true);
+        boolean isOilTile = gameScreen.getGameMap().objects[buildX][buildY] == MapGenerator.ObjectType.OIL;
         int addedCount = 0;
 
-        boolean isOilTile = gameScreen.getGameMap().objects[buildX][buildY] == MapGenerator.ObjectType.OIL;
+        // Check for existing built structures not tracked in gameMap.objects
+        Entity existingStruct = unitFactory.getEntityAt(buildX, buildY, 1);
+        boolean hasBlockingStructure = false;
+        if (existingStruct != null) {
+            StatsComponent stats = existingStruct.getComponent(StatsComponent.class);
+            // Allow building ONLY if it's an Oil Reservoir (allows Oil Derrick)
+            if (stats == null || !stats.name.equals("Oil Reservoir")) {
+                hasBlockingStructure = true;
+            }
+        }
 
         for (final String struct : unlocked) {
             boolean show;
-            if (isOilTile) {
+            if (hasBlockingStructure) {
+                show = false;
+            } else if (isOilTile) {
                 // On Oil tiles, ONLY show Oil Derrick
                 show = struct.equals("OIL_DERRICK");
             } else {
