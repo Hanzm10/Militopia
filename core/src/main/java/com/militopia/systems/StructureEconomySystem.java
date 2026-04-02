@@ -219,7 +219,7 @@ public class StructureEconomySystem extends EntitySystem {
     // Income / XP queries (used by GameScreen, InfoPanel, SlideMenu, HUD)
     // -------------------------------------------------------------------------
 
-    /** Per-entity income, including Solar Array tech-synergy bonus. */
+    /** Per-entity income, including Solar Array Adjacency Bonus. */
     public int calculateBaseIncome(Entity entity) {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
         if (stats == null) return 0;
@@ -227,7 +227,7 @@ public class StructureEconomySystem extends EntitySystem {
         int income = stats.income;
         GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
         if (pos != null && StructureType.fromDisplayName(stats.name) == StructureType.SOLAR) {
-            // SOLAR ARRAY: +1 income for each adjacent friendly structure
+            // SOLAR ARRAY: Adjacency Bonus (+1 income for each adjacent friendly structure)
             // Use index-based loop to avoid nested-iterator crash when called from
             // inside another for-each over the same family (e.g. calculateGroupedBaseIncome).
             ImmutableArray<Entity> entities = getEngine().getEntitiesFor(

@@ -11,6 +11,7 @@ import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
 import com.militopia.data.UnitData;
 import com.militopia.data.AnimalData;
+import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.AnimalComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
@@ -38,8 +39,12 @@ public class SaveManager {
 
             if (type.type == TypeComponent.Type.UNIT) {
                 String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
+                AbilitiesComponent ab = e.getComponent(AbilitiesComponent.class);
+                boolean isCloaked = (ab != null) && ab.isCloaked;
+                boolean isCloakBroken = (ab != null) && ab.isCloakBroken;
+
                 state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
-                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
+                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed, isCloaked, isCloakBroken));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
                 // --- DETECT ANIMALS VIA COMPONENT TAG ---

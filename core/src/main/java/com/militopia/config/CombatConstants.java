@@ -11,10 +11,6 @@ public class CombatConstants {
     }
 
     // -----------------------------------------------------------------------
-    // Rendering
-    // -----------------------------------------------------------------------
-    /** Alpha applied to invincible units so they appear translucent. */
-    public static final float UNREACHABLE_TINT_ALPHA = 0.9f;
 
     // -----------------------------------------------------------------------
     // Jump animation (Juggernaut)

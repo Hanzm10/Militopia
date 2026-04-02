@@ -142,7 +142,7 @@ Bases accumulate **XP** each turn and level up to unlock new units and structure
 | Unit | HP | ATK | DEF | MOV | RNG | VIS | Cost | Unlock |
 |---|---|---|---|---|---|---|---|---|
 | **Recon Drone** | 5 | 0 | 0 | 3 | 0 | 3 | 4 | Level 2 |
-| **Suicide Drone** | 5 | 20 | 0 | 2 | 1 | 2 | 7 | Level 3 |
+| **Suicide Drone** | 5 | 20 | 0 | 2 | 2 | 2 | 7 | Level 3 |
 | **Apache** | 20 | 15 | 2 | 3 | 2 | 3 | 18 | Level 4 |
 | **Wraith (B2)** | 45 | 18 | 3 | 3 | 3 | 3 | — | Level 5 (choice) |
 
@@ -170,8 +170,8 @@ Every unit has a unique special ability.
 | **Sniper** | **Camouflage** | Invisible on Forest/Ruins tiles; revealed on attack or when enemy is adjacent (within 1 tile) |
 | **Tank (MBT)** | **Blitz** | If an attack kills a unit, the Tank may move again immediately |
 | **Juggernaut** | **Suppressing Fire** | Attack hits all 8 adjacent tiles simultaneously; unit performs a jump animation |
-| **Recon Drone** | **High Altitude** | Immune to all damage from range-1 land units (rendered at 90% opacity) |
-| **Suicide Drone** | **Kamikaze** | Destroyed immediately after attacking |
+| **Recon Drone** | **High Altitude** | Immune to all damage from range-1 land units |
+| **Suicide Drone** | **Kamikaze** | Destroyed immediately after attacking; dives into target tile on attack |
 | **Apache** | **Fuel Gauge** | Has 5 turns of fuel; crashes if not refueled. A Carrier refuels adjacent air units each turn |
 | **Wraith (B2)** | **Stealth Cloak** | Permanently cloaked; only detected within 1 tile or by a Radar Station |
 | **Gunboat** | **Skirmish** | Gains 1 bonus movement after attacking |
@@ -190,7 +190,7 @@ Structures are built within a base's **border zone** and linked to the parent ba
 | **Munitions Factory** | 5 | +2 | +50 | — |
 | **Port** | 7 | 0 | +50 | Enables Sea unit summoning on adjacent Water tiles |
 | **Field Hospital** | 15 | 0 | +50 | Heals adjacent units at the start of each turn |
-| **Solar Array** | 8 | +3 | +75 | **Tech Synergy:** Reduces Drone and Radar upkeep by 1 |
+| **Solar Array** | 8 | +3 | +75 | **Adjacency Bonus:** +1 income for each adjacent friendly structure |
 | **Radar Station** | 20 | 0 | +75 | **Scanner:** Vision range +4; reveals cloaked/invisible enemies in radius |
 | **Signal Jammer** | 25 | 0 | +75 | **Static:** Jams enemy vision in a **4-tile radius** (suppressed units see only 1 tile); blocks stealth detection |
 | **Oil Derrick** | 10 | +6 | +100 | Must be built on an **Oil Reservoir** tile. **Volatile:** Explodes on death (AOE damage) |

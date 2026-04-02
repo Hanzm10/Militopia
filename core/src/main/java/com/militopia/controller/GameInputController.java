@@ -456,9 +456,9 @@ public class GameInputController extends InputAdapter {
             return;
         }
 
-        if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
+        if (!GameConfig.TESTING_MODE && unitStats.hasActed && unitStats.hasMoved) {
             GameLogger.log(GameLogger.INPUT,
-                    "Unit exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
+                    "Unit fully exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
             AudioManager.getInstance().playSFX(SFXKeys.UNIT_CANT_MOVE);
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
             gameHUD.showTileInfo("Unit Exhausted (" + unitStats.name + ")", info.region);
@@ -883,7 +883,6 @@ public class GameInputController extends InputAdapter {
         // RANGER: Overwatch (Check if move triggers an enemy attack)
         combatSystem.checkOverwatch(unit, targetX, targetY);
         if (stats != null) {
-            stats.hasActed = true;
             stats.hasMoved = true;
 
             // Play Movement SFX
@@ -916,7 +915,6 @@ public class GameInputController extends InputAdapter {
             abilities.isDiggingIn = false;
             abilities.pendingSkirmishMove = false;
         }
-        AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
         gameHUD.hideSummonMenu();
         triggerBounce(targetX, targetY);
         clearMarkers();
@@ -1006,7 +1004,7 @@ public class GameInputController extends InputAdapter {
             int[][] visitedMoves = new int[gameMap.width][gameMap.height];
             for (int[] row : visitedMoves)
                 java.util.Arrays.fill(row, -1);
-            floodFill(startX, startY, moveRange, visitedMoves, startX, startY, moveType);
+            floodFill(startX, startY, moveRange, visitedMoves, startX, startY, moveType, stats.unitType);
         }
 
         // --- Red attack markers ---
@@ -1035,18 +1033,19 @@ public class GameInputController extends InputAdapter {
                     if (ts != null && ts.owner == screen.getActiveLocalPlayer())
                         continue; // skip own units
                 }
-                // Juggernaut can jump to any tile (empty or enemy); others need an actual enemy
+
+                // Only show attack markers if the unit has NOT already acted
                 boolean isJuggernaut = stats != null && stats.unitType == UnitType.JUGGERNAUT;
-                if (tileUnit == null && !isJuggernaut)
-                    continue;
-                // Juggernaut cannot jump onto water
-                if (isJuggernaut) {
-                    MapGenerator.TerrainType t = gameMap.terrain[tx][ty];
-                    if (t == MapGenerator.TerrainType.WATER || t == MapGenerator.TerrainType.DEEP_WATER)
-                        continue;
+                if (!stats.hasActed && (tileUnit != null || isJuggernaut)) {
+                    // Juggernaut cannot jump onto water
+                    if (isJuggernaut) {
+                        MapGenerator.TerrainType t = gameMap.terrain[tx][ty];
+                        if (t == MapGenerator.TerrainType.WATER || t == MapGenerator.TerrainType.DEEP_WATER)
+                            continue;
+                    }
+                    entityFactory.createAttackMarker(tx, ty);
+                    attackMarkersAdded++;
                 }
-                entityFactory.createAttackMarker(tx, ty);
-                attackMarkersAdded++;
             }
         }
 
@@ -1076,7 +1075,7 @@ public class GameInputController extends InputAdapter {
 
     /** Flood-fill BFS for movement range (unchanged logic). */
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves,
-            int startX, int startY, StatsComponent.MoveType moveType) {
+            int startX, int startY, StatsComponent.MoveType moveType, UnitType unitType) {
         if (remainingMoves < 0)
             return;
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height)
@@ -1085,7 +1084,7 @@ public class GameInputController extends InputAdapter {
             return;
 
         boolean isStart = (x == startX && y == startY);
-        if (!isStart && !isWalkable(x, y, moveType))
+        if (!isStart && !isWalkable(x, y, moveType, unitType))
             return;
 
         visitedMoves[x][y] = remainingMoves;
@@ -1094,23 +1093,28 @@ public class GameInputController extends InputAdapter {
         }
 
         int next = remainingMoves - 1;
-        floodFill(x + 1, y, next, visitedMoves, startX, startY, moveType);
-        floodFill(x - 1, y, next, visitedMoves, startX, startY, moveType);
-        floodFill(x, y + 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x, y - 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x + 1, y + 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x - 1, y + 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x + 1, y - 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x - 1, y - 1, next, visitedMoves, startX, startY, moveType);
+        floodFill(x + 1, y, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x - 1, y, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x, y + 1, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x, y - 1, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x + 1, y + 1, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x - 1, y + 1, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x + 1, y - 1, next, visitedMoves, startX, startY, moveType, unitType);
+        floodFill(x - 1, y - 1, next, visitedMoves, startX, startY, moveType, unitType);
     }
 
-    private boolean isWalkable(int x, int y, StatsComponent.MoveType moveType) {
+    private boolean isWalkable(int x, int y, StatsComponent.MoveType moveType, UnitType unitType) {
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height)
             return false;
         MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
         if (moveType == StatsComponent.MoveType.LAND) {
             if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER)
                 return false;
+
+            // TANK Restriction: Cannot move to mountains
+            if (unitType == UnitType.TANK && gameMap.objects[x][y] == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
+                return false;
+            }
         } else if (moveType == StatsComponent.MoveType.SEA) {
             if (terrain != MapGenerator.TerrainType.WATER && terrain != MapGenerator.TerrainType.DEEP_WATER)
                 return false;
@@ -1159,7 +1163,7 @@ public class GameInputController extends InputAdapter {
                     MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
                     MapGenerator.ObjectType obj = gameMap.objects[x][y];
                     if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
-                            || obj == MapGenerator.ObjectType.RUINS) {
+                            || obj == MapGenerator.ObjectType.RUINS || obj == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
                         isStealth = true;
                     }
                 }

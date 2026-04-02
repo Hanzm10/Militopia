@@ -111,7 +111,7 @@ Militopia is a **two-player, turn-based military strategy game** played on an is
 | Unit | HP | ATK | DEF | MOV | RNG | VIS | Cost | Domain | Unlock Level |
 |---|---|---|---|---|---|---|---|---|---|
 | Recon Drone | 5 | 0 | 0 | 3 | 0 | 3 | 4 | AIR | 2 |
-| Suicide Drone | 5 | 20 | 0 | 2 | 1 | 2 | 7 | AIR | 3 |
+| Suicide Drone | 5 | 20 | 0 | 2 | 2 | 2 | 7 | AIR | 3 |
 | Apache | 20 | 15 | 2 | 3 | 2 | 3 | 18 | AIR | 4 |
 | Wraith (B2) | 45 | 18 | 3 | 3 | 3 | 3 | — | AIR | 5 |
 | Gunboat | 10 | 5 | 2 | 2 | 2 | 2 | 6 | SEA | 2 |
@@ -160,8 +160,8 @@ Structures are built within a base's border zone. They link to their parent base
 | Structure | HP | Cost | Income | XP Gain | Build Zone | Special Effect |
 |---|---|---|---|---|---|---|
 | Base (City) | N/A | N/A | +2 | +250 | N/A | Core territory anchor |
-| Munitions Factory | N/A | 5 | +2 | +50 | Inside Borders | **Tech Synergy** eligible target |
-| Solar Array | N/A | 8 | +3 | +75 | Inside Borders | **Tech Synergy:** reduces Drone/Radar upkeep by 1 |
+| Munitions Factory | N/A | 5 | +2 | +50 | Inside Borders | **Adjacency Bonus:** eligible neighbor target |
+| Solar Array | N/A | 8 | +3 | +75 | Inside Borders | **Adjacency Bonus:** +1 income for each adjacent friendly structure |
 | Oil Derrick | N/A | 10 | +6 | +100 | Oil Reservoir | **Volatile:** explodes on death (15 dmg to 8 tiles). Can only be built on "Oil Reservoir" tiles. |
 | Nuclear Plant | N/A | 40 | +15 | +150 | Coastline Only | **Meltdown:** tiles become Wasteland on death (3×3) |
 | Field Hospital | N/A | 15 | 0 | +50 | Inside Borders | Heals adjacent units at turn start |
@@ -175,27 +175,27 @@ Structures are built within a base's border zone. They link to their parent base
 
 Each unit and structure has one unique ability. These define the tactical depth of the game.
 
-| Unit / Building | Ability Name | Effect | Implementation Note |
-|---|---|---|---|
-| Recruit | **Dig In** | Spend 1 turn to gain +3 Defense | Creates temporary "Sandbag" object on tile |
-| Ranger | **Overwatch** | Auto-attacks first enemy entering range during enemy turn | Limit 1 trigger per turn |
-| Sniper | **Camouflage** | Invisible while on Forest/Ruins tiles | Revealed on attack or adjacent enemy |
-| Tank (MBT) | **Blitz** | Can move again if attack kills a unit | Reset movePoints if `target.hp <= 0` |
-| Juggernaut | **Suppressing Fire** | Attack hits all 8 adjacent tiles | Loop `x-1..x+1, y-1..y+1` |
-| Recon Drone | **High Altitude** | Immune to melee (Range 1) land unit attacks | `if (attacker.range == 1 && attacker.isLand) damage = 0` |
-| Suicide Drone | **Kamikaze** | Destroyed upon attacking | `this.kill()` after `attack()` |
-| Apache | **Fuel Gauge** | Crashes if not refueled within 5 turns | `fuel--` per turn; `this.kill()` if 0 |
-| Wraith (B2) | **Stealth Cloak** | Invisible on map; revealed only during attack | `isVisible = false` unless `isAttacking` |
-| Gunboat | **Skirmish** | Can move 1 tile after attacking | Grant +1 Move Point after combat |
-| Destroyer | **Shore Bombardment** | +5 bonus damage to Land Units | `if (target.isLand) damage += 5` |
-| Carrier | **Mobile Airfield** | Heals & refuels adjacent Air units | Check adjacent tiles at turn start |
-| Submarine | **Deep Dive** | Moves under ships; invisible; Nuke (area damage, 3-turn cooldown) | Nuke needs cooldown timer |
-| Solar Array | **Tech Synergy** | Reduces upkeep of Drones/Radar by 1 | Loop units; if `type == Drone`, `upkeep -= 1` |
-| Oil Derrick | **Volatile** | Explodes on death (15 dmg, 8 tiles) | Trigger `explosion(x,y)` on `onDeath()` |
-| Nuclear Plant | **Meltdown** | Explodes on death; tiles become Wasteland | Change `TileType` of 3×3 area to `WASTELAND` |
-| Radar Station | **Scanner** | Reveals invisible units in radius | Overrides Stealth and Camouflage flags |
-| Signal Jammer | **Static** | Blocks enemy vision in 3-tile radius | Forces `isVisible = false` for enemies in radius |
-| Ruins | **Scavenge** | Randomized effects upon unit entry | See Section 10.1 |
+| Unit / Building | Ability Name | Type | Effect | Implementation Note |
+|---|---|---|---|---|
+| Recruit | **Dig In** | Active | Spend 1 turn to gain +3 Defense | Creates temporary "Sandbag" object on tile |
+| Ranger | **Overwatch** | Passive | Auto-attacks first enemy entering range during enemy turn | Limit 1 trigger per turn |
+| Sniper | **Camouflage** | Passive | Invisible while on Forest/Ruins tiles | Revealed on attack or adjacent enemy |
+| Tank (MBT) | **Blitz** | Passive | Can move again if attack kills a unit | Reset movePoints if `target.hp <= 0` |
+| Juggernaut | **Suppressing Fire** | Passive | Attack hits all 8 adjacent tiles | Loop `x-1..x+1, y-1..y+1` |
+| Recon Drone | **High Altitude** | Passive | Immune to melee (Range 1) land unit attacks | `if (attacker.range == 1 && attacker.isLand) damage = 0` |
+| Suicide Drone | **Kamikaze** | Passive | Destroyed upon attacking; flies to target tile on attack | `this.kill()` after `attack()` |
+| Apache | **Fuel Gauge & High Altitude** | Passive | 5 turns of fuel; crashes at 0. Immune to land melee. | `fuel--` / `isUnreachable` |
+| Wraith (B2) | **Stealth Cloak** | Passive | Invisible on map; revealed only during attack | `isVisible = false` unless `isAttacking` |
+| Gunboat | **Skirmish** | Passive | Can move 1 tile after attacking | Grant +1 Move Point after combat |
+| Destroyer | **Shore Bombardment** | Passive | +5 bonus damage to Land Units | `if (target.isLand) damage += 5` |
+| Carrier | **Mobile Airfield** | Passive | Heals & refuels adjacent Air units | Check adjacent tiles at turn start |
+| Submarine | **Deep Dive** | Mixed | Moves under ships; invisible; Nuke (area damage, 3-turn cooldown) | Nuke needs cooldown timer |
+| Solar Array | **Adjacency Bonus** | Passive | +1 income for each adjacent friendly structure | Loop adjacent entities; `if (owner == self && (income > 0 || isBase)) income += 1` |
+| Oil Derrick | **Volatile** | Passive | Explodes on death (15 dmg, 8 tiles) | Trigger `explosion(x,y)` on `onDeath()` |
+| Nuclear Plant | **Meltdown** | Passive | Explodes on death; tiles become Wasteland | Change `TileType` of 3×3 area to `WASTELAND` |
+| Radar Station | **Scanner** | Passive | Reveals invisible units in radius | Overrides Stealth and Camouflage flags |
+| Signal Jammer | **Static** | Passive | Blocks enemy vision in 3-tile radius | Forces `isVisible = false` for enemies in radius |
+| Ruins | **Scavenge** | Active | Randomized effects upon unit entry | See Section 10.1 |
 
 ---
 

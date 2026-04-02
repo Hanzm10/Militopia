@@ -176,10 +176,16 @@ public class GameScreen implements Screen {
 
         // 3. Initialize fog/render systems
         // IMPORTANT: In LAN, we MUST lock these to the local player ID immediately.
-        int initialVisionID = getActiveLocalPlayer();
-        fogSystem = new FogSystem(gameMap, initialVisionID);
-        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, game.assets.getFont());
-        unitRenderSystem.setPlayer(initialVisionID);
+        int localID = getActiveLocalPlayer();
+        fogSystem = new FogSystem(gameMap, localID);
+        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
+        unitRenderSystem.setPlayer(localID);
+        unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(
+                game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
+        unitRenderSystem.setInvincibleRegions(
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_RED)),
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_BLUE))
+        );
 
         engine.addSystem(unitRenderSystem);
         engine.addSystem(fogSystem);
@@ -191,7 +197,6 @@ public class GameScreen implements Screen {
 
         structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, entityFactory, null);
         engine.addSystem(structureEconomySystem);
-
         winConditionSystem = new WinConditionSystem(loadedState, winnerID -> {
             boolean localWon = (winnerID == getActiveLocalPlayer());
             AudioManager.getInstance().playSFX(localWon
@@ -203,16 +208,6 @@ public class GameScreen implements Screen {
 
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
         engine.addSystem(mapRenderSystem);
-
-        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
-        unitRenderSystem.setPlayer(gameState.currentPlayer);
-        unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(
-                game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
-        unitRenderSystem.setInvincibleRegions(
-                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_RED)),
-                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_BLUE))
-        );
-        engine.addSystem(unitRenderSystem);
 
         engine.addSystem(new FloatingTextSystem());
 
@@ -234,9 +229,15 @@ public class GameScreen implements Screen {
                             s.currentHP = u.hp;
                         if (u.maxHp > 0)
                             s.maxHP = u.maxHp;
-                        s.hasMoved = u.hasMoved;
-                        s.hasActed = u.hasActed;
-                    }
+                         s.hasMoved = u.hasMoved;
+                         s.hasActed = u.hasActed;
+ 
+                         AbilitiesComponent ab = freshUnit.getComponent(AbilitiesComponent.class);
+                         if (ab != null) {
+                             ab.isCloaked = u.isCloaked;
+                             ab.isCloakBroken = u.isCloakBroken;
+                         }
+                     }
                 }
             }
         }
@@ -597,6 +598,7 @@ public class GameScreen implements Screen {
                         a.hasUsedDigIn = us.hasUsedDigIn;
                         a.isOverwatchActive = us.isOverwatchActive;
                         a.isCloaked = us.isCloaked;
+                        a.isCloakBroken = us.isCloakBroken;
                         a.pendingSkirmishMove = us.pendingSkirmishMove;
                         a.isUnreachable = us.isUnreachable;
                         a.fuel = us.fuel;

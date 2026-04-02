@@ -47,7 +47,7 @@ public class UnitStatConfig {
         m.put(UnitType.JUGGERNAUT,    new UnitStatData(50,  12,   6,   4,   4,   3,   0,  StatsComponent.MoveType.LAND));
 
         m.put(UnitType.RECON_DRONE,   new UnitStatData( 5,   0,   0,   3,   0,   3,   4,  StatsComponent.MoveType.AIR));
-        m.put(UnitType.SUICIDE_DRONE, new UnitStatData( 5,  20,   0,   2,   1,   2,   7,  StatsComponent.MoveType.AIR));
+        m.put(UnitType.SUICIDE_DRONE, new UnitStatData( 5,  20,   0,   2,   2,   2,   7,  StatsComponent.MoveType.AIR));
         m.put(UnitType.APACHE,        new UnitStatData(20,  15,   2,   3,   2,   3,  18,  StatsComponent.MoveType.AIR));
         m.put(UnitType.B2,            new UnitStatData(45,  18,   3,   3,   3,   3,   0,  StatsComponent.MoveType.AIR));
 

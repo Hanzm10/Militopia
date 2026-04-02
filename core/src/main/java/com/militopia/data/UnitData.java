@@ -10,6 +10,12 @@ public class UnitData {
     public int maxHp;
     public boolean hasMoved;
     public boolean hasActed;
+    public boolean isCloaked;
+    public boolean isCloakBroken;
+    public boolean pendingSkirmishMove;
+    public boolean isUnreachable;
+    public int fuel;
+    public int nukeCooldown;
 
     // Default constructor for JSON
     public UnitData() {
@@ -25,10 +31,16 @@ public class UnitData {
         this.maxHp = 10;
         this.hasMoved = false;
         this.hasActed = false;
+        this.isCloaked = false;
+        this.isCloakBroken = false;
+        this.pendingSkirmishMove = false;
+        this.isUnreachable = false;
+        this.fuel = -1;
+        this.nukeCooldown = 0;
     }
 
     public UnitData(int x, int y, String type, int owner, String unitTypeKey, int hp, int maxHp, boolean hasMoved,
-            boolean hasActed) {
+            boolean hasActed, boolean isCloaked, boolean isCloakBroken) {
         this.x = x;
         this.y = y;
         this.type = type;
@@ -38,5 +50,7 @@ public class UnitData {
         this.maxHp = maxHp;
         this.hasMoved = hasMoved;
         this.hasActed = hasActed;
+        this.isCloaked = isCloaked;
+        this.isCloakBroken = isCloakBroken;
     }
 }

@@ -198,6 +198,7 @@ public class UnitFactory {
         if (stats.unitType == UnitType.APACHE) {
             abilities.fuel = 5;
             abilities.fuelMax = 5;
+            abilities.isUnreachable = true; // High Altitude: immune to melee land attacks
         }
         if (stats.unitType == UnitType.SUBMARINE || stats.unitType == UnitType.B2) {
             abilities.isCloaked = true;
@@ -268,7 +269,7 @@ public class UnitFactory {
                 unitSnaps.add(new UnitSnapshot(
                         s.unitTypeKey, p.x, p.y, s.owner,
                         s.currentHP, s.hasActed, s.hasMoved, s.moveType,
-                        isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked,
+                        isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked, a != null ? a.isCloakBroken : false,
                         pendingSkirmishMove, isUnreachable, fuel, nukeCooldown));
 
             } else if (type.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {

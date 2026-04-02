@@ -103,8 +103,8 @@ public class AbilityTest {
 
     @Test
     public void testReconDroneHighAltitude() {
-        Entity attacker = createUnit(UnitType.RECRUIT,0, 0, 1);
-        Entity drone = createUnit(UnitType.RECON_DRONE,0, 0, 2);
+        Entity attacker = createUnit(UnitType.RECRUIT, 0, 0, 1);
+        Entity drone = createUnit(UnitType.RECON_DRONE, 0, 0, 2);
 
         StatsComponent dStats = drone.getComponent(StatsComponent.class);
         int initialHP = dStats.currentHP;
@@ -114,43 +114,48 @@ public class AbilityTest {
         assertEquals(initialHP, dStats.currentHP, "Drone should be immune to Range-1 land attacks (High Altitude)");
     }
 
+    @Test
+    public void testApacheHighAltitude() {
+        Entity attacker = createUnit(UnitType.RECRUIT, 0, 0, 1);
+        Entity apache = createUnit(UnitType.APACHE, 0, 0, 2);
+
+        StatsComponent dStats = apache.getComponent(StatsComponent.class);
+        int initialHP = dStats.currentHP;
+
+        combatSystem.resolveAttack(attacker, apache);
+
+        assertEquals(initialHP, dStats.currentHP, "Apache should be immune to Range-1 land attacks (High Altitude)");
+    }
+
     private Entity createUnit(UnitType type, int x, int y, int owner) {
         Entity e = engine.createEntity();
         e.add(new GridPositionComponent(x, y, 3));
         e.add(new TypeComponent(TypeComponent.Type.UNIT));
-        e.add(new AbilitiesComponent());
+        AbilitiesComponent abilities = new AbilitiesComponent();
+        e.add(abilities);
 
         int hp = 10, atk = 5, def = 0, move = 3, rng = 1, vis = 3, cost = 3;
         StatsComponent.MoveType moveType = StatsComponent.MoveType.LAND;
 
         if (type == UnitType.TANK) {
-            hp = 30;
-            atk = 12;
-            def = 5;
-            move = 2;
-            rng = 3;
+            hp = 30; atk = 12; def = 5; move = 2; rng = 3;
         }
         if (type == UnitType.RECRUIT) {
-            hp = 10;
-            atk = 3;
-            def = 1;
-            move = 1;
-            rng = 1;
+            hp = 10; atk = 3; def = 1; move = 1; rng = 1;
         }
         if (type == UnitType.RANGER) {
-            hp = 12;
-            atk = 5;
-            def = 1;
-            move = 1;
-            rng = 2;
+            hp = 12; atk = 5; def = 1; move = 1; rng = 2;
         }
         if (type == UnitType.RECON_DRONE) {
-            hp = 5;
-            atk = 0;
-            def = 0;
-            move = 6;
-            rng = 0;
+            hp = 5; atk = 0; def = 0; move = 6; rng = 0;
             moveType = StatsComponent.MoveType.AIR;
+            abilities.isUnreachable = true;
+        }
+        if (type == UnitType.APACHE) {
+            hp = 20; atk = 15; def = 2; move = 3; rng = 2;
+            moveType = StatsComponent.MoveType.AIR;
+            abilities.fuel = 5;
+            abilities.isUnreachable = true;
         }
 
         StatsComponent stats = new StatsComponent(type.name(), hp, atk, def, move, rng, vis, cost, moveType, owner);
