@@ -54,7 +54,7 @@ public class UnitStatConfig {
         m.put(UnitType.GUNBOAT,       new UnitStatData(12,   5,   1,   1,   2,   2,   5,  StatsComponent.MoveType.SEA));
         m.put(UnitType.DESTROYER,     new UnitStatData(30,  12,   5,   2,   3,   3,  15,  StatsComponent.MoveType.SEA));
         m.put(UnitType.CARRIER,       new UnitStatData(45,   5,   4,   3,   3,   3,  25,  StatsComponent.MoveType.SEA));
-        m.put(UnitType.SUBMARINE,     new UnitStatData(40,  25,   3,   4,   4,   3,   0,  StatsComponent.MoveType.SEA));
+        m.put(UnitType.SUBMARINE,     new UnitStatData(40,  20,   3,   4,   4,   3,   0,  StatsComponent.MoveType.SEA));
 
         STATS = Collections.unmodifiableMap(m);
     }

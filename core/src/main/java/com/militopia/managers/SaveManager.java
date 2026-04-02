@@ -40,11 +40,17 @@ public class SaveManager {
             if (type.type == TypeComponent.Type.UNIT) {
                 String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
                 AbilitiesComponent ab = e.getComponent(AbilitiesComponent.class);
-                boolean isCloaked = (ab != null) && ab.isCloaked;
-                boolean isCloakBroken = (ab != null) && ab.isCloakBroken;
 
                 state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
-                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed, isCloaked, isCloakBroken));
+                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed,
+                        ab != null && ab.isCloaked,
+                        ab != null && ab.isCloakBroken,
+                        ab != null && ab.isDiggingIn,
+                        ab != null && ab.hasUsedDigIn,
+                        ab != null && ab.isOverwatchActive,
+                        ab != null && ab.pendingSkirmishMove,
+                        ab != null && ab.isUnreachable,
+                        ab != null ? ab.fuel : -1));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
                 // --- DETECT ANIMALS VIA COMPONENT TAG ---

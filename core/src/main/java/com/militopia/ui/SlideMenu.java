@@ -157,8 +157,10 @@ public class SlideMenu {
                         GameLogger.log(GameLogger.CAPTURE, newOwner, "Captured " + sName + " at " + spr);
 
                         StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
-                        if (unitStats != null)
+                        if (unitStats != null) {
                             unitStats.hasActed = true;
+                            unitStats.hasMoved = true;
+                        }
 
                         int newXP = (newOwner == 1) ? state.p1XP : state.p2XP;
                         int curFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;

@@ -119,31 +119,6 @@ public class CombatSystem extends EntitySystem {
     }
 
     /**
-     * Detonates a nuclear strike at the target tile, dealing area damage and exhausting the attacker.
-     *
-     * @param attacker the entity launching the nuke (must have {@link StatsComponent} and {@link AbilitiesComponent})
-     * @param tx       target tile X coordinate
-     * @param ty       target tile Y coordinate
-     */
-    public void launchNuke(Entity attacker, int tx, int ty) {
-        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
-        AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);
-        if (aStats == null || aAbilities == null)
-            return;
-
-        GameLogger.log(GameLogger.ABILITY, aStats.owner,
-                "Nuke detonates at " + GameLogger.pos(tx, ty)
-                        + " | radius=" + CombatConstants.NUKE_RADIUS
-                        + " | dmg=" + CombatConstants.NUKE_DAMAGE);
-        triggerExplosion(tx, ty, CombatConstants.NUKE_RADIUS, CombatConstants.NUKE_DAMAGE, "NUKE");
-
-        aStats.hasActed = true;
-        aStats.hasMoved = true;
-        aAbilities.isCloakBroken = true;
-        aAbilities.nukeCooldown = CombatConstants.NUKE_COOLDOWN_TURNS;
-    }
-
-    /**
      * Resolves a single attack action.
      *
      * Resolution order:
@@ -298,6 +273,11 @@ public class CombatSystem extends EntitySystem {
 
         // Spawn floating text above the defender
         spawnFloatingText(dmg, dPos.x, dPos.y, false);
+
+        // B2 / SUBMARINE: AoE splash on primary target tile (radius 1, skip primary target)
+        if (unitType == UnitType.B2 || unitType == UnitType.SUBMARINE) {
+            applyAttackBasedAoE(attacker, dPos.x, dPos.y, 1, defender);
+        }
 
         // --- 2. Defender death? ---
         if (dStats.currentHP <= 0) {

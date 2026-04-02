@@ -186,6 +186,9 @@ public class GameScreen implements Screen {
                 new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_RED)),
                 new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_BLUE))
         );
+        unitRenderSystem.setDigInRegion(
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.DIG_IN))
+        );
 
         engine.addSystem(unitRenderSystem);
         engine.addSystem(fogSystem);
@@ -236,6 +239,12 @@ public class GameScreen implements Screen {
                          if (ab != null) {
                              ab.isCloaked = u.isCloaked;
                              ab.isCloakBroken = u.isCloakBroken;
+                             ab.isDiggingIn = u.isDiggingIn;
+                             ab.hasUsedDigIn = u.hasUsedDigIn;
+                             ab.isOverwatchActive = u.isOverwatchActive;
+                             ab.pendingSkirmishMove = u.pendingSkirmishMove;
+                             ab.isUnreachable = u.isUnreachable;
+                             if (u.fuel >= 0) ab.fuel = u.fuel;
                          }
                      }
                 }

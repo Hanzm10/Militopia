@@ -43,6 +43,7 @@ public class UnitRenderSystem extends EntitySystem {
 
     private com.badlogic.gdx.graphics.g2d.TextureRegion shadowRegion;
     private com.badlogic.gdx.graphics.g2d.TextureRegion invincibleRed, invincibleBlue;
+    private com.badlogic.gdx.graphics.g2d.TextureRegion digInRegion;
 
     public void setInvincibleRegions(com.badlogic.gdx.graphics.g2d.TextureRegion red,
             com.badlogic.gdx.graphics.g2d.TextureRegion blue) {
@@ -52,6 +53,10 @@ public class UnitRenderSystem extends EntitySystem {
 
     public void setShadowRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
         this.shadowRegion = r;
+    }
+
+    public void setDigInRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
+        this.digInRegion = r;
     }
 
     // Reusable removal list (avoids per-frame allocation accumulation)
@@ -316,6 +321,19 @@ public class UnitRenderSystem extends EntitySystem {
         }
 
         batch.setColor(Color.WHITE);
+
+        // Dig-In sandbag VFX: drawn in front of the unit sprite
+        if (digInRegion != null && typeC.type == TypeComponent.Type.UNIT
+                && stats != null && stats.unitType == UnitType.RECRUIT) {
+            AbilitiesComponent abilities = e.getComponent(AbilitiesComponent.class);
+            if (abilities != null && abilities.isDiggingIn) {
+                DisplayAssetConfig.AssetData sbCfg = DisplayAssetConfig.get("DIG_IN");
+                batch.draw(digInRegion,
+                        isoX - sbCfg.width / 2f + GameConfig.TILE_WIDTH / 2f + sbCfg.offsetX,
+                        isoY + sbCfg.offsetY + animY,
+                        sbCfg.width, sbCfg.height);
+            }
+        }
 
         // Selection glow
         if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {

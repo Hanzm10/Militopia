@@ -147,6 +147,7 @@ public class StructureEconomySystem extends EntitySystem {
                 StatsComponent uStats = unit.getComponent(StatsComponent.class);
                 GridPositionComponent uPos = unit.getComponent(GridPositionComponent.class);
                 if (uStats.owner == playerID
+                        && uStats.moveType != StatsComponent.MoveType.AIR
                         && Math.max(Math.abs(sPos.x - uPos.x), Math.abs(sPos.y - uPos.y)) <= 1) {
                     int healed = Math.min(uStats.currentHP + 3, uStats.maxHP) - uStats.currentHP;
                     uStats.currentHP += healed;

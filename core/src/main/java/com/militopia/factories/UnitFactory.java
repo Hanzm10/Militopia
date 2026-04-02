@@ -192,6 +192,7 @@ public class UnitFactory {
         stats.unitTypeKey = unitType.name(); // store raw key for snapshot restoration
         stats.unitType = unitType;
         stats.hasActed = isSummoned;
+        stats.hasMoved = isSummoned;
 
         // --- Post-processing for specific abilities ---
         AbilitiesComponent abilities = entity.getComponent(AbilitiesComponent.class);

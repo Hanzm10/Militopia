@@ -64,6 +64,7 @@ public class InfoPanel {
     private Label atkLabel, defLabel, rngLabel, movLabel, visLabel;
 
     private static final java.util.Map<UnitType, String> ABILITY_DESC;
+    private static final java.util.Map<StructureType, String> STRUCTURE_DESC;
     static {
         ABILITY_DESC = new java.util.EnumMap<UnitType, String>(UnitType.class);
         ABILITY_DESC.put(UnitType.RECRUIT,      "Dig In: +3 Def for 1 turn");
@@ -79,6 +80,9 @@ public class InfoPanel {
         ABILITY_DESC.put(UnitType.DESTROYER,    "Shore Bombardment: +5 dmg vs Land units");
         ABILITY_DESC.put(UnitType.CARRIER,      "Mobile Airfield: Heals+refuels adjacent air");
         ABILITY_DESC.put(UnitType.SUBMARINE,    "Deep Dive: Cloaked; Nuke on 3-turn cooldown");
+
+        STRUCTURE_DESC = new java.util.EnumMap<StructureType, String>(StructureType.class);
+        STRUCTURE_DESC.put(StructureType.HOSPITAL, "Field Hospital: Heals adjacent units +3 HP at turn start");
     }
 
     // Base specific labels
@@ -204,6 +208,17 @@ public class InfoPanel {
                 visLabel.setText(""); // Hide rewards for non-bases
             }
             statsTable.setVisible(true);
+
+            // Structure description
+            if (abilityDescLabel != null) {
+                StructureType sType = StructureType.fromDisplayName(stats.name);
+                String desc = STRUCTURE_DESC.get(sType);
+                if (desc != null) {
+                    abilityDescLabel.setText(desc);
+                    abilityDescLabel.setVisible(true);
+                    infoStack.getCell(abilityDescLabel).height(14);
+                }
+            }
         }
 
         // Demolish button: only for the current player's built (non-base, non-town) structures
@@ -435,16 +450,6 @@ public class InfoPanel {
                             }
                         });
 
-            } else if (stats.unitType == UnitType.SUBMARINE
-                    && abilities.nukeCooldown == 0) {
-                addAbilityButton("Launch Nuke",
-                        factory.getHudIcon(MapGenerator.ObjectType.BASE_P1),
-                        new ClickListener() {
-                            @Override
-                            public void clicked(InputEvent event, float x, float y) {
-                                controller.performAbility(unit, "LAUNCH_NUKE");
-                            }
-                        });
             } else if (stats.unitType == UnitType.RANGER && !abilities.isOverwatchActive) {
                 addAbilityButton("Overwatch",
                         factory.getTextureForPopup("RANGER"),

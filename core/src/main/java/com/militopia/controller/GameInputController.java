@@ -292,7 +292,8 @@ public class GameInputController extends InputAdapter {
                     StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
                     GridPositionComponent aPos = selectedUnitEntity.getComponent(GridPositionComponent.class);
                     if (tStats != null && aStats != null && aPos != null
-                            && tStats.owner != screen.getActiveLocalPlayer()) {
+                            && tStats.owner != screen.getActiveLocalPlayer()
+                            && !aStats.hasActed && !aStats.hasMoved) {
                         int dist = chebyshev(aPos.x, aPos.y, gridX, gridY);
                         if (dist <= aStats.attackRange) {
                             if (aStats.unitType == UnitType.JUGGERNAUT) {
@@ -643,14 +644,6 @@ public class GameInputController extends InputAdapter {
             // Visual feedback could be added here (e.g., spawn floating text "DUG IN")
             gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
             deselect();
-        } else if (abilityKey.equals("LAUNCH_NUKE")) {
-            GameLogger.log(GameLogger.ABILITY, stats.owner,
-                    "LAUNCH NUKE: " + stats.name + " at " + posStr + " — awaiting target tile");
-            isTargetingAbility = true;
-            targetingAbilityKey = "LAUNCH_NUKE";
-            targetingUnit = unit;
-            // Highlight area or show range markers if needed
-            gameHUD.hideTileInfo();
         } else if (abilityKey.equals("OVERWATCH")) {
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "OVERWATCH: " + stats.name + " goes into overwatch at " + posStr);
@@ -663,14 +656,6 @@ public class GameInputController extends InputAdapter {
     }
 
     private void executeTargetingAbility(int tx, int ty) {
-        if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
-            StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
-            String name = tStats != null ? tStats.name : "?";
-            int owner = tStats != null ? tStats.owner : 0;
-            GameLogger.log(GameLogger.ABILITY, owner,
-                    "NUKE launched by " + name + " → target " + GameLogger.pos(tx, ty));
-            combatSystem.launchNuke(targetingUnit, tx, ty);
-        }
         isTargetingAbility = false;
         targetingAbilityKey = null;
         targetingUnit = null;
@@ -884,6 +869,7 @@ public class GameInputController extends InputAdapter {
         combatSystem.checkOverwatch(unit, targetX, targetY);
         if (stats != null) {
             stats.hasMoved = true;
+            stats.hasActed = true;
 
             // Play Movement SFX
             if (stats.moveType == StatsComponent.MoveType.AIR) {
@@ -1036,7 +1022,7 @@ public class GameInputController extends InputAdapter {
 
                 // Only show attack markers if the unit has NOT already acted
                 boolean isJuggernaut = stats != null && stats.unitType == UnitType.JUGGERNAUT;
-                if (!stats.hasActed && (tileUnit != null || isJuggernaut)) {
+                if (!stats.hasActed && !stats.hasMoved && (tileUnit != null || isJuggernaut)) {
                     // Juggernaut cannot jump onto water
                     if (isJuggernaut) {
                         MapGenerator.TerrainType t = gameMap.terrain[tx][ty];

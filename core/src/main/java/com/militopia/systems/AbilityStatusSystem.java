@@ -10,6 +10,7 @@ import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.config.UnitType;
 import com.militopia.map.MapGenerator;
+import com.militopia.utils.GameLogger;
 
 /**
  * Handles turn-based status updates for unit and structure abilities.
@@ -47,11 +48,6 @@ public class AbilityStatusSystem extends EntitySystem {
                 // --- TURN START: My units ---
 
 
-                // SUBMARINE: Nuke Cooldown
-                if (abilities.nukeCooldown > 0) {
-                    abilities.nukeCooldown--;
-                }
-
                 // RECRUIT: Dig In reset (expires after 1 enemy turn cycle)
                 if (stats.unitType == UnitType.RECRUIT) {
                     abilities.isDiggingIn = false;
@@ -68,7 +64,7 @@ public class AbilityStatusSystem extends EntitySystem {
                     }
                 }
 
-                // CARRIER / HOSPITAL / SOLAR: Adjacency Effects
+                // CARRIER / SOLAR: Adjacency Effects
                 checkAdjacencyEffects(e, stats, pos, currentPlayerID);
             }
         }
@@ -79,10 +75,9 @@ public class AbilityStatusSystem extends EntitySystem {
                 Family.all(StatsComponent.class, GridPositionComponent.class).get());
 
         boolean isCarrier = stats.unitType == UnitType.CARRIER;
-        boolean isHospital = stats.name.contains("Hospital");
         boolean isSolar = stats.name.contains("Solar");
 
-        if (!isCarrier && !isHospital && !isSolar)
+        if (!isCarrier && !isSolar)
             return;
 
         for (Entity neighbor : neighbors) {
@@ -95,13 +90,12 @@ public class AbilityStatusSystem extends EntitySystem {
                 // CARRIER: Heal & Refuel Air
                 if (isCarrier && nStats.moveType == StatsComponent.MoveType.AIR) {
                     heal(nStats, 2);
+                    GameLogger.log(GameLogger.ECONOMY, owner,
+                            "Carrier heal: " + stats.name + " at " + GameLogger.pos(pos.x, pos.y)
+                                    + " → " + nStats.name + " at " + GameLogger.pos(nPos.x, nPos.y) + " +2 HP");
                     AbilitiesComponent nAbilities = neighbor.getComponent(AbilitiesComponent.class);
                     if (nAbilities != null)
                         nAbilities.fuel = nAbilities.fuelMax;
-                }
-                // HOSPITAL: Heal
-                if (isHospital) {
-                    heal(nStats, 2);
                 }
             }
         }
