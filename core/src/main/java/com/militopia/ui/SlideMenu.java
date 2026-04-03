@@ -499,6 +499,39 @@ public class SlideMenu {
                         }
                     });
         }
+        // --- Build Railway button ---
+        MapGenerator.TerrainType tileType = gameScreen.getGameMap().terrain[buildX][buildY];
+        boolean canShowRail = !hasBlockingStructure
+                && tileType != MapGenerator.TerrainType.WATER
+                && tileType != MapGenerator.TerrainType.DEEP_WATER
+                && tileType != MapGenerator.TerrainType.MOUNTAIN
+                && !gameScreen.getGameMap().rails[buildX][buildY];
+        if (canShowRail) {
+            final int railCost = 3;
+            String railLabel = "Build Railway (" + railCost + ")";
+            TextureRegion railIcon = null; // no dedicated icon yet; SummonButton handles null gracefully
+            SummonButton.addToWrapped(content, railIcon, railLabel, game, assets,
+                    new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            if (funds < railCost) return;
+                            if (currentBaseOwner == 1) state.p1Funding -= railCost;
+                            else state.p2Funding -= railCost;
+                            gameScreen.getGameMap().rails[buildX][buildY] = true;
+                            AudioManager.getInstance().playSFX(SFXKeys.ACTION_BUILD);
+                            GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                    "Built Railway at (" + buildX + "," + buildY + ")");
+                            int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            hide();
+                            inputController.resetLastClicked();
+                        }
+                    });
+            addedCount++;
+        }
+
         if (addedCount > 0) {
             menuTable.add(content).expandX().center();
             menuTable.row();

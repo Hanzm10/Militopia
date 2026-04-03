@@ -990,7 +990,7 @@ public class GameInputController extends InputAdapter {
             int[][] visitedMoves = new int[gameMap.width][gameMap.height];
             for (int[] row : visitedMoves)
                 java.util.Arrays.fill(row, -1);
-            floodFill(startX, startY, moveRange, visitedMoves, startX, startY, moveType, stats.unitType);
+            floodFill(startX, startY, moveRange * 2, visitedMoves, startX, startY, moveType, stats.unitType, stats.owner);
         }
 
         // --- Red attack markers ---
@@ -1059,9 +1059,28 @@ public class GameInputController extends InputAdapter {
         }
     }
 
-    /** Flood-fill BFS for movement range (unchanged logic). */
+    /**
+     * Movement cost in x2-scaled units. Rail-to-rail LAND steps = 1 (half cost).
+     * All other steps = 2 (normal cost). No bonus in enemy territory.
+     */
+    private int getRailStepCost(int fromX, int fromY, int toX, int toY,
+            StatsComponent.MoveType moveType, int unitOwner) {
+        if (moveType != StatsComponent.MoveType.LAND) return 2;
+        if (fromX < 0 || fromX >= gameMap.width || fromY < 0 || fromY >= gameMap.height) return 2;
+        if (toX < 0 || toX >= gameMap.width || toY < 0 || toY >= gameMap.height) return 2;
+        if (!gameMap.rails[fromX][fromY] || !gameMap.rails[toX][toY]) return 2;
+        // No bonus in enemy territory
+        int enemyOwner = (unitOwner == 1) ? 2 : 1;
+        int[] fromCheck = findControllingBase(fromX, fromY, enemyOwner);
+        int[] toCheck   = findControllingBase(toX, toY, enemyOwner);
+        if (fromCheck[0] == 1 || toCheck[0] == 1) return 2;
+        return 1; // half cost on connected rail in friendly/neutral territory
+    }
+
+    /** Flood-fill BFS for movement range with x2 integer scaling for rail bonus. */
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves,
-            int startX, int startY, StatsComponent.MoveType moveType, UnitType unitType) {
+            int startX, int startY, StatsComponent.MoveType moveType, UnitType unitType,
+            int unitOwner) {
         if (remainingMoves < 0)
             return;
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height)
@@ -1078,15 +1097,13 @@ public class GameInputController extends InputAdapter {
             entityFactory.createMovementMarker(x, y);
         }
 
-        int next = remainingMoves - 1;
-        floodFill(x + 1, y, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x - 1, y, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x, y + 1, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x, y - 1, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x + 1, y + 1, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x - 1, y + 1, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x + 1, y - 1, next, visitedMoves, startX, startY, moveType, unitType);
-        floodFill(x - 1, y - 1, next, visitedMoves, startX, startY, moveType, unitType);
+        int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{-1,1},{1,-1},{-1,-1}};
+        for (int[] d : dirs) {
+            int nx = x + d[0];
+            int ny = y + d[1];
+            int cost = getRailStepCost(x, y, nx, ny, moveType, unitOwner);
+            floodFill(nx, ny, remainingMoves - cost, visitedMoves, startX, startY, moveType, unitType, unitOwner);
+        }
     }
 
     private boolean isWalkable(int x, int y, StatsComponent.MoveType moveType, UnitType unitType) {
