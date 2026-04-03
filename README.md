@@ -11,25 +11,26 @@
 1. [Overview](#overview)
 2. [Screenshots](#screenshots)
 3. [Getting Started](#getting-started)
-4. [Controls](#controls)
-5. [Gameplay at a Glance](#gameplay-at-a-glance)
-6. [The Map](#the-map)
-7. [Turn System](#turn-system)
-8. [Economy](#economy)
-9. [Base Progression](#base-progression)
-10. [Units](#units)
-11. [Unit Abilities](#unit-abilities)
-12. [Structures](#structures)
-13. [Combat](#combat)
-14. [Capture Mechanics](#capture-mechanics)
-15. [Fog of War](#fog-of-war)
-16. [Ruins (Scavenging)](#ruins-scavenging)
-17. [Save & Load](#save--load)
-18. [HUD](#hud)
-19. [Tech Stack](#tech-stack)
-20. [Developer Notes](#developer-notes)
-21. [Roadmap](#roadmap)
-22. [License](#license)
+4. [LAN Multiplayer](#lan-multiplayer)
+5. [Controls](#controls)
+6. [Gameplay at a Glance](#gameplay-at-a-glance)
+7. [The Map](#the-map)
+8. [Turn System](#turn-system)
+9. [Economy](#economy)
+10. [Base Progression](#base-progression)
+11. [Units](#units)
+12. [Unit Abilities](#unit-abilities)
+13. [Structures](#structures)
+14. [Combat](#combat)
+15. [Capture Mechanics](#capture-mechanics)
+16. [Fog of War](#fog-of-war)
+17. [Ruins (Scavenging)](#ruins-scavenging)
+18. [Save & Load](#save--load)
+19. [HUD](#hud)
+20. [Tech Stack](#tech-stack)
+21. [Developer Notes](#developer-notes)
+22. [Roadmap](#roadmap)
+23. [License](#license)
 
 ---
 
@@ -92,6 +93,28 @@ Output lands in `lwjgl3/build/libs/`.
 
 ---
 
+## LAN Multiplayer
+
+Militopia supports **LAN play** — each player runs the game on their own machine on the same network.
+
+### Hosting a game
+
+1. Launch the game and select **LAN** from the main menu.
+2. Configure your player name, game seed, and map mode.
+3. Click **Host Game** — the lobby waits for a client to connect (TCP port 7777).
+4. Once the client joins, the game starts automatically.
+
+### Joining a game
+
+1. Launch the game and select **LAN** from the main menu.
+2. Switch to the **Join** tab — hosts on the same network are auto-discovered via UDP broadcast.
+3. Click **Join** next to a discovered host, or enter the host's IP address manually.
+4. The host sends the initial game state and both players enter the game.
+
+> **Note:** In LAN mode each player sees only their own fog of war — there is no shared screen like hot-seat.
+
+---
+
 ## Controls
 
 | Action | Input |
@@ -108,7 +131,7 @@ Output lands in `lwjgl3/build/libs/`.
 
 | Feature | Detail |
 |---|---|
-| Players | 2 (hot-seat, same machine) |
+| Players | 2 — Hot-seat (same machine) or LAN (separate machines) |
 | Player Colors | Player 1 = Blue · Player 2 = Red |
 | Map | Procedurally generated per seed |
 | Game Modes | Blitz (16×16) · Marathon (32×32) |
@@ -268,15 +291,15 @@ Every unit has a unique special ability.
 | **Ranger** | Overwatch | Manually activate to auto-attack the first enemy that enters range during the enemy's turn (1 trigger per turn) |
 | **Sniper** | Camouflage | Invisible on Forest/Ruins tiles; revealed on attack or when enemy is adjacent (within 1 tile) |
 | **Tank (MBT)** | Blitz | If an attack kills a unit, the Tank may move again immediately |
-| **Juggernaut** | Suppressing Fire | Attack hits all 8 adjacent tiles simultaneously; unit performs a jump animation |
+| **Juggernaut** | Jump Strike | Leaps to the target tile; deals AoE damage to all enemies on landing |
 | **Recon Drone** | High Altitude | Immune to all damage from range-1 land units |
 | **Suicide Drone** | Kamikaze | Destroyed immediately after attacking; dives into target tile on attack |
 | **Apache** | Fuel Gauge | Has 5 turns of fuel; crashes if not refueled. A Carrier refuels adjacent air units each turn |
-| **Wraith (B2)** | Stealth Cloak | Permanently cloaked; only detected within 1 tile or by a Radar Station |
+| **Wraith (B2)** | Stealth Cloak | Invisible until it attacks; only detected within 1 tile or by a Radar Station |
 | **Gunboat** | Skirmish | Gains 1 bonus movement after attacking |
 | **Destroyer** | Shore Bombardment | Deals +5 bonus damage to Land units |
 | **Carrier** | Mobile Airfield | Heals and refuels adjacent Air units at turn start |
-| **Submarine** | Deep Dive + Nuke | Permanently cloaked; Nuke ability deals 15 damage in a 1-tile radius (3-turn cooldown) |
+| **Submarine** | Deep Dive | Cloaked until it attacks; regular attack splashes all adjacent tiles (radius 1) |
 
 ---
 
@@ -292,8 +315,8 @@ Structures are built within a base's **border zone** and linked to the parent ba
 | **Solar Array** | 8 | +3 | +75 | Adjacency Bonus: +1 income for each adjacent friendly structure |
 | **Radar Station** | 20 | 0 | +75 | Scanner: Vision range +4; reveals cloaked/invisible enemies in radius |
 | **Signal Jammer** | 25 | 0 | +75 | Static: Jams enemy vision in a 4-tile radius (suppressed units see only 1 tile); blocks stealth detection |
-| **Oil Derrick** | 10 | +6 | +100 | Must be built on an Oil Reservoir tile. Volatile: Explodes on death (AOE damage) |
-| **Nuclear Plant** | 40 | +15 | +150 | Coastline only. Meltdown: Converts a 3×3 area to Wasteland upon destruction |
+| **Oil Derrick** | 10 | +6 | +100 | Must be built on an Oil Reservoir tile. Indestructible: cannot be destroyed by attacks |
+| **Nuclear Plant** | 40 | +15 | +150 | Coastline only. Indestructible: cannot be destroyed by attacks |
 
 ---
 
