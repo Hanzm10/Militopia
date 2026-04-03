@@ -1,8 +1,8 @@
 # Phase 9: Advanced Mechanics - Research
 
 **Researched:** 2026-04-03
-**Domain:** Railway infrastructure system — tile-based connectivity, adjacency sprite rendering, pathfinding cost modification
-**Confidence:** HIGH (mechanics), MEDIUM (art pipeline specifics)
+**Domain:** Railway infrastructure system — tile-based connectivity, ShapeRenderer rendering, pathfinding cost modification
+**Confidence:** HIGH (mechanics, rendering approach confirmed against codebase)
 
 ---
 
@@ -12,9 +12,9 @@ Phase 9 adds a Railway system inspired by Polytopia roads. The core mechanic is 
 
 The existing codebase uses integer move steps (units have `stats.move = 1`, `2`, `3`, etc.) and a recursive `floodFill` that decrements by 1 per tile. Railways require fractional costs (0.5 per rail tile), which means the flood-fill must either switch to float arithmetic or scale everything by ×2. Scaling by ×2 is the safer approach — no floating-point ambiguity in BFS.
 
-The adjacency sprite system uses a 4-bit bitmask over the four cardinal directions (N/S/E/W in grid space). With 16 possible variants, this is the minimum sprite set needed. For an isometric game at Militopia's scale (TILE_WIDTH=16, TILE_HEIGHT=10), rail overlays drawn on top of terrain tiles during the map render pass is the correct approach — no Z-ordering issues because rails are ground-plane decorations, not elevated objects.
+Rails are rendered using `ShapeRenderer` — the same approach already used for territory borders and the selection indicator in `MapRenderSystem`. This means **zero art assets are required**. Rail connectivity is drawn procedurally: for each rail tile, check which of the 4 cardinal neighbors also have rail, then draw `rectLine` segments from the tile center to each connected edge midpoint. Color: steel gray (`0.6, 0.6, 0.6, 1.0`).
 
-**Primary recommendation:** Store rail state in `GameMap` (a `boolean[][] rails` layer), compute 4-bit bitmask per tile on render, draw the correct rail sprite overlay in `MapRenderSystem.drawTerrainTile()`, and modify `floodFill` to subtract 0.5 (or use ×2 scaling) when crossing a rail tile.
+**Primary recommendation:** Store rail state in `GameMap` (a `boolean[][] rails` layer), draw rail lines procedurally in `renderBordersPass()` using the existing `ShapeRenderer`, and modify `floodFill` to use ×2 scaling when crossing a rail tile. No sprite sheet, no art assets needed.
 
 ---
 
@@ -43,14 +43,16 @@ This section documents Polytopia roads precisely so the Railway adaptation is gr
 
 Militopia's "Railway" is a renamed, adapted version. Key design decisions to make:
 
-| Question | Polytopia Answer | Recommended Militopia Answer |
-|----------|------------------|------------------------------|
-| Who builds? | Any city action in your territory | Player action via SlideMenu, costs resources, land only |
-| Both-tile requirement? | Yes — both origin AND destination must be rail | Yes — preserve this; avoids rail exploitation |
-| Enemy territory? | No bonus | No bonus (same) |
-| Move type restriction? | All land units | LAND MoveType only; AIR/SEA unaffected |
-| Cost model | 0.5 per rail-to-rail step | 0.5 per rail-to-rail step (same) |
+| Question | Polytopia Answer | Militopia Decision (confirmed) |
+|----------|------------------|-------------------------------|
+| Who builds? | Any city action in your territory | Player action via SlideMenu |
+| Build cost | 3 stars | **+3 funding** |
+| Both-tile requirement? | Yes — both origin AND destination must be rail | **Yes** — preserve this; avoids rail exploitation |
+| Enemy territory? | No bonus | **No bonus** (same) |
+| Move type restriction? | All land units | **LAND MoveType only** — AIR/SEA unaffected |
+| Cost model | 0.5 per rail-to-rail step | 0.5 per rail-to-rail step (×2 integer scaling) |
 | Placement terrain | No mountains/water | No mountains/water/deep water |
+| Rendering approach | Sprite tiles | **ShapeRenderer lines** — steel gray, no art assets |
 
 ---
 
@@ -112,38 +114,79 @@ core/src/main/java/com/militopia/
 ├── data/
 │   └── GameState.java           # Add: boolean[][] railGrid for persistence
 ├── systems/
-│   └── MapRenderSystem.java     # Add: drawRailOverlay(x, y, ...) call in drawTerrainTile()
+│   └── MapRenderSystem.java     # Add: drawRailPass() called inside renderBordersPass()
 ├── controller/
 │   └── GameInputController.java # Modify: floodFill() to use ×2 scaling for rail cost
 └── ui/
     └── SlideMenu.java (or GameHUD) # Add: "Build Railway" action button
 ```
 
-### Pattern 1: 4-Bit Bitmask for Rail Sprites
+### Pattern 1: ShapeRenderer Rail Rendering
 
-**What:** Each rail tile computes a 4-bit value based on whether its 4 cardinal neighbors also have rails. This value (0–15) indexes into a 16-sprite rail sprite sheet.
+**What:** Rails are drawn procedurally using `ShapeRenderer` — no sprite assets needed. For each rail tile, draw `rectLine` segments from the tile's isometric center to the midpoint of each connected edge. The existing `drawSmartBorders` method in `MapRenderSystem` uses the exact same technique for territory borders.
 
-**Bitmask bit assignment (cardinal grid directions):**
+**Color:** Steel gray — `shapeRenderer.setColor(0.6f, 0.6f, 0.6f, 1.0f)`
+
+**Isometric geometry for a rail tile (matching existing coord math in MapRenderSystem):**
 
 ```
-North (+Y) = bit 3 = value 8
-East  (+X) = bit 2 = value 4
-South (-Y) = bit 1 = value 2
-West  (-X) = bit 0 = value 1
+Tile diamond corners:       Rail draws to edge MIDPOINTS:
+  top (centerX, cy+halfH)     NE edge mid = (cx+halfW/2, cy+halfH/2)
+  right (cx+halfW, cy)        SE edge mid = (cx+halfW/2, cy-halfH/2)
+  bot (centerX, cy-halfH)     SW edge mid = (cx-halfW/2, cy-halfH/2)
+  left (cx-halfW, cy)         NW edge mid = (cx-halfW/2, cy+halfH/2)
+
+Rail line = center → each edge midpoint where neighbor has rail
 ```
 
-**Implementation:**
+**Implementation — added to `renderBordersPass()` inside the existing ShapeRenderer begin/end block:**
 
 ```java
-// Source: "Tile Bitmasking" technique, verified across multiple sources
-// Called from MapRenderSystem.drawTerrainTile()
-private int computeRailMask(int x, int y) {
-    int mask = 0;
-    if (hasRail(x, y + 1)) mask |= 8; // North
-    if (hasRail(x + 1, y)) mask |= 4; // East
-    if (hasRail(x, y - 1)) mask |= 2; // South
-    if (hasRail(x - 1, y)) mask |= 1; // West
-    return mask; // 0..15
+private void drawRailPass() {
+    float thick = 2.5f;
+    float jointSize = thick / 2f;
+    shapeRenderer.setColor(0.6f, 0.6f, 0.6f, 1.0f); // steel gray
+
+    for (int x = gameMap.width - 1; x >= 0; x--) {
+        for (int y = gameMap.height - 1; y >= 0; y--) {
+            if (!gameMap.rails[x][y]) continue;
+            if (fogEnabled && !gameMap.visibleTiles[x][y]) continue;
+
+            float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+            float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
+            float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
+            float cx = isoX - xOffset + (GameConfig.DRAW_WIDTH / 2f);
+            float cy = isoY + 10f; // surfaceLift matches existing code
+            float halfW = GameConfig.TILE_WIDTH / 2.0f;
+            float halfH = GameConfig.TILE_HEIGHT / 2.0f;
+
+            // Edge midpoints (isometric: NE, SE, SW, NW)
+            float neX = cx + halfW / 2f, neY = cy + halfH / 2f; // grid +X neighbor direction
+            float seX = cx + halfW / 2f, seY = cy - halfH / 2f; // grid -Y neighbor direction
+            float swX = cx - halfW / 2f, swY = cy - halfH / 2f; // grid -X neighbor direction
+            float nwX = cx - halfW / 2f, nwY = cy + halfH / 2f; // grid +Y neighbor direction
+
+            // Draw center dot
+            shapeRenderer.circle(cx, cy, jointSize);
+
+            if (hasRail(x + 1, y)) { // East neighbor (visual NE)
+                shapeRenderer.rectLine(cx, cy, neX, neY, thick);
+                shapeRenderer.circle(neX, neY, jointSize);
+            }
+            if (hasRail(x, y - 1)) { // South neighbor (visual SE)
+                shapeRenderer.rectLine(cx, cy, seX, seY, thick);
+                shapeRenderer.circle(seX, seY, jointSize);
+            }
+            if (hasRail(x - 1, y)) { // West neighbor (visual SW)
+                shapeRenderer.rectLine(cx, cy, swX, swY, thick);
+                shapeRenderer.circle(swX, swY, jointSize);
+            }
+            if (hasRail(x, y + 1)) { // North neighbor (visual NW)
+                shapeRenderer.rectLine(cx, cy, nwX, nwY, thick);
+                shapeRenderer.circle(nwX, nwY, jointSize);
+            }
+        }
+    }
 }
 
 private boolean hasRail(int x, int y) {
@@ -152,36 +195,15 @@ private boolean hasRail(int x, int y) {
 }
 ```
 
-**Sprite variants needed:** 16 TextureRegions from a sprite sheet. Index them as `railRegions[mask]`.
-
-**When to use:** Always when `gameMap.rails[x][y] == true`.
-
-**Example mask meanings:**
-
-| Mask | Binary | Shape |
-|------|--------|-------|
-| 0 | 0000 | Isolated dot (dead end, no neighbors) |
-| 5 | 0101 | N–S straight (connects North and South) |
-| 10 | 1010 | E–W straight (connects East and West) |
-| 3 | 0011 | S–W corner (South and West) |
-| 15 | 1111 | Cross junction (all 4 directions) |
-
-### Pattern 2: Rail Rendering — Overlay in drawTerrainTile()
-
-Rails are drawn on top of the terrain tile, below units. They should be drawn AFTER the terrain base sprite and BEFORE entity rendering. MapRenderSystem's `drawTerrainTile()` is the correct insertion point.
+**Call site in `renderBordersPass()`** — after `drawSmartBorders`, before `shapeRenderer.end()`:
 
 ```java
-// In MapRenderSystem.drawTerrainTile(), after drawing the terrain region:
-if (!isFog && gameMap.rails[x][y]) {
-    int mask = computeRailMask(x, y);
-    TextureRegion railRegion = railRegions[mask]; // array of 16 regions
-    if (railRegion != null) {
-        batch.draw(railRegion, drawX, drawY + animY, drawW, drawH);
-    }
-}
+drawRailPass(); // NEW — inside existing begin/end block, after territory borders
+renderSelectionIndicator();
+shapeRenderer.end();
 ```
 
-**No Z-ordering issues:** Rail overlays are ground-plane sprites drawn in the same map pass. Units are drawn in a separate pass by `UnitRenderSystem` with priority=1 (map has priority=0). Rails render correctly beneath units automatically.
+**No Z-ordering issues:** `renderBordersPass()` runs in the same ShapeRenderer pass as territory and selection. Units are drawn separately by `UnitRenderSystem` (priority=1). Rails are correctly beneath units.
 
 ### Pattern 3: Movement Cost Modification — ×2 Scaling
 
@@ -264,12 +286,12 @@ This plugs into the existing SlideMenu/GameHUD action system (`StructurePlacemen
 
 | Problem | Don't Build | Use Instead |
 |---------|-------------|-------------|
-| Adjacency sprite selection | Custom per-sprite if/else chain | 4-bit bitmask → array index (16 entries, O(1)) |
+| Rail visuals | Sprite sheet with 16 tile variants | `ShapeRenderer.rectLine()` — same as territory borders, zero art assets |
 | Rail persistence | New file format or separate save file | Add `boolean[][] railGrid` to existing `GameState` JSON via SaveManager |
 | Rail build action UI | New UI system | Reuse `SlideMenu`/`StructurePlacementSystem` pattern from Phase 5 |
 | Movement cost math | Float arithmetic in BFS | ×2 integer scaling (no floats in pathfinding) |
 
-**Key insight:** The adjacency sprite system feels complex but reduces to a 4-line bitmask computation and a 16-element array lookup. Any if/else approach to the same problem will have 16+ cases and be impossible to maintain.
+**Key insight:** ShapeRenderer is already present and initialized in `MapRenderSystem`. Drawing rail lines is a 20-line method that reuses the exact same geometry helpers as `drawSmartBorders`. No texture atlas, no asset pipeline, no artist needed.
 
 ---
 
@@ -281,11 +303,11 @@ This plugs into the existing SlideMenu/GameHUD action system (`StructurePlacemen
 **How to avoid:** In `getRailStepCost`, check `gameMap.rails[fromX][fromY]` AND `gameMap.rails[toX][toY]`. Both must be true.
 **Warning signs:** A unit standing adjacent to a lone rail tile gains unexpected extra reach.
 
-### Pitfall 2: Bitmask Direction Mismatch With Isometric Grid
-**What goes wrong:** The bitmask is computed in grid coordinates (x, y), but the sprite sheet was authored expecting screen-space directions (visual north/south/east/west). In isometric projection, grid +X goes to the lower-right visually and grid +Y goes to the lower-left.
-**Why it happens:** Artist draws sprites with "visual north" at screen top; code computes bitmask in grid space where north is +Y.
-**How to avoid:** Define the bitmask convention ONCE in comments and use it consistently in both the art brief and the code. Isometric grid conventions: grid +Y = visual NW, grid +X = visual NE, grid -Y = visual SE, grid -X = visual SW.
-**Warning signs:** Rail sprites connect visually in the wrong direction (a horizontal-looking straight rail connects grid-diagonally).
+### Pitfall 2: ShapeRenderer Rail Direction Mismatch With Isometric Grid
+**What goes wrong:** The edge midpoint coordinates are computed using screen-space assumptions (visual N/S/E/W) rather than grid-space neighbors. A rail connecting grid-east neighbor (+X) must draw toward the visual NE edge midpoint, not the screen-right.
+**Why it happens:** Isometric projection rotates the grid 45°. Grid +X = visual NE, grid +Y = visual NW, grid -X = visual SW, grid -Y = visual SE.
+**How to avoid:** Comment each neighbor check with both its grid direction AND its visual direction (see Pattern 1 code). Match the edge midpoint formula to the correct visual direction.
+**Warning signs:** Rail lines visually point in the wrong diagonal when only one neighbor is connected.
 
 ### Pitfall 3: Save/Load Rails Not Persisted
 **What goes wrong:** Built rails disappear after saving and reloading the game because `GameState` doesn't include the rail grid.
@@ -310,40 +332,15 @@ This plugs into the existing SlideMenu/GameHUD action system (`StructurePlacemen
 
 ## Code Examples
 
-### 4-Bit Bitmask Computation (Verified Pattern)
+### Rail Rendering via ShapeRenderer (no assets required)
+
+See full implementation in **Pattern 1** above (`drawRailPass()`). Summary:
 
 ```java
-// Source: "Tile Bitmasking" technique — N=8, E=4, S=2, W=1 convention
-// Standard across all strategy game autotiling implementations
-
-private int computeRailMask(int x, int y, GameMap map) {
-    int mask = 0;
-    if (hasRail(x,     y + 1, map)) mask |= 8; // North (grid +Y)
-    if (hasRail(x + 1, y,     map)) mask |= 4; // East  (grid +X)
-    if (hasRail(x,     y - 1, map)) mask |= 2; // South (grid -Y)
-    if (hasRail(x - 1, y,     map)) mask |= 1; // West  (grid -X)
-    return mask;
-}
-
-private boolean hasRail(int x, int y, GameMap map) {
-    if (x < 0 || x >= map.width || y < 0 || y >= map.height) return false;
-    return map.rails[x][y];
-}
-```
-
-### Rail Sprite Loading
-
-```java
-// In UnitFactory or AssetManager initialization — mirrors existing texture loading
-TextureRegion[] railRegions = new TextureRegion[16];
-// Assumes a 4x4 sprite sheet with tiles ordered by bitmask value 0..15
-Texture railSheet = game.assets.get("rail_tiles.png", Texture.class);
-int tileW = 18, tileH = 20; // match DRAW_WIDTH/DRAW_HEIGHT
-for (int i = 0; i < 16; i++) {
-    int col = i % 4;
-    int row = i / 4;
-    railRegions[i] = new TextureRegion(railSheet, col * tileW, row * tileH, tileW, tileH);
-}
+// Steel gray, reuses existing ShapeRenderer in MapRenderSystem
+shapeRenderer.setColor(0.6f, 0.6f, 0.6f, 1.0f);
+// For each connected neighbor: rectLine(center → edge midpoint) + circle joint
+// Called inside renderBordersPass() — same begin/end block as territory + selection
 ```
 
 ### ×2 Integer Scaling in floodFill
