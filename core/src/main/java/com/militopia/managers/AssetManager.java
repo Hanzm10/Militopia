@@ -98,6 +98,7 @@ public class AssetManager {
     public static final String MILITOPIA_BTN = "ui/militopia-button.png";
     public static final String INVINCIBLE_RED = "ui/INVINCIBLE_RED.png";
     public static final String INVINCIBLE_BLUE = "ui/INVINCIBLE_BLUE.png";
+    public static final String RAILWAY_ICON = "ui/RAILWAY.png";
     public static final String DIG_IN         = "displays/DIG-IN.png";
     public static final String BACKGROUND    = "game-system/militopia_background.png";
     public static final String LOGO          = "game-system/militopia-logo.png";
@@ -260,6 +261,7 @@ public class AssetManager {
         manager.load(MILITOPIA_BTN, Texture.class);
         manager.load(INVINCIBLE_RED, Texture.class);
         manager.load(INVINCIBLE_BLUE, Texture.class);
+        manager.load(RAILWAY_ICON, Texture.class);
         manager.load(DIG_IN, Texture.class);
         manager.load(BACKGROUND, Texture.class);
         manager.load(LOGO, Texture.class);

@@ -501,15 +501,14 @@ public class SlideMenu {
         }
         // --- Build Railway button ---
         MapGenerator.TerrainType tileType = gameScreen.getGameMap().terrain[buildX][buildY];
-        boolean canShowRail = !hasBlockingStructure
-                && tileType != MapGenerator.TerrainType.WATER
+        boolean canShowRail = tileType != MapGenerator.TerrainType.WATER
                 && tileType != MapGenerator.TerrainType.DEEP_WATER
                 && tileType != MapGenerator.TerrainType.MOUNTAIN
                 && !gameScreen.getGameMap().rails[buildX][buildY];
         if (canShowRail) {
             final int railCost = 3;
             String railLabel = "Build Railway (" + railCost + ")";
-            TextureRegion railIcon = null; // no dedicated icon yet; SummonButton handles null gracefully
+            TextureRegion railIcon = unitFactory.getTextureForPopup("RAILWAY");
             SummonButton.addToWrapped(content, railIcon, railLabel, game, assets,
                     new ClickListener() {
                         @Override

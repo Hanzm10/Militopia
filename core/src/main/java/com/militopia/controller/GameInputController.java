@@ -694,21 +694,29 @@ public class GameInputController extends InputAdapter {
         // [0]=isTerritory(1/0), [1]=maxLevel, [2]=parentX, [3]=parentY
         int[] territory = findControllingBase(x, y, owner);
 
-        // --- 3. BUILD MENU OR TERRAIN INFO ---
-        if (territory[0] == 1) {
-            boolean isWater = (terrain == MapGenerator.TerrainType.WATER
-                    || terrain == MapGenerator.TerrainType.DEEP_WATER);
-            boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
-            boolean isCoastalLand = !isWater && hasAdjacentWater(x, y);
-            boolean hasBuildOptions = !isWater || isCoastalWater;
+        boolean isMountain = (terrain == MapGenerator.TerrainType.MOUNTAIN);
+        boolean isWater = (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER);
+        boolean hasRail = gameMap.rails[x][y];
+        boolean canBuildRail = !isMountain && !isWater && !hasRail;
 
-            if (hasBuildOptions) {
-                gameHUD.openBuildMenu(x, y, owner, territory[1], isWater, isCoastalWater, isCoastalLand,
-                        screen.getGameState(), territory[2], territory[3], terrain, unitFactory);
-            } else {
-                gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
-                        unitFactory.getTextureForTerrain(terrain.ordinal()));
-            }
+        // If there's a blocking object or structure, we only allow opening the build menu if a rail can be built
+        if (isOccupied && !canBuildRail) {
+            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
+                    unitFactory.getTextureForTerrain(terrain.ordinal()));
+            return;
+        }
+
+        // --- 3. BUILD MENU OR TERRAIN INFO ---
+        boolean inTerritory = (territory[0] == 1);
+        boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
+        boolean isCoastalLand = !isWater && hasAdjacentWater(x, y);
+
+        // Can build structures if in territory AND (land OR coastal water)
+        boolean canBuildStructure = inTerritory && (!isWater || isCoastalWater);
+
+        if (canBuildStructure || canBuildRail) {
+            gameHUD.openBuildMenu(x, y, owner, territory[1], isWater, isCoastalWater, isCoastalLand,
+                    screen.getGameState(), territory[2], territory[3], terrain, unitFactory);
         } else {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));

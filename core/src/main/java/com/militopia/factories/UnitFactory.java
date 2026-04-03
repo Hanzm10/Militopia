@@ -144,6 +144,7 @@ public class UnitFactory {
         structRegions.put("TOWN",  townRegion);
         structRegions.put("RUINS", ruinsRegion);
         structRegions.put("OIL",   oilRegion);
+        structRegions.put("RAILWAY", new TextureRegion(assets.get(AssetManager.RAILWAY_ICON)));
 
         // Animals
         this.horseRegion = new TextureRegion(assets.get(AssetManager.HORSE));

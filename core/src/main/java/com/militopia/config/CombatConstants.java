@@ -58,13 +58,6 @@ public class CombatConstants {
     public static final int SHORE_BOMBARDMENT_BONUS = 5; // Destroyer vs Land
 
     // -----------------------------------------------------------------------
-    // Nuke ability
-    // -----------------------------------------------------------------------
-    public static final int NUKE_RADIUS = 1;
-    public static final int NUKE_DAMAGE = 15;
-    public static final int NUKE_COOLDOWN_TURNS = 3;
-
-    // -----------------------------------------------------------------------
     // Fog of War / Vision
     // -----------------------------------------------------------------------
     /** Radius of the jamming zone projected by a Signal Jammer structure. */
