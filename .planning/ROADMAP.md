@@ -135,7 +135,10 @@ Plans:
 **Depends on**: Phase 8
 **Success Criteria** (what must be TRUE):
   1. Railway feature (inspired by Polytopia roads) is implemented for enhanced unit mobility.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Rail data layer, persistence, and ShapeRenderer rendering
+- [ ] 09-02-PLAN.md — Movement x2 scaling and Build Railway action
 
 ---
 | Phase | Plans Complete | Status | Completed |
@@ -150,4 +153,4 @@ Plans:
 | 6. Win / Loss | 2/2 | Complete   | 2026-03-27 |
 | 7. Exploration | 1/1 | Complete | 2026-03-24 |
 | 8. Polish & UX | 4/4 | Complete | 2026-03-31 |
-| 9. Adv. Mechanics | 0/1 | Planned | - |
+| 9. Adv. Mechanics | 0/2 | Planned | - |
