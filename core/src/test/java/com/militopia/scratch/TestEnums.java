@@ -1,3 +1,5 @@
+package com.militopia.scratch;
+
 public class TestEnums {
     public enum StructureType {
         BASE("BASE", "Base"),
