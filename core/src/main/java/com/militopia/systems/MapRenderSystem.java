@@ -159,6 +159,7 @@ public class MapRenderSystem extends EntitySystem {
                 }
             }
         }
+        drawRailPass();
         renderSelectionIndicator();
         shapeRenderer.end();
     }
@@ -286,5 +287,61 @@ public class MapRenderSystem extends EntitySystem {
             return obj == MapGenerator.ObjectType.BASE_P2;
         }
         return false;
+    }
+
+    private boolean hasRail(int x, int y) {
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) return false;
+        return gameMap.rails[x][y];
+    }
+
+    private void drawRailPass() {
+        float thick = 2.5f;
+        float jointSize = thick / 2f;
+        shapeRenderer.setColor(0.6f, 0.6f, 0.6f, 1.0f); // steel gray
+
+        for (int x = gameMap.width - 1; x >= 0; x--) {
+            for (int y = gameMap.height - 1; y >= 0; y--) {
+                if (!gameMap.rails[x][y]) continue;
+                if (fogEnabled && !gameMap.visibleTiles[x][y]) continue;
+
+                float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+                float isoX = (x - y) * (GameConfig.TILE_WIDTH / 2.0f);
+                float isoY = (x + y) * (GameConfig.TILE_HEIGHT / 2.0f);
+                float cx = isoX - xOffset + (GameConfig.DRAW_WIDTH / 2f);
+                float cy = isoY + 10f; // surfaceLift = 10f, same as drawSmartBorders
+                float halfW = GameConfig.TILE_WIDTH / 2.0f;
+                float halfH = GameConfig.TILE_HEIGHT / 2.0f;
+
+                // Isometric edge midpoints:
+                // grid +X neighbor = visual NE edge midpoint
+                float neX = cx + halfW / 2f, neY = cy + halfH / 2f;
+                // grid -Y neighbor = visual SE edge midpoint
+                float seX = cx + halfW / 2f, seY = cy - halfH / 2f;
+                // grid -X neighbor = visual SW edge midpoint
+                float swX = cx - halfW / 2f, swY = cy - halfH / 2f;
+                // grid +Y neighbor = visual NW edge midpoint
+                float nwX = cx - halfW / 2f, nwY = cy + halfH / 2f;
+
+                // Center dot (junction point)
+                shapeRenderer.circle(cx, cy, jointSize);
+
+                if (hasRail(x + 1, y)) { // grid +X = visual NE
+                    shapeRenderer.rectLine(cx, cy, neX, neY, thick);
+                    shapeRenderer.circle(neX, neY, jointSize);
+                }
+                if (hasRail(x, y - 1)) { // grid -Y = visual SE
+                    shapeRenderer.rectLine(cx, cy, seX, seY, thick);
+                    shapeRenderer.circle(seX, seY, jointSize);
+                }
+                if (hasRail(x - 1, y)) { // grid -X = visual SW
+                    shapeRenderer.rectLine(cx, cy, swX, swY, thick);
+                    shapeRenderer.circle(swX, swY, jointSize);
+                }
+                if (hasRail(x, y + 1)) { // grid +Y = visual NW
+                    shapeRenderer.rectLine(cx, cy, nwX, nwY, thick);
+                    shapeRenderer.circle(nwX, nwY, jointSize);
+                }
+            }
+        }
     }
 }

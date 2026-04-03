@@ -81,6 +81,7 @@ public class SaveManager {
         }
 
         state.mapObjects = map.objects;
+        state.railGrid = map.rails;
     }
 
     /**

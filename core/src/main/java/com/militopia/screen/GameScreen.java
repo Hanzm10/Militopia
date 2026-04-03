@@ -123,6 +123,9 @@ public class GameScreen implements Screen {
         if (loadedState.mapObjects != null) {
             gameMap.objects = loadedState.mapObjects;
         }
+        if (loadedState.railGrid != null) {
+            gameMap.rails = loadedState.railGrid;
+        }
 
         centerCameraOnBase(gameState.currentPlayer);
 
