@@ -10,47 +10,45 @@ A tactically deep, heterogeneous unit combat system on a procedurally generated 
 
 ## Requirements
 
+## Requirements
+
 ### Validated
 
-- ✓ Isometric tile renderer (Ashley ECS)
-- ✓ Procedural map generation
-- ✓ Turn system & Economy core
-- ✓ Base progression & Level-up system
-- ✓ Capture & Territory mechanics
-- ✓ Fog of War visibility system
-- ✓ 10 playable units with Land/Sea/Air domains
-- ✓ Unit abilities (Phase 4.1)
-- ✓ Specialized structure logic (Phase 5)
-- ✓ Win / Loss conditions (Phase 6)
+- ✓ Isometric tile renderer (Ashley ECS) — v1.0
+- ✓ Procedural map generation (Simplex noise) — v1.0
+- ✓ Turn system & Economy core — v1.0
+- ✓ Base progression & Level-up system — v1.0
+- ✓ Capture & Territory (Fog of War) — v1.0
+- ✓ 13 playable units (Land/Sea/Air) — v1.0
+- ✓ Unit abilities (Stealth, AOE, Blitz) — v1.0
+- ✓ Specialized structures (Ports, Oil Derricks, Hospitals) — v1.0
+- ✓ Win / Loss conditions (GameOverPopup) — v1.0
+- ✓ Exploration rewards (Ruins) & Persistence — v1.0
+- ✓ Polish & UX (SFX, Animations, Undo) — v1.0
+- ✓ Railways Infrastructure — v1.0
 
 ### Active
 
-- [/] Exploration & Persistence (Phase 7)
-- [/] Polish & UX (Animations, SFX, BGM) (Phase 8) - Wave 1 Finished <!-- id: 7 -->
+- [ ] AI Opponent (v2.0)
+- [ ] Online Multiplayer (v2.0)
+- [ ] Map Editor (v2.0)
 
 ### Out of Scope
 
-- AI opponent (v2)
-- Online multiplayer (v2)
-- Map editor (v2)
+- Mobile app — web-first/desktop-first approach
+- 3D Rendering — committed to pixel-art isometric aesthetic
 
 ## Context
 
-The game uses libGDX with Ashley ECS for high-performance entity management. The map is generated using Simplex noise. Combat resolution follows a deterministic damage formula influenced by terrain and range.
-
-## Constraints
-
-- **Tech Stack**: Java 8+, libGDX, Ashley ECS
-- **Platform**: Desktop (LWJGL3)
-- **Controls**: Mouse-driven (drag-to-pan, scroll-to-zoom)
+Militopia has reached v1.0 with ~12,000 LOC of Java code. The engine is stable, featuring a modular Ashley ECS architecture and a custom Scene2D-based UI. 
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Ashley ECS | Decoupled data/logic for game systems | ✓ Good |
-| Isometric Grid | Visual depth and tactical clarity | ✓ Good |
-| Damage Formula | ATK - DEF + terrain - range penalty | ✓ Good |
+| Pre-action Snapshots | Enables robust Ctrl+Z rewind logic | ✓ Good |
+| x2 Integer Budget | Avoids floating-point errors in movement math | ✓ Good |
 
 ---
-*Last updated: 2026-03-27 — Phase 06 complete (win/loss conditions: WinConditionSystem, GameOverPopup, full test coverage)*
+*Last updated: 2026-04-03 — v1.0 MVP Shipped (all 11 phases complete)*
