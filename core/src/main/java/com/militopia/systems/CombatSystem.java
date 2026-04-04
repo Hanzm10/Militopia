@@ -119,30 +119,6 @@ public class CombatSystem extends EntitySystem {
     }
 
     /**
-     * Detonates a nuclear strike at the target tile, dealing area damage and exhausting the attacker.
-     *
-     * @param attacker the entity launching the nuke (must have {@link StatsComponent} and {@link AbilitiesComponent})
-     * @param tx       target tile X coordinate
-     * @param ty       target tile Y coordinate
-     */
-    public void launchNuke(Entity attacker, int tx, int ty) {
-        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
-        AbilitiesComponent aAbilities = attacker.getComponent(AbilitiesComponent.class);
-        if (aStats == null || aAbilities == null)
-            return;
-
-        GameLogger.log(GameLogger.ABILITY, aStats.owner,
-                "Nuke detonates at " + GameLogger.pos(tx, ty)
-                        + " | radius=" + CombatConstants.NUKE_RADIUS
-                        + " | dmg=" + CombatConstants.NUKE_DAMAGE);
-        triggerExplosion(tx, ty, CombatConstants.NUKE_RADIUS, CombatConstants.NUKE_DAMAGE, "NUKE");
-
-        aStats.hasActed = true;
-        aStats.hasMoved = true;
-        aAbilities.nukeCooldown = CombatConstants.NUKE_COOLDOWN_TURNS;
-    }
-
-    /**
      * Resolves a single attack action.
      *
      * Resolution order:
@@ -194,8 +170,9 @@ public class CombatSystem extends EntitySystem {
             return;
         }
 
-        // RECON DRONE: High Altitude (Immune to Range-1 land attacks)
-        if (dStats.unitType == UnitType.RECON_DRONE && aStats.moveType == StatsComponent.MoveType.LAND
+        // HIGH ALTITUDE: Immune to melee (Range-1) land attacks
+        AbilitiesComponent dAbilities = defender.getComponent(AbilitiesComponent.class);
+        if (dAbilities != null && dAbilities.isUnreachable && aStats.moveType == StatsComponent.MoveType.LAND
                 && aStats.attackRange <= 1) {
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     aStats.name + " attacks " + dStats.name + " | BLOCKED (High Altitude immunity)");
@@ -213,7 +190,6 @@ public class CombatSystem extends EntitySystem {
         int shoreBonus = (aStats.unitType == UnitType.DESTROYER && dStats.moveType == StatsComponent.MoveType.LAND)
                 ? CombatConstants.SHORE_BOMBARDMENT_BONUS : 0;
 
-        AbilitiesComponent dAbilities = defender.getComponent(AbilitiesComponent.class);
         int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
 
         // Damage formula: (attack + shore bonus) - (defense + dig-in bonus) - terrain bonus - long-range penalty
@@ -228,8 +204,9 @@ public class CombatSystem extends EntitySystem {
 
         boolean isKill = (dmg >= dStats.currentHP);
         boolean isRecruitMelee = aStats.unitType == UnitType.RECRUIT && aStats.attackRange <= 1;
+        boolean isSuicideDrone = aStats.unitType == UnitType.SUICIDE_DRONE;
 
-        if (!(isKill && isRecruitMelee)) {
+        if (!(isKill && isRecruitMelee) && !isSuicideDrone) {
             triggerAttackAnimation(attacker, defender);
         }
 
@@ -297,6 +274,11 @@ public class CombatSystem extends EntitySystem {
         // Spawn floating text above the defender
         spawnFloatingText(dmg, dPos.x, dPos.y, false);
 
+        // B2 / SUBMARINE: AoE splash on primary target tile (radius 1, skip primary target)
+        if (unitType == UnitType.B2 || unitType == UnitType.SUBMARINE) {
+            applyAttackBasedAoE(attacker, dPos.x, dPos.y, 1, defender);
+        }
+
         // --- 2. Defender death? ---
         if (dStats.currentHP <= 0) {
             dStats.currentHP = 0;
@@ -305,9 +287,9 @@ public class CombatSystem extends EntitySystem {
 
             if (entityFactory != null) entityFactory.createExplosion(dPos.x, dPos.y);
 
-            // Melee Auto-Advance
-            if (aStats.attackRange <= 1) {
-                if (isRecruitMelee) {
+            // Melee Auto-Advance or Suicide Drone Dive
+            if (aStats.attackRange <= 1 || aStats.unitType == UnitType.SUICIDE_DRONE) {
+                if (isRecruitMelee || aStats.unitType == UnitType.SUICIDE_DRONE) {
                     attacker.add(new MovementComponent(aPos.x, aPos.y, dPos.x, dPos.y));
                 }
                 aPos.x = dPos.x;
@@ -341,7 +323,13 @@ public class CombatSystem extends EntitySystem {
             if (entityFactory != null) entityFactory.createHit(dPos.x, dPos.y);
         }
 
-        // --- 3. Counterattack (range-gated) ---
+        // --- 3. Counterattack (ignore if attacker is currently cloaked) ---
+        if (isUnitCurrentlyCloaked(attacker)) {
+            GameLogger.log(GameLogger.ATTACK, aStats.owner, aStats.name + " strikes from stealth | No Counter");
+            exhaustAttacker(attacker, aStats, false);
+            return;
+        }
+
         // RECON DRONE: High Altitude (Immune to Range-1 Land attacks)
         boolean isHighAltitude = aStats.unitType == UnitType.RECON_DRONE;
         boolean isLandAttacker = dStats.moveType == StatsComponent.MoveType.LAND;
@@ -443,7 +431,7 @@ public class CombatSystem extends EntitySystem {
         MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
 
-        if (terrain == MapGenerator.TerrainType.MOUNTAIN) {
+        if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
             return CombatConstants.TERRAIN_BONUS_MOUNTAIN;
         }
         if (obj == MapGenerator.ObjectType.TREE) {
@@ -525,10 +513,44 @@ public class CombatSystem extends EntitySystem {
         }
     }
 
+    /**
+     * Shared logic for determining if a unit is currently stealthed/cloaked.
+     * Matches UnitRenderSystem logic but centralized for consistency.
+     */
+    public boolean isUnitCurrentlyCloaked(Entity unit) {
+        AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
+        if (abilities == null || abilities.isCloakBroken) {
+            return false;
+        }
+
+        if (abilities.isCloaked) {
+            return true;
+        }
+
+        // Sniper Camouflage check
+        StatsComponent stats = unit.getComponent(StatsComponent.class);
+        GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+        if (stats != null && pos != null && stats.unitType == UnitType.SNIPER) {
+            MapGenerator.TerrainType terrain = gameMap.terrain[pos.x][pos.y];
+            MapGenerator.ObjectType obj = gameMap.objects[pos.x][pos.y];
+            if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                    || obj == MapGenerator.ObjectType.RUINS || obj == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** Marks the attacker so they cannot act or move again this turn. */
     private void exhaustAttacker(Entity attacker, StatsComponent aStats, boolean targetDied) {
         aStats.hasActed = true;
         aStats.hasMoved = true;
+
+        AbilitiesComponent abilities = attacker.getComponent(AbilitiesComponent.class);
+        if (abilities != null) {
+            abilities.isCloakBroken = true;
+        }
 
         // TANK: Blitz (Move again if attack kills target)
         if (targetDied && aStats.unitType == UnitType.TANK) {

@@ -56,8 +56,9 @@ public class ScavengeSystem {
         int fundingGain = 0;
         int xpGain = 0;
 
-        // 1. Mark unit as acted
+        // 1. Mark unit as exhausted
         unitStats.hasActed = true;
+        unitStats.hasMoved = true;
 
         // 2. Remove ruins from map and engine
         map.objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;

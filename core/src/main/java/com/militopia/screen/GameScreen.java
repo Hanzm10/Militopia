@@ -122,6 +122,9 @@ public class GameScreen implements Screen {
         if (loadedState.mapObjects != null) {
             gameMap.objects = loadedState.mapObjects;
         }
+        if (loadedState.railGrid != null) {
+            gameMap.rails = loadedState.railGrid;
+        }
 
         centerCameraOnBase(gameState.currentPlayer);
 
@@ -175,12 +178,20 @@ public class GameScreen implements Screen {
 
         // 3. Initialize fog/render systems
         // IMPORTANT: In LAN, we MUST lock these to the local player ID immediately.
-        int initialVisionID = getActiveLocalPlayer();
-        fogSystem = new FogSystem(gameMap, initialVisionID);
-        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, game.assets.getFont());
-        unitRenderSystem.setPlayer(initialVisionID);
+        int localID = getActiveLocalPlayer();
+        fogSystem = new FogSystem(gameMap, localID);
+        unitRenderSystem = new UnitRenderSystem(game.batch, gameMap, font);
+        unitRenderSystem.setPlayer(localID);
         unitRenderSystem.setShadowRegion(new com.badlogic.gdx.graphics.g2d.TextureRegion(
                 game.assets.get(com.militopia.managers.AssetManager.SHADOW)));
+        unitRenderSystem.setInvincibleRegions(
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(
+                        game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_RED)),
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(
+                        game.assets.get(com.militopia.managers.AssetManager.INVINCIBLE_BLUE)));
+        unitRenderSystem.setDigInRegion(
+                new com.badlogic.gdx.graphics.g2d.TextureRegion(
+                        game.assets.get(com.militopia.managers.AssetManager.DIG_IN)));
 
         mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
 
@@ -195,7 +206,6 @@ public class GameScreen implements Screen {
 
         structureEconomySystem = new StructureEconomySystem(loadedState, unitFactory, entityFactory, null);
         engine.addSystem(structureEconomySystem);
-
         winConditionSystem = new WinConditionSystem(loadedState, winnerID -> {
             boolean localWon = (winnerID == getActiveLocalPlayer());
             AudioManager.getInstance().playSFX(localWon
@@ -204,6 +214,8 @@ public class GameScreen implements Screen {
             gameHUD.showGameOverPopup(winnerID);
         });
         engine.addSystem(winConditionSystem);
+
+
         engine.addSystem(new FloatingTextSystem());
 
         if (loadedState.units != null) {
@@ -226,6 +238,19 @@ public class GameScreen implements Screen {
                             s.maxHP = u.maxHp;
                         s.hasMoved = u.hasMoved;
                         s.hasActed = u.hasActed;
+
+                        AbilitiesComponent ab = freshUnit.getComponent(AbilitiesComponent.class);
+                        if (ab != null) {
+                            ab.isCloaked = u.isCloaked;
+                            ab.isCloakBroken = u.isCloakBroken;
+                            ab.isDiggingIn = u.isDiggingIn;
+                            ab.hasUsedDigIn = u.hasUsedDigIn;
+                            ab.isOverwatchActive = u.isOverwatchActive;
+                            ab.pendingSkirmishMove = u.pendingSkirmishMove;
+                            ab.isUnreachable = u.isUnreachable;
+                            if (u.fuel >= 0)
+                                ab.fuel = u.fuel;
+                        }
                     }
                 }
             }
@@ -421,8 +446,15 @@ public class GameScreen implements Screen {
         ImmutableArray<Entity> units = engine.getEntitiesFor(Family.all(StatsComponent.class).get());
         for (Entity entity : units) {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
-            stats.hasActed = false;
-            stats.hasMoved = false;
+            if (stats.owner == gameState.currentPlayer) {
+                stats.hasActed = false;
+                stats.hasMoved = false;
+
+                AbilitiesComponent ab = entity.getComponent(AbilitiesComponent.class);
+                if (ab != null) {
+                    ab.isCloakBroken = false;
+                }
+            }
         }
     }
 
@@ -522,10 +554,13 @@ public class GameScreen implements Screen {
 
             if (isMapGenObject && objType != null) {
                 unitFactory.createObjectEntity(ss.x, ss.y, objType, gameState);
-                // createObjectEntity increments base counts, but we already set them directly in step 2.
+                // createObjectEntity increments base counts, but we already set them directly
+                // in step 2.
                 // We MUST undo the auto-increment here so we don't double count:
-                if (objType == MapGenerator.ObjectType.BASE_P1) gameState.p1BaseCount--;
-                if (objType == MapGenerator.ObjectType.BASE_P2) gameState.p2BaseCount--;
+                if (objType == MapGenerator.ObjectType.BASE_P1)
+                    gameState.p1BaseCount--;
+                if (objType == MapGenerator.ObjectType.BASE_P2)
+                    gameState.p2BaseCount--;
             } else {
                 unitFactory.createStructure(ss.unitTypeKey, ss.x, ss.y, ss.owner, ss.parentBaseX, ss.parentBaseY);
             }
@@ -535,7 +570,8 @@ public class GameScreen implements Screen {
                     Family.all(GridPositionComponent.class, TypeComponent.class, StatsComponent.class).get());
             for (Entity e : objects) {
                 TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.OBJECT) continue;
+                if (t.type != TypeComponent.Type.OBJECT)
+                    continue;
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
                 if (pos.x == ss.x && pos.y == ss.y) {
                     com.militopia.data.StructureData sd = new com.militopia.data.StructureData();
@@ -573,15 +609,16 @@ public class GameScreen implements Screen {
                     s.currentHP = us.currentHP;
                     s.hasActed = us.hasActed;
                     s.hasMoved = us.hasMoved;
-                    
+
                     AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
                     if (a != null) {
                         a.isDiggingIn = us.isDiggingIn;
                         a.hasUsedDigIn = us.hasUsedDigIn;
                         a.isOverwatchActive = us.isOverwatchActive;
                         a.isCloaked = us.isCloaked;
+                        a.isCloakBroken = us.isCloakBroken;
                         a.pendingSkirmishMove = us.pendingSkirmishMove;
-                        a.isInvincible = us.isInvincible;
+                        a.isUnreachable = us.isUnreachable;
                         a.fuel = us.fuel;
                         a.nukeCooldown = us.nukeCooldown;
                     }
@@ -708,7 +745,7 @@ public class GameScreen implements Screen {
         sb.append("\n========================================\n");
         sb.append("       TURN ").append(gameState.turnCount).append(" STATUS REPORT       \n");
         sb.append("========================================\n");
-        
+
         int p1Inc = calculateIncome(1);
         int p1Maint = structureEconomySystem.calculateMaintenance(1);
         int p2Inc = calculateIncome(2);
@@ -717,13 +754,15 @@ public class GameScreen implements Screen {
         sb.append(String.format("%-15s | Funds: %3d | Inc: +%d | Maint: -%d | Net: %s%d\n",
                 gameState.p1Name.toUpperCase(), gameState.p1Funding, p1Inc, p1Maint,
                 (p1Inc - p1Maint >= 0 ? "+" : ""), (p1Inc - p1Maint)));
-                
+
         sb.append(String.format("%-15s | Funds: %3d | Inc: +%d | Maint: -%d | Net: %s%d\n",
                 gameState.p2Name.toUpperCase(), gameState.p2Funding, p2Inc, p2Maint,
                 (p2Inc - p2Maint >= 0 ? "+" : ""), (p2Inc - p2Maint)));
-        
+
         sb.append("----------------------------------------\n");
-        sb.append("ACTIVE PLAYER : ").append((gameState.currentPlayer == 1 ? gameState.p1Name : gameState.p2Name).toUpperCase()).append("\n");
+        sb.append("ACTIVE PLAYER : ")
+                .append((gameState.currentPlayer == 1 ? gameState.p1Name : gameState.p2Name).toUpperCase())
+                .append("\n");
         sb.append("----------------------------------------\n");
 
         List<String> p1Logs = new ArrayList<>();
@@ -785,7 +824,7 @@ public class GameScreen implements Screen {
         int grossIncome = calculateIncome(gameState.currentPlayer);
         int maintenance = structureEconomySystem.calculateMaintenance(gameState.currentPlayer);
         int netIncome = Math.max(0, grossIncome - maintenance);
-        
+
         // XP distribution, Hospital healing, and base leveling
         int xpGain = structureEconomySystem.processTurn(gameState.currentPlayer);
 
@@ -807,10 +846,10 @@ public class GameScreen implements Screen {
                         .getIncomeBreakdown(gameState.currentPlayer);
                 LinkedHashMap<String, Integer> xpBreakdown = structureEconomySystem
                         .getXPBreakdown(gameState.currentPlayer);
-                
+
                 // Add maintenance to breakdown for transparency
                 incomeBreakdown.put("Unit Maintenance", -maintenance);
-                
+
                 AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.UI_NOTIFICATION);
                 gameHUD.showEconomyPopup(gameState.turnCount, netIncome, xpGain, currentTotal, incomeBreakdown,
                         xpBreakdown);
@@ -876,7 +915,8 @@ public class GameScreen implements Screen {
     public void resize(int width, int height) {
         viewport.update(width, height, false);
         gameHUD.resize(width, height);
-        if (devPanel != null) devPanel.resize();
+        if (devPanel != null)
+            devPanel.resize();
     }
 
     @Override
@@ -919,11 +959,15 @@ public class GameScreen implements Screen {
             // 3. Process economy for the NEW active player and unlock HUD
             startActiveTurn();
         } else if (msg.type.startsWith("ACTION_") || msg.type.equals(NetworkMessage.TYPE_SYNC_ECONOMY) ||
-                   msg.type.equals(NetworkMessage.TYPE_ACTION_MOVE) || msg.type.equals(NetworkMessage.TYPE_ACTION_ATTACK) ||
-                   msg.type.equals(NetworkMessage.TYPE_ACTION_SUMMON) || msg.type.equals(NetworkMessage.TYPE_ACTION_BUILD) ||
-                   msg.type.equals(NetworkMessage.TYPE_ACTION_SCAVENGE) || msg.type.equals(NetworkMessage.TYPE_ACTION_CAPTURE) ||
-                   msg.type.equals(NetworkMessage.TYPE_ACTION_ABILITY) || msg.type.equals(NetworkMessage.TYPE_ACTION_DEMOLISH) ||
-                   msg.type.equals(NetworkMessage.TYPE_ACTION_DISBAND)) {
+                msg.type.equals(NetworkMessage.TYPE_ACTION_MOVE) || msg.type.equals(NetworkMessage.TYPE_ACTION_ATTACK)
+                ||
+                msg.type.equals(NetworkMessage.TYPE_ACTION_SUMMON) || msg.type.equals(NetworkMessage.TYPE_ACTION_BUILD)
+                ||
+                msg.type.equals(NetworkMessage.TYPE_ACTION_SCAVENGE)
+                || msg.type.equals(NetworkMessage.TYPE_ACTION_CAPTURE) ||
+                msg.type.equals(NetworkMessage.TYPE_ACTION_ABILITY)
+                || msg.type.equals(NetworkMessage.TYPE_ACTION_DEMOLISH) ||
+                msg.type.equals(NetworkMessage.TYPE_ACTION_DISBAND)) {
             processRemoteAction(msg);
         } else if (NetworkMessage.TYPE_DISCONNECT.equals(msg.type)) {
             GameLogger.log(GameLogger.INPUT, "LAN: Opponent disconnected");
@@ -948,7 +992,8 @@ public class GameScreen implements Screen {
                     pos.x = tx;
                     pos.y = ty;
                     StatsComponent stats = unit.getComponent(StatsComponent.class);
-                    if (stats != null) stats.hasMoved = true;
+                    if (stats != null)
+                        stats.hasMoved = true;
                 }
             } else if (NetworkMessage.TYPE_ACTION_ATTACK.equals(msg.type)) {
                 // ax,ay,dx,dy
@@ -958,7 +1003,8 @@ public class GameScreen implements Screen {
                 int dy = Integer.parseInt(p[3]);
                 Entity attacker = findUnitAt(ax, ay);
                 Entity defender = findUnitAt(dx, dy);
-                if (defender == null) defender = findStructureAt(dx, dy);
+                if (defender == null)
+                    defender = findStructureAt(dx, dy);
                 if (attacker != null && defender != null) {
                     engine.getSystem(com.militopia.systems.CombatSystem.class).resolveAttack(attacker, defender);
                 }
@@ -968,18 +1014,20 @@ public class GameScreen implements Screen {
                 int x = Integer.parseInt(p[1]);
                 int y = Integer.parseInt(p[2]);
                 int owner = Integer.parseInt(p[3]);
-                
+
                 UnitType ut = com.militopia.config.UnitType.fromKey(typeKey);
                 unitFactory.createUnit(ut, x, y, owner, true);
-                
+
                 // --- LAN FUNDING SYNC ---
                 int cost = com.militopia.factories.UnitFactory.getUnitCost(ut);
-                if (owner == 1) gameState.p1Funding -= cost;
-                else gameState.p2Funding -= cost;
-                
+                if (owner == 1)
+                    gameState.p1Funding -= cost;
+                else
+                    gameState.p2Funding -= cost;
+
                 int updatedFunds = (owner == 1) ? gameState.p1Funding : gameState.p2Funding;
                 gameHUD.updateFunding(owner, updatedFunds, calculateIncome(owner));
-                
+
                 AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.UNIT_DEPLOY);
             } else if (NetworkMessage.TYPE_ACTION_BUILD.equals(msg.type)) {
                 // type,x,y,owner
@@ -987,25 +1035,28 @@ public class GameScreen implements Screen {
                 int x = Integer.parseInt(p[1]);
                 int y = Integer.parseInt(p[2]);
                 int owner = Integer.parseInt(p[3]);
-                
+
                 // --- LAN FUNDING SYNC ---
                 int cost = unitFactory.getStructureCost(typeKey);
                 gameHUD.getStructurePlacementSystem().performBuild(typeKey, x, y, owner, cost, x, y);
-                
+
                 int updatedFunds = (owner == 1) ? gameState.p1Funding : gameState.p2Funding;
                 gameHUD.updateFunding(owner, updatedFunds, calculateIncome(owner));
-                
+
                 AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.ACTION_BUILD);
             } else if (NetworkMessage.TYPE_ACTION_SCAVENGE.equals(msg.type)) {
                 // x,y,owner
                 int x = Integer.parseInt(p[0]);
                 int y = Integer.parseInt(p[1]);
                 Entity ruins = findObjectAt(x, y, com.militopia.map.MapGenerator.ObjectType.RUINS);
-                if (ruins == null) ruins = findObjectAt(x, y, com.militopia.map.MapGenerator.ObjectType.TREE);
-                if (ruins == null) ruins = findObjectAt(x, y, com.militopia.map.MapGenerator.ObjectType.CACTUS);
-                
+                if (ruins == null)
+                    ruins = findObjectAt(x, y, com.militopia.map.MapGenerator.ObjectType.TREE);
+                if (ruins == null)
+                    ruins = findObjectAt(x, y, com.militopia.map.MapGenerator.ObjectType.CACTUS);
+
                 if (ruins != null) {
-                    gameHUD.getScavengeSystem().performScavenge(ruins, null); // unit=null is handled in ScavengeSystem if we just want to remove and reward
+                    gameHUD.getScavengeSystem().performScavenge(ruins, null); // unit=null is handled in ScavengeSystem
+                                                                              // if we just want to remove and reward
                     AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.ACTION_SCAVENGE);
                 }
             } else if (NetworkMessage.TYPE_ACTION_CAPTURE.equals(msg.type)) {
@@ -1014,12 +1065,13 @@ public class GameScreen implements Screen {
                 int y = Integer.parseInt(p[1]);
                 int newOwner = Integer.parseInt(p[2]);
                 Entity struct = findStructureAt(x, y);
-                    unitFactory.captureStructure(struct, newOwner, gameMap, gameState);
-                    AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.STRUCTURE_CAPTURE);
-                    
-                    // Force refresh local income label to prevent stale state
-                    int local = getActiveLocalPlayer();
-                    gameHUD.updateFunding(local, (local == 1 ? gameState.p1Funding : gameState.p2Funding), calculateIncome(local));
+                unitFactory.captureStructure(struct, newOwner, gameMap, gameState);
+                AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.STRUCTURE_CAPTURE);
+
+                // Force refresh local income label to prevent stale state
+                int local = getActiveLocalPlayer();
+                gameHUD.updateFunding(local, (local == 1 ? gameState.p1Funding : gameState.p2Funding),
+                        calculateIncome(local));
             } else if (NetworkMessage.TYPE_ACTION_DEMOLISH.equals(msg.type)) {
                 // x,y,owner
                 int x = Integer.parseInt(p[0]);
@@ -1028,10 +1080,11 @@ public class GameScreen implements Screen {
                 if (struct != null) {
                     engine.removeEntity(struct);
                     AudioManager.getInstance().playSFX(com.militopia.managers.SFXKeys.ACTION_DEMOLISH);
-                    
+
                     // Force refresh local income label
                     int local = getActiveLocalPlayer();
-                    gameHUD.updateFunding(local, (local == 1 ? gameState.p1Funding : gameState.p2Funding), calculateIncome(local));
+                    gameHUD.updateFunding(local, (local == 1 ? gameState.p1Funding : gameState.p2Funding),
+                            calculateIncome(local));
                 }
             } else if (NetworkMessage.TYPE_ACTION_DISBAND.equals(msg.type)) {
                 // x,y,owner
@@ -1071,24 +1124,27 @@ public class GameScreen implements Screen {
                         int oldLevel = stats.level;
                         stats.currentBaseXP = xp;
                         stats.level = level;
-                        
+
                         // Retrieve level-up metadata for popup
-                        com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig.getLevel(level);
+                        com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig
+                                .getLevel(level);
                         stats.maxBaseXP = data.maxXP;
                         stats.income = data.income;
                         stats.vision = data.borderRadius;
-                        
+
                         // If level increased, force a fog update because vision might have expanded
                         if (level > oldLevel) {
                             engine.getSystem(com.militopia.systems.FogSystem.class).update(0);
                             // Show level-up popup
-                            gameHUD.showLevelUpPopup(owner, stats.name, level, data.fundingBonus, data.unlockedUnits, data.unlockedStructures, unitFactory);
+                            gameHUD.showLevelUpPopup(owner, stats.name, level, data.fundingBonus, data.unlockedUnits,
+                                    data.unlockedStructures, unitFactory);
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            GameLogger.log(GameLogger.INPUT, "LAN ERROR: Failed to process remote action: " + msg.type + " payload: " + msg.payload);
+            GameLogger.log(GameLogger.INPUT,
+                    "LAN ERROR: Failed to process remote action: " + msg.type + " payload: " + msg.payload);
             e.printStackTrace();
         }
     }
@@ -1112,18 +1168,22 @@ public class GameScreen implements Screen {
         for (Entity e : objs) {
             GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
             TypeComponent type = e.getComponent(TypeComponent.class);
-            // Objects are identified by texture region usually, or we can check the map array
+            // Objects are identified by texture region usually, or we can check the map
+            // array
             if (pos.x == x && pos.y == y && type.type == TypeComponent.Type.OBJECT) {
                 // If it's the right type in the map array, it's probably this entity
-                if (gameMap.objects[x][y] == objType) return e;
+                if (gameMap.objects[x][y] == objType)
+                    return e;
             }
         }
         return null;
     }
+
     public void syncEconomy(int owner) {
-        if (networkManager == null || !gameState.isLanGame) return;
+        if (networkManager == null || !gameState.isLanGame)
+            return;
         int funding = (owner == 1) ? gameState.p1Funding : gameState.p2Funding;
-        int xp = (owner == 1) ? (int)gameState.p1XP : (int)gameState.p2XP;
+        int xp = (owner == 1) ? (int) gameState.p1XP : (int) gameState.p2XP;
         int income = calculateIncome(owner);
         networkManager.send(NetworkMessage.action(NetworkMessage.TYPE_SYNC_ECONOMY,
                 owner + "," + funding + "," + xp + "," + income));
@@ -1133,17 +1193,20 @@ public class GameScreen implements Screen {
                 Family.all(GridPositionComponent.class, StatsComponent.class).get());
         for (Entity b : bases) {
             StatsComponent s = b.getComponent(StatsComponent.class);
-            if (s.owner == owner && com.militopia.config.StructureType.fromDisplayName(s.name) == com.militopia.config.StructureType.BASE) {
+            if (s.owner == owner && com.militopia.config.StructureType
+                    .fromDisplayName(s.name) == com.militopia.config.StructureType.BASE) {
                 syncBaseState(b);
             }
         }
     }
 
     public void syncBaseState(Entity base) {
-        if (networkManager == null || !gameState.isLanGame) return;
+        if (networkManager == null || !gameState.isLanGame)
+            return;
         GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
         StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (pos == null || stats == null) return;
+        if (pos == null || stats == null)
+            return;
 
         networkManager.send(NetworkMessage.action(NetworkMessage.TYPE_SYNC_BASE,
                 pos.x + "," + pos.y + "," + stats.currentBaseXP + "," + stats.level + "," + stats.owner));
@@ -1181,8 +1244,10 @@ public class GameScreen implements Screen {
     }
 
     public void devAddFundsToPlayer(int owner, int amount) {
-        if (owner == 1) gameState.p1Funding += amount;
-        else gameState.p2Funding += amount;
+        if (owner == 1)
+            gameState.p1Funding += amount;
+        else
+            gameState.p2Funding += amount;
         int updated = (owner == 1) ? gameState.p1Funding : gameState.p2Funding;
         gameHUD.updateFunding(owner, updated, calculateIncome(owner));
         GameLogger.log(GameLogger.INPUT, "[DEV] Added " + amount + " funds to P" + owner);
@@ -1204,8 +1269,10 @@ public class GameScreen implements Screen {
     public void devSetBaseLevel(Entity base, int targetLevel) {
         StatsComponent s = base.getComponent(StatsComponent.class);
         GridPositionComponent pos = base.getComponent(GridPositionComponent.class);
-        if (s == null || pos == null) return;
-        com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig.getLevel(targetLevel);
+        if (s == null || pos == null)
+            return;
+        com.militopia.config.BaseLevelConfig.LevelData data = com.militopia.config.BaseLevelConfig
+                .getLevel(targetLevel);
         float prevXP = targetLevel > 1 ? com.militopia.config.BaseLevelConfig.getLevel(targetLevel - 1).maxXP : 0;
         s.level = targetLevel;
         s.income = data.income;
@@ -1219,7 +1286,8 @@ public class GameScreen implements Screen {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(
                 Family.all(com.militopia.components.AbilitiesComponent.class).get());
         for (Entity e : entities) {
-            com.militopia.components.AbilitiesComponent ab = e.getComponent(com.militopia.components.AbilitiesComponent.class);
+            com.militopia.components.AbilitiesComponent ab = e
+                    .getComponent(com.militopia.components.AbilitiesComponent.class);
             ab.nukeCooldown = 0;
         }
         GameLogger.log(GameLogger.INPUT, "[DEV] Reset all nuke cooldowns");
@@ -1231,7 +1299,8 @@ public class GameScreen implements Screen {
     }
 
     public void devOpenBaseLevelPicker(Entity base) {
-        if (devPanel != null) devPanel.showBaseLevelPicker(base);
+        if (devPanel != null)
+            devPanel.showBaseLevelPicker(base);
     }
 
     /**

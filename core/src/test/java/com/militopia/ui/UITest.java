@@ -16,6 +16,12 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.militopia.components.StatsComponent;
+import com.militopia.controller.GameInputController;
+import com.militopia.factories.UnitFactory;
+import com.militopia.screen.GameScreen;
 import com.militopia.managers.AssetManager;
 import com.militopia.MilitopiaGame;
 import org.junit.jupiter.api.AfterEach;
@@ -123,10 +129,54 @@ public class UITest {
         }
     }
 
+    @Test
+    public void testFieldHospitalDescription() {
+        try (MockedConstruction<Table> mTable = mockConstruction(Table.class, (mock, context) -> {
+            setupTableMock(mock);
+        });
+                MockedConstruction<Label> mLabel = mockConstruction(Label.class);
+                MockedConstruction<ScrollPane> mScroll = mockConstruction(ScrollPane.class, (mock, context) -> {
+                    ScrollPane.ScrollPaneStyle style = mock(ScrollPane.ScrollPaneStyle.class);
+                    when(mock.getStyle()).thenReturn(style);
+                });
+                MockedConstruction<Texture> mTexture = mockConstruction(Texture.class)) {
+
+            Stage mockStage = mock(Stage.class);
+            HudBottomBar mockBottomBar = mock(HudBottomBar.class);
+            when(mockBottomBar.getBottomContainer()).thenReturn(mock(Table.class));
+
+            InfoPanel panel = new InfoPanel(mockGame, mockAssets, mockStage, mockBottomBar);
+
+            // Mock Entity and Components
+            Entity mockHospital = mock(Entity.class);
+            StatsComponent stats = new StatsComponent("Field Hospital", 10, 0, 0, 0, 0, 1, 100, 
+                    StatsComponent.MoveType.LAND, 0);
+            stats.unitTypeKey = "HOSPITAL";
+            when(mockHospital.getComponent(StatsComponent.class)).thenReturn(stats);
+
+            GameInputController mockController = mock(GameInputController.class);
+            UnitFactory mockFactory = mock(UnitFactory.class);
+            GameScreen mockScreen = mock(GameScreen.class);
+            when(mockScreen.calculateBaseXPGain(any())).thenReturn(50);
+            when(mockScreen.calculateGroupedBaseIncome(any())).thenReturn(0);
+
+            // Capture the abilityDescLabel to verify its text
+            Label abilityDescLabel = (Label) getInternalField(panel, "abilityDescLabel");
+            assertNotNull(abilityDescLabel);
+
+            panel.showBaseInfo(mockHospital, "Field Hospital", mock(TextureRegion.class),
+                    mockController, mockFactory, mockScreen, false);
+
+            verify(abilityDescLabel).setText("Field Hospital: Heals adjacent units +3 HP at turn start");
+            verify(abilityDescLabel).setVisible(true);
+        }
+    }
+
     private void setupTableMock(Table table) {
         Cell mockCell = mock(Cell.class);
         when(table.add(any(Actor.class))).thenReturn(mockCell);
         when(table.add()).thenReturn(mockCell);
+        when(table.getCell(any())).thenReturn(mockCell);
 
         // Mock fluent Cell methods
         when(mockCell.expandX()).thenReturn(mockCell);

@@ -34,6 +34,7 @@ public class MapGenerator {
         public ObjectType[][] objects;
         public boolean[][] visibleTiles;
         public boolean[][] detectedTiles; // NEW: For stealth detection
+        public boolean[][] rails;
         public int width, height;
 
         public GameMap(int w, int h) {
@@ -43,6 +44,7 @@ public class MapGenerator {
             objects = new ObjectType[w][h];
             visibleTiles = new boolean[w][h];
             detectedTiles = new boolean[w][h];
+            rails = new boolean[w][h];
         }
     }
 

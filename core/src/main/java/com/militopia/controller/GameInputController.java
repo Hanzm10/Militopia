@@ -28,6 +28,7 @@ import com.militopia.ui.GameHUD;
 import com.militopia.utils.GameLogger;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
+import com.militopia.managers.TutorialManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,7 +58,10 @@ public class GameInputController extends InputAdapter {
     private Entity targetingUnit = null;
 
     // Dev Mode
-    public enum DevSpawnMode { NONE, SPAWNING_UNIT, BUILDING_STRUCTURE, KILLING_UNIT, REMOVING_OBJECT, BUILDING_MAP_OBJ, SETTING_BASE_LEVEL }
+    public enum DevSpawnMode {
+        NONE, SPAWNING_UNIT, BUILDING_STRUCTURE, KILLING_UNIT, REMOVING_OBJECT, BUILDING_MAP_OBJ, SETTING_BASE_LEVEL
+    }
+
     private DevSpawnMode devSpawnMode = DevSpawnMode.NONE;
     private UnitType devSpawnUnitType;
     private String devSpawnStructureType;
@@ -86,19 +90,42 @@ public class GameInputController extends InputAdapter {
     }
 
     public void enterDevSpawn(DevSpawnMode mode, UnitType type, int owner) {
-        devSpawnMode = mode; devSpawnUnitType = type; devSpawnOwner = owner;
+        devSpawnMode = mode;
+        devSpawnUnitType = type;
+        devSpawnOwner = owner;
     }
+
     public void enterDevBuild(String type, int owner) {
-        devSpawnMode = DevSpawnMode.BUILDING_STRUCTURE; devSpawnStructureType = type; devSpawnOwner = owner;
+        devSpawnMode = DevSpawnMode.BUILDING_STRUCTURE;
+        devSpawnStructureType = type;
+        devSpawnOwner = owner;
     }
+
     public void enterDevBuildMapObj(String type, int owner) {
-        devSpawnMode = DevSpawnMode.BUILDING_MAP_OBJ; devSpawnMapObjType = type; devSpawnOwner = owner;
+        devSpawnMode = DevSpawnMode.BUILDING_MAP_OBJ;
+        devSpawnMapObjType = type;
+        devSpawnOwner = owner;
     }
-    public void enterDevKill()         { devSpawnMode = DevSpawnMode.KILLING_UNIT; }
-    public void enterDevRemove()       { devSpawnMode = DevSpawnMode.REMOVING_OBJECT; }
-    public void enterDevSetBaseLevel() { devSpawnMode = DevSpawnMode.SETTING_BASE_LEVEL; }
-    public void exitDevMode()          { devSpawnMode = DevSpawnMode.NONE; }
-    public DevSpawnMode getDevSpawnMode() { return devSpawnMode; }
+
+    public void enterDevKill() {
+        devSpawnMode = DevSpawnMode.KILLING_UNIT;
+    }
+
+    public void enterDevRemove() {
+        devSpawnMode = DevSpawnMode.REMOVING_OBJECT;
+    }
+
+    public void enterDevSetBaseLevel() {
+        devSpawnMode = DevSpawnMode.SETTING_BASE_LEVEL;
+    }
+
+    public void exitDevMode() {
+        devSpawnMode = DevSpawnMode.NONE;
+    }
+
+    public DevSpawnMode getDevSpawnMode() {
+        return devSpawnMode;
+    }
 
     public void deselect() {
         if (selectedUnitEntity != null) {
@@ -158,11 +185,14 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean keyDown(int keycode) {
-        if (!inputEnabled) return false;
+        if (!inputEnabled)
+            return false;
 
         // Undo Shortcut (Ctrl+Z)
-        if (keycode == Input.Keys.Z && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT))) {
-            if (screen.getGameState().isLanGame) return false;
+        if (keycode == Input.Keys.Z && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT)
+                || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT))) {
+            if (screen.getGameState().isLanGame)
+                return false;
             screen.undoTurn();
             return true;
         }
@@ -178,6 +208,13 @@ public class GameInputController extends InputAdapter {
         camera.update();
         if (oldZoom != camera.zoom) {
             GameLogger.log(GameLogger.CAMERA, String.format("Camera zoom: %.2f (delta: %.2f)", camera.zoom, amountY));
+
+            // Tutorial Hook: Camera / Zoom
+            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                    && com.militopia.managers.TutorialManager.getInstance()
+                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.CAMERA) {
+                com.militopia.managers.TutorialManager.getInstance().nextStep();
+            }
         }
         return true;
     }
@@ -197,11 +234,12 @@ public class GameInputController extends InputAdapter {
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
 
         // --- LAN LOCKDOWN ---
-        // Allow inspection (selecting units/terrain) even if it's not our turn, 
+        // Allow inspection (selecting units/terrain) even if it's not our turn,
         // but block all commands (movement, attack, summon, build).
         boolean isMyTurn = (screen.getGameState().currentPlayer == screen.getActiveLocalPlayer());
         if (!isMyTurn) {
-            boolean isVisible = !screen.isFogEnabled() || (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height && gameMap.visibleTiles[gridX][gridY]);
+            boolean isVisible = !screen.isFogEnabled() || (gridX >= 0 && gridX < gameMap.width && gridY >= 0
+                    && gridY < gameMap.height && gameMap.visibleTiles[gridX][gridY]);
             handleInspection(gridX, gridY, isVisible);
             return true;
         }
@@ -260,7 +298,7 @@ public class GameInputController extends InputAdapter {
             Entity clickedAttackMarker = getEntityAt(gridX, gridY, TypeComponent.Type.ATTACK_MARKER);
             if (clickedAttackMarker != null && selectedUnitEntity != null) {
                 StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
-                Entity targetUnit = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                Entity targetUnit = getVisibleUnitAt(gridX, gridY);
                 Entity enemy = null;
                 if (targetUnit != null) {
                     StatsComponent tStats = targetUnit.getComponent(StatsComponent.class);
@@ -279,15 +317,17 @@ public class GameInputController extends InputAdapter {
                 return true;
             }
 
-            // --- ATTACK: directly click enemy unit tile within range (no marker needed) ---
+            // --- ATTACK: directly click enemy unit tile within range (no marker needed)
+            // ---
             if (selectedUnitEntity != null) {
-                Entity directTarget = getEntityAt(gridX, gridY, TypeComponent.Type.UNIT);
+                Entity directTarget = getVisibleUnitAt(gridX, gridY);
                 if (directTarget != null) {
                     StatsComponent tStats = directTarget.getComponent(StatsComponent.class);
                     StatsComponent aStats = selectedUnitEntity.getComponent(StatsComponent.class);
                     GridPositionComponent aPos = selectedUnitEntity.getComponent(GridPositionComponent.class);
                     if (tStats != null && aStats != null && aPos != null
-                            && tStats.owner != screen.getActiveLocalPlayer()) {
+                            && tStats.owner != screen.getActiveLocalPlayer()
+                            && !aStats.hasActed && !aStats.hasMoved) {
                         int dist = chebyshev(aPos.x, aPos.y, gridX, gridY);
                         if (dist <= aStats.attackRange) {
                             if (aStats.unitType == UnitType.JUGGERNAUT) {
@@ -325,7 +365,10 @@ public class GameInputController extends InputAdapter {
                 if (pos.x == gridX && pos.y == gridY) {
                     TypeComponent type = e.getComponent(TypeComponent.class);
                     if (type.type == TypeComponent.Type.UNIT) {
-                        foundUnit = e;
+                        Entity visibleUnit = getVisibleUnitAt(gridX, gridY);
+                        if (visibleUnit != null) {
+                            foundUnit = visibleUnit;
+                        }
                     } else if (type.type == TypeComponent.Type.OBJECT) {
                         if (pos.zIndex == 2 || e.getComponent(AnimalComponent.class) != null) {
                             foundAnimal = e;
@@ -390,12 +433,22 @@ public class GameInputController extends InputAdapter {
         if (aStats != null && aStats.currentHP > 0) {
             gameHUD.snapHP(aStats.currentHP, aStats.maxHP);
         }
+
+        // Tutorial Hook: Attack Enemy
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.ATTACK_ENEMY) {
+            TutorialManager.getInstance().nextStep();
+        }
+
         clearMarkers();
         selectedUnitEntity = null;
         gameHUD.hideTileInfo();
     }
 
-    /** Triggers a Juggernaut jump to the target tile. Target may be null for empty-tile jumps. */
+    /**
+     * Triggers a Juggernaut jump to the target tile. Target may be null for
+     * empty-tile jumps.
+     */
     private void performJump(Entity attacker, Entity target, int tx, int ty) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
         GridPositionComponent aPos = attacker.getComponent(GridPositionComponent.class);
@@ -410,12 +463,21 @@ public class GameInputController extends InputAdapter {
 
         // Block jump onto water terrain
         MapGenerator.TerrainType terrain = gameMap.terrain[tx][ty];
-        if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER) return;
-        // Block jump onto a friendly unit tile
+        if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER)
+            return;
         Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
         if (tileUnit != null) {
             StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
-            if (ts != null && ts.owner == screen.getActiveLocalPlayer()) return;
+            if (ts != null) {
+                if (ts.owner == screen.getActiveLocalPlayer())
+                    return;
+
+                // Stealth Rule: Block jump onto cloaked units silently (unresponsive)
+                AbilitiesComponent ab = tileUnit.getComponent(AbilitiesComponent.class);
+                if (ab != null && ab.isCloaked) {
+                    return; // Swallow click
+                }
+            }
         }
         combatSystem.resolveJumperAttack(attacker, target, tx, ty);
         if (aStats != null && aStats.currentHP > 0) {
@@ -438,7 +500,8 @@ public class GameInputController extends InputAdapter {
 
         boolean withinBounds = gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height;
         Entity foundUnit = (withinBounds && isVisible) ? getEntityAt(gridX, gridY, TypeComponent.Type.UNIT) : null;
-        Entity foundStructure = (withinBounds && isVisible) ? getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT) : null;
+        Entity foundStructure = (withinBounds && isVisible) ? getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT)
+                : null;
         MapGenerator.TerrainType clickedTerrain = withinBounds ? gameMap.terrain[gridX][gridY] : null;
 
         if (foundUnit != null) {
@@ -452,9 +515,10 @@ public class GameInputController extends InputAdapter {
             gameHUD.showBaseInfoUnified(foundStructure, screen.getGameState(), stats.level, "");
             AudioManager.getInstance().playSFX(SFXKeys.TILE_CLICK);
         } else {
-             gameHUD.showTileInfo((withinBounds && isVisible) ? clickedTerrain.name() : "Undiscovered",
-                     (withinBounds && isVisible) ? screen.getGame().assets.getTerrainRegion(clickedTerrain) : unitFactory.fogRegion);
-             AudioManager.getInstance().playSFX(SFXKeys.TILE_CLICK);
+            gameHUD.showTileInfo((withinBounds && isVisible) ? clickedTerrain.name() : "Undiscovered",
+                    (withinBounds && isVisible) ? screen.getGame().assets.getTerrainRegion(clickedTerrain)
+                            : unitFactory.fogRegion);
+            AudioManager.getInstance().playSFX(SFXKeys.TILE_CLICK);
         }
     }
 
@@ -472,12 +536,20 @@ public class GameInputController extends InputAdapter {
                             + " | HP: " + unitStats.currentHP + "/" + unitStats.maxHP);
             gameHUD.showUnitInfo(foundUnit, unitStats.name + " (Enemy)", info.region, unitStats.currentHP,
                     unitStats.maxHP);
+
+            // Tutorial Hook: Check Stats (Enemy Unit)
+            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                    && com.militopia.managers.TutorialManager.getInstance()
+                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.CHECK_STATS) {
+                com.militopia.managers.TutorialManager.getInstance().nextStep();
+            }
+
             return;
         }
 
-        if (!GameConfig.TESTING_MODE && unitStats.hasActed) {
+        if (!GameConfig.TESTING_MODE && unitStats.hasActed && unitStats.hasMoved) {
             GameLogger.log(GameLogger.INPUT,
-                    "Unit exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
+                    "Unit fully exhausted: " + unitStats.name + " at " + GameLogger.pos(gridX, gridY));
             AudioManager.getInstance().playSFX(SFXKeys.UNIT_CANT_MOVE);
             UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
             gameHUD.showTileInfo("Unit Exhausted (" + unitStats.name + ")", info.region);
@@ -492,6 +564,12 @@ public class GameInputController extends InputAdapter {
         showRangeMarkers(gridX, gridY);
         UnitFactory.UiInfo info = unitFactory.getUnitUi(unitStats.unitType);
         gameHUD.showUnitInfo(foundUnit, info.name, info.region, unitStats.currentHP, unitStats.maxHP);
+
+        // Tutorial Hook: Select Unit
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.SELECT_UNIT) {
+            TutorialManager.getInstance().nextStep();
+        }
 
         if (foundAnimal != null) {
             String animName = foundAnimal.getComponent(StatsComponent.class).name;
@@ -562,12 +640,27 @@ public class GameInputController extends InputAdapter {
                     int level = structStats.level;
                     // --- UNIQUE: Unified Base Menu (Stats + Summons) ---
                     gameHUD.showBaseInfoUnified(foundStructure, screen.getGameState(), level, "BASE");
+
+                    // Tutorial Hook: Select Base
+                    if (TutorialManager.getInstance().isActive()
+                            && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.SELECT_BASE) {
+                        TutorialManager.getInstance().nextStep();
+                    }
                     return;
                 }
             }
             // Enemy Base or unit on top: Show standard InfoPanel scouting
             // Use specialized name and icon
-            gameHUD.showBaseInfo(foundStructure, structName, foundStructure.getComponent(com.militopia.components.TextureComponent.class).region, true);
+            gameHUD.showBaseInfo(foundStructure, structName,
+                    foundStructure.getComponent(com.militopia.components.TextureComponent.class).region, true);
+
+            // Tutorial Hook: Check Stats (Enemy Base)
+            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                    && com.militopia.managers.TutorialManager.getInstance()
+                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.CHECK_STATS) {
+                com.militopia.managers.TutorialManager.getInstance().nextStep();
+            }
+
             return;
         }
 
@@ -613,7 +706,7 @@ public class GameInputController extends InputAdapter {
             state.p1Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
         else
             state.p2Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
-        
+
         if (screen.getGameState().isLanGame) {
             screen.syncEconomy(hunterStats.owner);
         }
@@ -663,14 +756,6 @@ public class GameInputController extends InputAdapter {
             // Visual feedback could be added here (e.g., spawn floating text "DUG IN")
             gameHUD.snapHP(stats.currentHP, stats.maxHP); // Refresh UI
             deselect();
-        } else if (abilityKey.equals("LAUNCH_NUKE")) {
-            GameLogger.log(GameLogger.ABILITY, stats.owner,
-                    "LAUNCH NUKE: " + stats.name + " at " + posStr + " — awaiting target tile");
-            isTargetingAbility = true;
-            targetingAbilityKey = "LAUNCH_NUKE";
-            targetingUnit = unit;
-            // Highlight area or show range markers if needed
-            gameHUD.hideTileInfo();
         } else if (abilityKey.equals("OVERWATCH")) {
             GameLogger.log(GameLogger.ABILITY, stats.owner,
                     "OVERWATCH: " + stats.name + " goes into overwatch at " + posStr);
@@ -685,7 +770,8 @@ public class GameInputController extends InputAdapter {
     private void executeTargetingAbility(int tx, int ty) {
         if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
             StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
-            GridPositionComponent tPos = targetingUnit != null ? targetingUnit.getComponent(GridPositionComponent.class) : null;
+            GridPositionComponent tPos = targetingUnit != null ? targetingUnit.getComponent(GridPositionComponent.class)
+                    : null;
 
             if (screen.getGameState().isLanGame && tPos != null) {
                 screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ABILITY,
@@ -712,8 +798,20 @@ public class GameInputController extends InputAdapter {
     private void handleTerrainSelection(int x, int y, MapGenerator.TerrainType terrain) {
         MapGenerator.ObjectType obj = gameMap.objects[x][y];
 
-        // If there's a blocking object that isn't Oil, just show terrain info
-        if (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL) {
+        // Check for existing built structures not tracked in gameMap.objects
+        Entity existingStruct = getEntityAt(x, y, TypeComponent.Type.OBJECT);
+        boolean isOccupied = (obj != MapGenerator.ObjectType.NONE && obj != MapGenerator.ObjectType.OIL);
+
+        if (existingStruct != null) {
+            StatsComponent stats = existingStruct.getComponent(StatsComponent.class);
+            // Allow building ONLY if it's an Oil Reservoir (allows Oil Derrick)
+            if (stats == null || !stats.name.equals("Oil Reservoir")) {
+                isOccupied = true;
+            }
+        }
+
+        // If there's a blocking object or structure, just show terrain info
+        if (isOccupied) {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
             return;
@@ -725,21 +823,30 @@ public class GameInputController extends InputAdapter {
         // [0]=isTerritory(1/0), [1]=maxLevel, [2]=parentX, [3]=parentY
         int[] territory = findControllingBase(x, y, owner);
 
-        // --- 3. BUILD MENU OR TERRAIN INFO ---
-        if (territory[0] == 1) {
-            boolean isWater = (terrain == MapGenerator.TerrainType.WATER
-                    || terrain == MapGenerator.TerrainType.DEEP_WATER);
-            boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
-            boolean isCoastalLand = !isWater && hasAdjacentWater(x, y);
-            boolean hasBuildOptions = !isWater || isCoastalWater;
+        boolean isMountain = (terrain == MapGenerator.TerrainType.MOUNTAIN);
+        boolean isWater = (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER);
+        boolean hasRail = gameMap.rails[x][y];
+        boolean canBuildRail = !isMountain && !isWater && !hasRail;
 
-            if (hasBuildOptions) {
-                gameHUD.openBuildMenu(x, y, owner, territory[1], isWater, isCoastalWater, isCoastalLand,
-                        screen.getGameState(), territory[2], territory[3], terrain, unitFactory);
-            } else {
-                gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
-                        unitFactory.getTextureForTerrain(terrain.ordinal()));
-            }
+        // If there's a blocking object or structure, we only allow opening the build
+        // menu if a rail can be built
+        if (isOccupied && !canBuildRail) {
+            gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
+                    unitFactory.getTextureForTerrain(terrain.ordinal()));
+            return;
+        }
+
+        // --- 3. BUILD MENU OR TERRAIN INFO ---
+        boolean inTerritory = (territory[0] == 1);
+        boolean isCoastalWater = isWater && hasAdjacentLand(x, y);
+        boolean isCoastalLand = !isWater && hasAdjacentWater(x, y);
+
+        // Can build structures if in territory AND (land OR coastal water)
+        boolean canBuildStructure = inTerritory && (!isWater || isCoastalWater);
+
+        if (canBuildStructure || canBuildRail) {
+            gameHUD.openBuildMenu(x, y, owner, territory[1], isWater, isCoastalWater, isCoastalLand,
+                    screen.getGameState(), territory[2], territory[3], terrain, unitFactory);
         } else {
             gameHUD.showTileInfo(unitFactory.getTerrainUi(terrain).name,
                     unitFactory.getTextureForTerrain(terrain.ordinal()));
@@ -759,7 +866,8 @@ public class GameInputController extends InputAdapter {
             GridPositionComponent bp = e.getComponent(GridPositionComponent.class);
             if (bs.owner == owner && bs.income >= 2 && bs.name.contains("Base")) {
                 if (Math.abs(bp.x - tx) <= bs.vision && Math.abs(bp.y - ty) <= bs.vision) {
-                    if (bs.level > maxLevel) maxLevel = bs.level;
+                    if (bs.level > maxLevel)
+                        maxLevel = bs.level;
                 }
             }
         }
@@ -787,7 +895,7 @@ public class GameInputController extends InputAdapter {
                 }
             }
         }
-        return new int[]{ maxLevel > 0 ? 1 : 0, maxLevel, parentX, parentY };
+        return new int[] { maxLevel > 0 ? 1 : 0, maxLevel, parentX, parentY };
     }
 
     private boolean hasAdjacentLand(int x, int y) {
@@ -869,7 +977,8 @@ public class GameInputController extends InputAdapter {
     // -------------------------------------------------------------------------
 
     private void triggerBounce(int x, int y) {
-        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) return;
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height)
+            return;
         this.bouncingX = x;
         this.bouncingY = y;
         this.bounceTimer = GameConfig.BOUNCE_DURATION;
@@ -877,6 +986,13 @@ public class GameInputController extends InputAdapter {
     }
 
     private void moveUnit(Entity unit, int targetX, int targetY) {
+        // --- Stealth Rule: Block movement into cloaked units silently ---
+        Entity tileUnit = getEntityAt(targetX, targetY, TypeComponent.Type.UNIT);
+        if (tileUnit != null) {
+            // Unresponsive: just return without clearing selection or markers
+            return;
+        }
+
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         if (pos == null)
             return;
@@ -900,8 +1016,8 @@ public class GameInputController extends InputAdapter {
         // RANGER: Overwatch (Check if move triggers an enemy attack)
         combatSystem.checkOverwatch(unit, targetX, targetY);
         if (stats != null) {
-            stats.hasActed = true;
             stats.hasMoved = true;
+            stats.hasActed = true;
 
             // Play Movement SFX
             if (stats.moveType == StatsComponent.MoveType.AIR) {
@@ -933,20 +1049,32 @@ public class GameInputController extends InputAdapter {
             abilities.isDiggingIn = false;
             abilities.pendingSkirmishMove = false;
         }
+        gameHUD.hideSummonMenu();
+        triggerBounce(targetX, targetY);
         clearMarkers();
         selectedUnitEntity = null;
+
+        // Tutorial Hook: Move Unit
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_UNIT) {
+            TutorialManager.getInstance().nextStep();
+        }
     }
 
     private void transformUnit(Entity unit, int targetX, int targetY) {
         StatsComponent stats = unit.getComponent(StatsComponent.class);
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
-        if (stats == null || pos == null) return;
+        if (stats == null || pos == null)
+            return;
 
         UnitType targetType = null;
-        if (stats.unitType == UnitType.GUNBOAT) targetType = UnitType.RANGER;
-        else if (stats.unitType == UnitType.DESTROYER) targetType = UnitType.TANK;
+        if (stats.unitType == UnitType.GUNBOAT)
+            targetType = UnitType.RANGER;
+        else if (stats.unitType == UnitType.DESTROYER)
+            targetType = UnitType.TANK;
 
-        if (targetType == null) return;
+        if (targetType == null)
+            return;
 
         int owner = stats.owner;
         int currentHP = stats.currentHP;
@@ -1009,13 +1137,15 @@ public class GameInputController extends InputAdapter {
         AudioManager.getInstance().playSFX(SFXKeys.TILE_MOVE_RANGE);
 
         // --- Blue move markers ---
-        // Juggernaut always jumps — skip flood fill so red attack markers aren't shadowed
+        // Juggernaut always jumps — skip flood fill so red attack markers aren't
+        // shadowed
         boolean isJuggernautSelected = stats.unitType == UnitType.JUGGERNAUT;
         if (!stats.hasMoved && !isJuggernautSelected) {
             int[][] visitedMoves = new int[gameMap.width][gameMap.height];
             for (int[] row : visitedMoves)
                 java.util.Arrays.fill(row, -1);
-            floodFill(startX, startY, moveRange, visitedMoves, startX, startY, moveType);
+            floodFill(startX, startY, moveRange * 2, visitedMoves, startX, startY, moveType, stats.unitType,
+                    stats.owner);
         }
 
         // --- Red attack markers ---
@@ -1038,28 +1168,30 @@ public class GameInputController extends InputAdapter {
                     continue;
                 // Only show attack markers on tiles occupied by enemies OR empty
                 // enemy-reachable tiles
-                Entity tileUnit = getEntityAt(tx, ty, TypeComponent.Type.UNIT);
+                Entity tileUnit = getVisibleUnitAt(tx, ty);
                 if (tileUnit != null) {
                     StatsComponent ts = tileUnit.getComponent(StatsComponent.class);
                     if (ts != null && ts.owner == screen.getActiveLocalPlayer())
                         continue; // skip own units
                 }
-                // Juggernaut can jump to any tile (empty or enemy); others need an actual enemy
+
+                // Only show attack markers if the unit has NOT already acted
                 boolean isJuggernaut = stats != null && stats.unitType == UnitType.JUGGERNAUT;
-                if (tileUnit == null && !isJuggernaut)
-                    continue;
-                // Juggernaut cannot jump onto water
-                if (isJuggernaut) {
-                    MapGenerator.TerrainType t = gameMap.terrain[tx][ty];
-                    if (t == MapGenerator.TerrainType.WATER || t == MapGenerator.TerrainType.DEEP_WATER)
-                        continue;
+                if (!stats.hasActed && !stats.hasMoved && (tileUnit != null || isJuggernaut)) {
+                    // Juggernaut cannot jump onto water
+                    if (isJuggernaut) {
+                        MapGenerator.TerrainType t = gameMap.terrain[tx][ty];
+                        if (t == MapGenerator.TerrainType.WATER || t == MapGenerator.TerrainType.DEEP_WATER)
+                            continue;
+                    }
+                    entityFactory.createAttackMarker(tx, ty);
+                    attackMarkersAdded++;
                 }
-                entityFactory.createAttackMarker(tx, ty);
-                attackMarkersAdded++;
             }
         }
 
-        // Attack range SFX — only play if at least one attack marker was actually spawned
+        // Attack range SFX — only play if at least one attack marker was actually
+        // spawned
         if (attackMarkersAdded > 0) {
             AudioManager.getInstance().playSFX(SFXKeys.TILE_ATTACK_RANGE);
         }
@@ -1083,9 +1215,33 @@ public class GameInputController extends InputAdapter {
         }
     }
 
-    /** Flood-fill BFS for movement range (unchanged logic). */
+    /**
+     * Movement cost in x2-scaled units. Rail-to-rail LAND steps = 1 (half cost).
+     * All other steps = 2 (normal cost). No bonus in enemy territory.
+     */
+    private int getRailStepCost(int fromX, int fromY, int toX, int toY,
+            StatsComponent.MoveType moveType, int unitOwner) {
+        if (moveType != StatsComponent.MoveType.LAND)
+            return 2;
+        if (fromX < 0 || fromX >= gameMap.width || fromY < 0 || fromY >= gameMap.height)
+            return 2;
+        if (toX < 0 || toX >= gameMap.width || toY < 0 || toY >= gameMap.height)
+            return 2;
+        if (!gameMap.rails[fromX][fromY] || !gameMap.rails[toX][toY])
+            return 2;
+        // No bonus in enemy territory
+        int enemyOwner = (unitOwner == 1) ? 2 : 1;
+        int[] fromCheck = findControllingBase(fromX, fromY, enemyOwner);
+        int[] toCheck = findControllingBase(toX, toY, enemyOwner);
+        if (fromCheck[0] == 1 || toCheck[0] == 1)
+            return 2;
+        return 1; // half cost on connected rail in friendly/neutral territory
+    }
+
+    /** Flood-fill BFS for movement range with x2 integer scaling for rail bonus. */
     private void floodFill(int x, int y, int remainingMoves, int[][] visitedMoves,
-            int startX, int startY, StatsComponent.MoveType moveType) {
+            int startX, int startY, StatsComponent.MoveType moveType, UnitType unitType,
+            int unitOwner) {
         if (remainingMoves < 0)
             return;
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height)
@@ -1094,7 +1250,7 @@ public class GameInputController extends InputAdapter {
             return;
 
         boolean isStart = (x == startX && y == startY);
-        if (!isStart && !isWalkable(x, y, moveType))
+        if (!isStart && !isWalkable(x, y, moveType, unitType))
             return;
 
         visitedMoves[x][y] = remainingMoves;
@@ -1102,30 +1258,37 @@ public class GameInputController extends InputAdapter {
             entityFactory.createMovementMarker(x, y);
         }
 
-        int next = remainingMoves - 1;
-        floodFill(x + 1, y, next, visitedMoves, startX, startY, moveType);
-        floodFill(x - 1, y, next, visitedMoves, startX, startY, moveType);
-        floodFill(x, y + 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x, y - 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x + 1, y + 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x - 1, y + 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x + 1, y - 1, next, visitedMoves, startX, startY, moveType);
-        floodFill(x - 1, y - 1, next, visitedMoves, startX, startY, moveType);
+        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 } };
+        for (int[] d : dirs) {
+            int nx = x + d[0];
+            int ny = y + d[1];
+            int cost = getRailStepCost(x, y, nx, ny, moveType, unitOwner);
+            floodFill(nx, ny, remainingMoves - cost, visitedMoves, startX, startY, moveType, unitType, unitOwner);
+        }
     }
 
-    private boolean isWalkable(int x, int y, StatsComponent.MoveType moveType) {
+    private boolean isWalkable(int x, int y, StatsComponent.MoveType moveType, UnitType unitType) {
         if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height)
             return false;
         MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
         if (moveType == StatsComponent.MoveType.LAND) {
             if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER)
                 return false;
+
+            // TANK Restriction: Cannot move to mountains
+            if (unitType == UnitType.TANK && gameMap.objects[x][y] == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
+                return false;
+            }
         } else if (moveType == StatsComponent.MoveType.SEA) {
             if (terrain != MapGenerator.TerrainType.WATER && terrain != MapGenerator.TerrainType.DEEP_WATER)
                 return false;
         }
-        if (getEntityAt(x, y, TypeComponent.Type.UNIT) != null)
-            return false;
+        // Stealth Rule: Invisible enemies do not block movement range markers
+        // (information hiding)
+        Entity existingUnit = getVisibleUnitAt(x, y);
+        if (existingUnit != null) {
+            return false; // Blocks move
+        }
         return true;
     }
 
@@ -1137,7 +1300,8 @@ public class GameInputController extends InputAdapter {
         Array<Entity> toRemove = new Array<>();
         for (Entity e : all) {
             TypeComponent.Type t = e.getComponent(TypeComponent.class).type;
-            if (t == TypeComponent.Type.MARKER || t == TypeComponent.Type.ATTACK_MARKER || t == TypeComponent.Type.TRANSFORM_MARKER) {
+            if (t == TypeComponent.Type.MARKER || t == TypeComponent.Type.ATTACK_MARKER
+                    || t == TypeComponent.Type.TRANSFORM_MARKER) {
                 toRemove.add(e);
             }
         }
@@ -1149,6 +1313,38 @@ public class GameInputController extends InputAdapter {
     public void clearMarkersPublic() {
         clearMarkers();
         selectedUnitEntity = null;
+    }
+
+    private Entity getVisibleUnitAt(int x, int y) {
+        Entity unit = getEntityAt(x, y, TypeComponent.Type.UNIT);
+        if (unit != null) {
+            StatsComponent stats = unit.getComponent(StatsComponent.class);
+            AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
+            if (stats != null && stats.owner != screen.getActiveLocalPlayer()) {
+                // 1. Permanent Cloak
+                boolean isStealth = (abilities != null && abilities.isCloaked);
+
+                // 2. Sniper Dynamic Stealth
+                if (stats.unitType == UnitType.SNIPER && !stats.hasActed) {
+                    MapGenerator.TerrainType terrain = gameMap.terrain[x][y];
+                    MapGenerator.ObjectType obj = gameMap.objects[x][y];
+                    if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                            || obj == MapGenerator.ObjectType.RUINS || obj == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
+                        isStealth = true;
+                    }
+                }
+
+                // 3. Reveal overrides (attacked or detected)
+                if (stats.hasActed || (abilities != null && abilities.isCloakBroken)) {
+                    isStealth = false;
+                }
+
+                if (isStealth && !gameMap.detectedTiles[x][y]) {
+                    return null; // Hidden enemy!
+                }
+            }
+        }
+        return unit;
     }
 
     private Entity getEntityAt(int x, int y, TypeComponent.Type type) {
@@ -1194,7 +1390,8 @@ public class GameInputController extends InputAdapter {
 
                 MapGenerator.TerrainType terrain = gameMap.terrain[gridX][gridY];
                 StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(devSpawnUnitType);
-                boolean isWater = (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER);
+                boolean isWater = (terrain == MapGenerator.TerrainType.WATER
+                        || terrain == MapGenerator.TerrainType.DEEP_WATER);
 
                 if (moveType == StatsComponent.MoveType.LAND && isWater) {
                     AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
@@ -1227,7 +1424,8 @@ public class GameInputController extends InputAdapter {
                 }
 
                 MapGenerator.TerrainType buildTerrain = gameMap.terrain[gridX][gridY];
-                boolean buildIsWater = (buildTerrain == MapGenerator.TerrainType.WATER || buildTerrain == MapGenerator.TerrainType.DEEP_WATER);
+                boolean buildIsWater = (buildTerrain == MapGenerator.TerrainType.WATER
+                        || buildTerrain == MapGenerator.TerrainType.DEEP_WATER);
                 boolean buildIsCoastalWater = buildIsWater && hasAdjacentLand(gridX, gridY);
                 boolean buildIsCoastalLand = !buildIsWater && hasAdjacentWater(gridX, gridY);
 
@@ -1261,7 +1459,8 @@ public class GameInputController extends InputAdapter {
                 }
 
                 if (devSpawnStructureType.equals("BASE")) {
-                    MapGenerator.ObjectType baseType = (devSpawnOwner == 1) ? MapGenerator.ObjectType.BASE_P1 : MapGenerator.ObjectType.BASE_P2;
+                    MapGenerator.ObjectType baseType = (devSpawnOwner == 1) ? MapGenerator.ObjectType.BASE_P1
+                            : MapGenerator.ObjectType.BASE_P2;
                     gameMap.objects[gridX][gridY] = baseType;
                     unitFactory.createObjectEntity(gridX, gridY, baseType, screen.getGameState());
                 } else if (devSpawnStructureType.equals("TOWN")) {
@@ -1294,7 +1493,8 @@ public class GameInputController extends InputAdapter {
                     engine.removeEntity(objToRemove);
                     removedSomething = true;
                 }
-                // Always clear the tile's object layer in the map data, even if it's just a tree
+                // Always clear the tile's object layer in the map data, even if it's just a
+                // tree
                 if (gameMap.objects[gridX][gridY] != MapGenerator.ObjectType.NONE) {
                     gameMap.objects[gridX][gridY] = MapGenerator.ObjectType.NONE;
                     removedSomething = true;
@@ -1306,8 +1506,10 @@ public class GameInputController extends InputAdapter {
                 break;
             case BUILDING_MAP_OBJ:
                 // Check terrain validation
-                boolean objIsWater = devSpawnMapObjType.equals("FISH") || devSpawnMapObjType.equals("OIL") || devSpawnMapObjType.equals("RUINS");
-                boolean tileIsWater = (gameMap.terrain[gridX][gridY] == MapGenerator.TerrainType.WATER || gameMap.terrain[gridX][gridY] == MapGenerator.TerrainType.DEEP_WATER);
+                boolean objIsWater = devSpawnMapObjType.equals("FISH") || devSpawnMapObjType.equals("OIL")
+                        || devSpawnMapObjType.equals("RUINS");
+                boolean tileIsWater = (gameMap.terrain[gridX][gridY] == MapGenerator.TerrainType.WATER
+                        || gameMap.terrain[gridX][gridY] == MapGenerator.TerrainType.DEEP_WATER);
 
                 if (objIsWater != tileIsWater) {
                     AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
@@ -1316,7 +1518,8 @@ public class GameInputController extends InputAdapter {
 
                 boolean isAnimal = (com.militopia.config.AnimalType.fromKey(devSpawnMapObjType) != null);
 
-                // Check stacking rules: non-animals cannot be placed if there's already any object (static or animal)
+                // Check stacking rules: non-animals cannot be placed if there's already any
+                // object (static or animal)
                 if (!isAnimal) {
                     Entity animalAtTile = getEntityAtLayer(gridX, gridY, 2);
                     if (gameMap.objects[gridX][gridY] != MapGenerator.ObjectType.NONE || animalAtTile != null) {
@@ -1337,20 +1540,20 @@ public class GameInputController extends InputAdapter {
                 if (devSpawnMapObjType.equals("MOUNTAIN")) {
                     gameMap.terrain[gridX][gridY] = MapGenerator.TerrainType.MOUNTAIN;
                     gameMap.objects[gridX][gridY] = MapGenerator.ObjectType.MOUNTAIN_OBJ;
-                    unitFactory.createObjectEntity(gridX, gridY, MapGenerator.ObjectType.MOUNTAIN_OBJ, screen.getGameState());
+                    unitFactory.createObjectEntity(gridX, gridY, MapGenerator.ObjectType.MOUNTAIN_OBJ,
+                            screen.getGameState());
                 } else {
                     MapGenerator.ObjectType objType = MapGenerator.ObjectType.valueOf(devSpawnMapObjType);
-                    
+
                     if (!isAnimal) {
                         gameMap.objects[gridX][gridY] = objType;
                     }
-                    
+
                     unitFactory.createObjectEntity(gridX, gridY, objType, screen.getGameState());
                 }
-                
+
                 GameLogger.log(GameLogger.INPUT, "[DEV] Built Map Obj " + devSpawnMapObjType
                         + " at (" + gridX + "," + gridY + ")");
-                AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
                 break;
             case SETTING_BASE_LEVEL:
                 Entity baseAtTile = getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT);

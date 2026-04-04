@@ -76,6 +76,9 @@ public class DisplayAssetConfig {
         DATA.put("BASE_9", new AssetData(17, 17, 0, 8f, 14, 8, 0, 0));
         DATA.put("BASE_10", new AssetData(17, 17, 0, 8f, 14, 8, 0, 0));
 
+        // Ability overlays
+        DATA.put("DIG_IN", new AssetData(13f, 13f, 0f, 3f, 0, 0, 0, 0));
+
         // Animals
         DATA.put("HORSE", new AssetData(4, 4, 0, 6f, 5, 5, 0, 0));
         DATA.put("FISH", new AssetData(6, 6, 0, 6f, 5, 5, 0, 0));

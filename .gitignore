@@ -9,6 +9,10 @@ logs/
 docs/
 skills-lock.json
 
+##Agent:
+.agent/
+.claude/
+.planning/
 
 ## OS:
 Thumbs.db

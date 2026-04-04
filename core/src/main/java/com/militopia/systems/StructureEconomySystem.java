@@ -15,6 +15,7 @@ import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
 import com.militopia.ui.GameHUD;
+import com.militopia.utils.CountingSort;
 import com.militopia.utils.GameLogger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -146,6 +147,7 @@ public class StructureEconomySystem extends EntitySystem {
                 StatsComponent uStats = unit.getComponent(StatsComponent.class);
                 GridPositionComponent uPos = unit.getComponent(GridPositionComponent.class);
                 if (uStats.owner == playerID
+                        && uStats.moveType != StatsComponent.MoveType.AIR
                         && Math.max(Math.abs(sPos.x - uPos.x), Math.abs(sPos.y - uPos.y)) <= 1) {
                     int healed = Math.min(uStats.currentHP + 3, uStats.maxHP) - uStats.currentHP;
                     uStats.currentHP += healed;
@@ -218,7 +220,7 @@ public class StructureEconomySystem extends EntitySystem {
     // Income / XP queries (used by GameScreen, InfoPanel, SlideMenu, HUD)
     // -------------------------------------------------------------------------
 
-    /** Per-entity income, including Solar Array tech-synergy bonus. */
+    /** Per-entity income, including Solar Array Adjacency Bonus. */
     public int calculateBaseIncome(Entity entity) {
         StatsComponent stats = entity.getComponent(StatsComponent.class);
         if (stats == null) return 0;
@@ -226,7 +228,7 @@ public class StructureEconomySystem extends EntitySystem {
         int income = stats.income;
         GridPositionComponent pos = entity.getComponent(GridPositionComponent.class);
         if (pos != null && StructureType.fromDisplayName(stats.name) == StructureType.SOLAR) {
-            // SOLAR ARRAY: +1 income for each adjacent friendly structure
+            // SOLAR ARRAY: Adjacency Bonus (+1 income for each adjacent friendly structure)
             // Use index-based loop to avoid nested-iterator crash when called from
             // inside another for-each over the same family (e.g. calculateGroupedBaseIncome).
             ImmutableArray<Entity> entities = getEngine().getEntitiesFor(
@@ -362,7 +364,7 @@ public class StructureEconomySystem extends EntitySystem {
             Integer existing = map.get(stats.name);
             map.put(stats.name, (existing != null ? existing : 0) + inc);
         }
-        return map;
+        return CountingSort.sortEconomyMap(map);
     }
 
     /**
@@ -394,6 +396,6 @@ public class StructureEconomySystem extends EntitySystem {
                 map.put(stats.name, (existing != null ? existing : 0) + stats.xpGain);
             }
         }
-        return map;
+        return CountingSort.sortEconomyMap(map);
     }
 }

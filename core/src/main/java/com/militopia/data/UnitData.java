@@ -10,6 +10,15 @@ public class UnitData {
     public int maxHp;
     public boolean hasMoved;
     public boolean hasActed;
+    public boolean isCloaked;
+    public boolean isCloakBroken;
+    public boolean isDiggingIn;
+    public boolean hasUsedDigIn;
+    public boolean isOverwatchActive;
+    public boolean pendingSkirmishMove;
+    public boolean isUnreachable;
+    public int fuel;
+    public int nukeCooldown;
 
     // Default constructor for JSON
     public UnitData() {
@@ -25,10 +34,22 @@ public class UnitData {
         this.maxHp = 10;
         this.hasMoved = false;
         this.hasActed = false;
+        this.isCloaked = false;
+        this.isCloakBroken = false;
+        this.isDiggingIn = false;
+        this.hasUsedDigIn = false;
+        this.isOverwatchActive = false;
+        this.pendingSkirmishMove = false;
+        this.isUnreachable = false;
+        this.fuel = -1;
+        this.nukeCooldown = 0;
     }
 
-    public UnitData(int x, int y, String type, int owner, String unitTypeKey, int hp, int maxHp, boolean hasMoved,
-            boolean hasActed) {
+    public UnitData(int x, int y, String type, int owner, String unitTypeKey, int hp, int maxHp,
+            boolean hasMoved, boolean hasActed,
+            boolean isCloaked, boolean isCloakBroken,
+            boolean isDiggingIn, boolean hasUsedDigIn, boolean isOverwatchActive,
+            boolean pendingSkirmishMove, boolean isUnreachable, int fuel) {
         this.x = x;
         this.y = y;
         this.type = type;
@@ -38,5 +59,14 @@ public class UnitData {
         this.maxHp = maxHp;
         this.hasMoved = hasMoved;
         this.hasActed = hasActed;
+        this.isCloaked = isCloaked;
+        this.isCloakBroken = isCloakBroken;
+        this.isDiggingIn = isDiggingIn;
+        this.hasUsedDigIn = hasUsedDigIn;
+        this.isOverwatchActive = isOverwatchActive;
+        this.pendingSkirmishMove = pendingSkirmishMove;
+        this.isUnreachable = isUnreachable;
+        this.fuel = fuel;
+        this.nukeCooldown = 0;
     }
 }

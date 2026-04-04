@@ -11,6 +11,7 @@ import com.militopia.data.GameState;
 import com.militopia.data.StructureData;
 import com.militopia.data.UnitData;
 import com.militopia.data.AnimalData;
+import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.AnimalComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
@@ -38,8 +39,18 @@ public class SaveManager {
 
             if (type.type == TypeComponent.Type.UNIT) {
                 String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
+                AbilitiesComponent ab = e.getComponent(AbilitiesComponent.class);
+
                 state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
-                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed));
+                        stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed,
+                        ab != null && ab.isCloaked,
+                        ab != null && ab.isCloakBroken,
+                        ab != null && ab.isDiggingIn,
+                        ab != null && ab.hasUsedDigIn,
+                        ab != null && ab.isOverwatchActive,
+                        ab != null && ab.pendingSkirmishMove,
+                        ab != null && ab.isUnreachable,
+                        ab != null ? ab.fuel : -1));
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
                 // --- DETECT ANIMALS VIA COMPONENT TAG ---
@@ -70,6 +81,7 @@ public class SaveManager {
         }
 
         state.mapObjects = map.objects;
+        state.railGrid = map.rails;
     }
 
     /**

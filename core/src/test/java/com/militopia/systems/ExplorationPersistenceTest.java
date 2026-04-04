@@ -84,7 +84,7 @@ public class ExplorationPersistenceTest {
 
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         UnitData data = new UnitData(pos.x, pos.y, stats.name, stats.owner, stats.unitTypeKey, stats.currentHP,
-                stats.maxHP, stats.hasMoved, stats.hasActed);
+                stats.maxHP, stats.hasMoved, stats.hasActed, false, false);
         assertTrue(data.hasMoved);
         assertTrue(data.hasActed);
         assertEquals(1, data.x);

@@ -115,8 +115,9 @@ public class SlideMenu {
                             GridPositionComponent hPos = hunterUnit.getComponent(GridPositionComponent.class);
                             GridPositionComponent aPos = animalEntity.getComponent(GridPositionComponent.class);
                             if (hPos != null && aPos != null) {
-                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ATTACK,
-                                        hPos.x + "," + hPos.y + "," + aPos.x + "," + aPos.y));
+                                gameScreen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ATTACK,
+                                                hPos.x + "," + hPos.y + "," + aPos.x + "," + aPos.y));
                             }
                         }
                         controller.performHunt(animalEntity, hunterUnit);
@@ -159,8 +160,9 @@ public class SlideMenu {
                         if (gameScreen.getGameState().isLanGame) {
                             GridPositionComponent sPos = structureEntity.getComponent(GridPositionComponent.class);
                             if (sPos != null) {
-                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_CAPTURE,
-                                        sPos.x + "," + sPos.y + "," + newOwner));
+                                gameScreen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_CAPTURE,
+                                                sPos.x + "," + sPos.y + "," + newOwner));
                                 gameScreen.syncEconomy(newOwner);
                             }
                         }
@@ -174,14 +176,25 @@ public class SlideMenu {
                         GameLogger.log(GameLogger.CAPTURE, newOwner, "Captured " + sName + " at " + spr);
 
                         StatsComponent unitStats = capturingUnit.getComponent(StatsComponent.class);
-                        if (unitStats != null)
+                        if (unitStats != null) {
                             unitStats.hasActed = true;
+                            unitStats.hasMoved = true;
+                        }
 
                         int newXP = (newOwner == 1) ? state.p1XP : state.p2XP;
                         int curFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
                         int newIncome = gameScreen.calculateIncome(newOwner);
+
                         gameScreen.gameHUD.updateXP(newOwner, newXP);
                         gameScreen.gameHUD.updateFunding(newOwner, curFunds, newIncome);
+
+                        // Tutorial Hook: Capture Town
+                        if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                && com.militopia.managers.TutorialManager.getInstance()
+                                        .getCurrentStep() == com.militopia.managers.TutorialManager.Step.CAPTURE_TOWN) {
+                            com.militopia.managers.TutorialManager.getInstance().nextStep();
+                        }
+
                         hide();
                         controller.deselect();
                     }
@@ -236,6 +249,12 @@ public class SlideMenu {
         // needs snap)
         gameScreen.gameHUD.updateXP(owner, (owner == 1) ? state.p1XP : state.p2XP);
         gameScreen.gameHUD.updateFunding(owner, (owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
+
+        // Tutorial Hook: Scavenge Ruins
+        if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager
+                .getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SCAVENGE_RUINS) {
+            com.militopia.managers.TutorialManager.getInstance().nextStep();
+        }
 
         hide();
         controller.deselect();
@@ -341,7 +360,8 @@ public class SlideMenu {
                                 state.p2Funding -= cost;
 
                             if (state.isLanGame) {
-                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SUMMON,
+                                gameScreen.getNetworkManager().send(NetworkMessage.action(
+                                        NetworkMessage.TYPE_ACTION_SUMMON,
                                         unit.name() + "," + spawn[0] + "," + spawn[1] + "," + currentBaseOwner));
                                 gameScreen.syncEconomy(currentBaseOwner);
                             }
@@ -356,6 +376,14 @@ public class SlideMenu {
                             // Use fresh income calculation for HUD update
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
                             gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
+
+                            // Tutorial Hook: Summon Unit
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.SUMMON_UNIT) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
+
                             hide();
                             inputController.resetLastClicked();
                         }
@@ -371,17 +399,20 @@ public class SlideMenu {
         for (Entity base : allBases) {
             StatsComponent bs = base.getComponent(StatsComponent.class);
             if (bs.owner == currentBaseOwner && bs.chosenSuperUnit != null && !bs.chosenSuperUnit.isEmpty()) {
-                if (superUnitsAdded.contains(bs.chosenSuperUnit)) continue;
+                if (superUnitsAdded.contains(bs.chosenSuperUnit))
+                    continue;
 
                 final UnitType superUnit = UnitType.fromKey(bs.chosenSuperUnit);
-                if (superUnit == null) continue;
+                if (superUnit == null)
+                    continue;
 
                 StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(superUnit);
                 boolean show = producerType.equals("PORT")
                         ? moveType == StatsComponent.MoveType.SEA
                         : moveType == StatsComponent.MoveType.LAND || moveType == StatsComponent.MoveType.AIR;
 
-                if (!show) continue;
+                if (!show)
+                    continue;
 
                 superUnitsAdded.add(bs.chosenSuperUnit);
                 UnitFactory.UiInfo info = unitFactory.getUnitUi(superUnit);
@@ -398,17 +429,24 @@ public class SlideMenu {
                                 }
                                 int tx = inputController.getLastClickedX();
                                 int ty = inputController.getLastClickedY();
-                                if (tx == -1 || ty == -1) return;
+                                if (tx == -1 || ty == -1)
+                                    return;
 
-                                int[] spawn = unitFactory.findValidSpawnPoint(tx, ty, moveType, gameScreen.getGameMap());
-                                if (spawn == null) return;
+                                int[] spawn = unitFactory.findValidSpawnPoint(tx, ty, moveType,
+                                        gameScreen.getGameMap());
+                                if (spawn == null)
+                                    return;
 
-                                if (currentBaseOwner == 1) state.p1Funding -= cost;
-                                else state.p2Funding -= cost;
+                                if (currentBaseOwner == 1)
+                                    state.p1Funding -= cost;
+                                else
+                                    state.p2Funding -= cost;
 
                                 if (state.isLanGame) {
-                                    gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SUMMON,
-                                            superUnit.name() + "," + spawn[0] + "," + spawn[1] + "," + currentBaseOwner));
+                                    gameScreen.getNetworkManager()
+                                            .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SUMMON,
+                                                    superUnit.name() + "," + spawn[0] + "," + spawn[1] + ","
+                                                            + currentBaseOwner));
                                     gameScreen.syncEconomy(currentBaseOwner);
                                 }
 
@@ -451,13 +489,25 @@ public class SlideMenu {
         Table content = new Table();
 
         java.util.Set<String> unlocked = unlockedForLevel(maxLevel, true);
+        boolean isOilTile = gameScreen.getGameMap().objects[buildX][buildY] == MapGenerator.ObjectType.OIL;
         int addedCount = 0;
 
-        boolean isOilTile = gameScreen.getGameMap().objects[buildX][buildY] == MapGenerator.ObjectType.OIL;
+        // Check for existing built structures not tracked in gameMap.objects
+        Entity existingStruct = unitFactory.getEntityAt(buildX, buildY, 1);
+        boolean hasBlockingStructure = false;
+        if (existingStruct != null) {
+            StatsComponent stats = existingStruct.getComponent(StatsComponent.class);
+            // Allow building ONLY if it's an Oil Reservoir (allows Oil Derrick)
+            if (stats == null || !stats.name.equals("Oil Reservoir")) {
+                hasBlockingStructure = true;
+            }
+        }
 
         for (final String struct : unlocked) {
             boolean show;
-            if (isOilTile) {
+            if (hasBlockingStructure) {
+                show = false;
+            } else if (isOilTile) {
                 // On Oil tiles, ONLY show Oil Derrick
                 show = struct.equals("OIL_DERRICK");
             } else {
@@ -489,8 +539,9 @@ public class SlideMenu {
                             }
 
                             if (state.isLanGame) {
-                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_BUILD,
-                                        struct + "," + buildX + "," + buildY + "," + currentBaseOwner));
+                                gameScreen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_BUILD,
+                                                struct + "," + buildX + "," + buildY + "," + currentBaseOwner));
                                 gameScreen.syncEconomy(currentBaseOwner);
                             }
 
@@ -500,12 +551,56 @@ public class SlideMenu {
 
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+
                             gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
+
+                            // Tutorial Hook: Build Structure
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.BUILD_STRUCTURE) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
+
                             hide();
                             inputController.resetLastClicked();
                         }
                     });
         }
+        // --- Build Railway button ---
+        MapGenerator.TerrainType tileType = gameScreen.getGameMap().terrain[buildX][buildY];
+        boolean canShowRail = tileType != MapGenerator.TerrainType.WATER
+                && tileType != MapGenerator.TerrainType.DEEP_WATER
+                && tileType != MapGenerator.TerrainType.MOUNTAIN
+                && !gameScreen.getGameMap().rails[buildX][buildY];
+        if (canShowRail) {
+            final int railCost = 3;
+            String railLabel = "Build Railway (" + railCost + ")";
+            TextureRegion railIcon = unitFactory.getTextureForPopup("RAILWAY");
+            SummonButton.addToWrapped(content, railIcon, railLabel, game, assets,
+                    new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            if (funds < railCost)
+                                return;
+                            if (currentBaseOwner == 1)
+                                state.p1Funding -= railCost;
+                            else
+                                state.p2Funding -= railCost;
+                            gameScreen.getGameMap().rails[buildX][buildY] = true;
+                            AudioManager.getInstance().playSFX(SFXKeys.ACTION_BUILD);
+                            GameLogger.log(GameLogger.BUILD, currentBaseOwner,
+                                    "Built Railway at (" + buildX + "," + buildY + ")");
+                            int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
+                            int newIncome = gameScreen.calculateIncome(currentBaseOwner);
+                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            hide();
+                            inputController.resetLastClicked();
+                        }
+                    });
+            addedCount++;
+        }
+
         if (addedCount > 0) {
             menuTable.add(content).expandX().center();
             menuTable.row();

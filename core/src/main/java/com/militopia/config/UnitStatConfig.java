@@ -47,14 +47,14 @@ public class UnitStatConfig {
         m.put(UnitType.JUGGERNAUT,    new UnitStatData(50,  12,   6,   4,   4,   3,   0,  StatsComponent.MoveType.LAND));
 
         m.put(UnitType.RECON_DRONE,   new UnitStatData( 5,   0,   0,   3,   0,   3,   4,  StatsComponent.MoveType.AIR));
-        m.put(UnitType.SUICIDE_DRONE, new UnitStatData( 5,  20,   0,   2,   1,   2,   7,  StatsComponent.MoveType.AIR));
+        m.put(UnitType.SUICIDE_DRONE, new UnitStatData( 5,  20,   0,   2,   2,   2,   7,  StatsComponent.MoveType.AIR));
         m.put(UnitType.APACHE,        new UnitStatData(20,  15,   2,   3,   2,   3,  18,  StatsComponent.MoveType.AIR));
         m.put(UnitType.B2,            new UnitStatData(45,  18,   3,   3,   3,   3,   0,  StatsComponent.MoveType.AIR));
 
         m.put(UnitType.GUNBOAT,       new UnitStatData(12,   5,   1,   1,   2,   2,   5,  StatsComponent.MoveType.SEA));
         m.put(UnitType.DESTROYER,     new UnitStatData(30,  12,   5,   2,   3,   3,  15,  StatsComponent.MoveType.SEA));
         m.put(UnitType.CARRIER,       new UnitStatData(45,   5,   4,   3,   3,   3,  25,  StatsComponent.MoveType.SEA));
-        m.put(UnitType.SUBMARINE,     new UnitStatData(40,  25,   3,   4,   4,   3,   0,  StatsComponent.MoveType.SEA));
+        m.put(UnitType.SUBMARINE,     new UnitStatData(40,  20,   3,   4,   4,   3,   0,  StatsComponent.MoveType.SEA));
 
         STATS = Collections.unmodifiableMap(m);
     }

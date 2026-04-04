@@ -10,7 +10,8 @@ public enum StructureType {
     MUNITION_FACTORY("MUNITION_FACTORY", "Munition Factory"),
     NUCLEAR_PLANT("NUCLEAR", "Nuclear Plant"),
     PORT("PORT", "Port"),
-    AIRPORT("AIRPORT", "Airport");
+    AIRPORT("AIRPORT", "Airport"),
+    HOSPITAL("HOSPITAL", "Field Hospital");
 
     private final String key;
     private final String displayName;

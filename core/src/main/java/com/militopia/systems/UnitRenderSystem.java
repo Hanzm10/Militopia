@@ -13,7 +13,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.militopia.components.*;
-import com.militopia.config.CombatConstants;
 import com.militopia.config.DisplayAssetConfig;
 import com.militopia.config.GameConfig;
 import com.militopia.config.StructureType;
@@ -43,9 +42,21 @@ public class UnitRenderSystem extends EntitySystem {
     private float bounceTimer = 0;
 
     private com.badlogic.gdx.graphics.g2d.TextureRegion shadowRegion;
+    private com.badlogic.gdx.graphics.g2d.TextureRegion invincibleRed, invincibleBlue;
+    private com.badlogic.gdx.graphics.g2d.TextureRegion digInRegion;
+
+    public void setInvincibleRegions(com.badlogic.gdx.graphics.g2d.TextureRegion red,
+            com.badlogic.gdx.graphics.g2d.TextureRegion blue) {
+        this.invincibleRed = red;
+        this.invincibleBlue = blue;
+    }
 
     public void setShadowRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
         this.shadowRegion = r;
+    }
+
+    public void setDigInRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
+        this.digInRegion = r;
     }
 
     // Reusable removal list (avoids per-frame allocation accumulation)
@@ -119,7 +130,8 @@ public class UnitRenderSystem extends EntitySystem {
         DeathAnimComponent death = e.getComponent(DeathAnimComponent.class);
         SpriteAnimationComponent spriteAnim = e.getComponent(SpriteAnimationComponent.class);
 
-        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER || typeC.type == TypeComponent.Type.TRANSFORM_MARKER);
+        boolean isMarker = (typeC.type == TypeComponent.Type.MARKER
+                || typeC.type == TypeComponent.Type.TRANSFORM_MARKER);
         boolean isAttackMarker = (typeC.type == TypeComponent.Type.ATTACK_MARKER);
 
         // Fog and Stealth culling
@@ -145,13 +157,13 @@ public class UnitRenderSystem extends EntitySystem {
                     MapGenerator.TerrainType terrain = gameMap.terrain[pos.x][pos.y];
                     MapGenerator.ObjectType obj = gameMap.objects[pos.x][pos.y];
                     if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
-                            || obj == MapGenerator.ObjectType.RUINS) {
+                            || obj == MapGenerator.ObjectType.RUINS || obj == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
                         isStealth = true;
                     }
                 }
 
                 // If unit has already acted/attacked, it is revealed
-                if (stats.hasActed) {
+                if (stats.hasActed || (abilities != null && abilities.isCloakBroken)) {
                     isStealth = false;
                 }
 
@@ -179,13 +191,27 @@ public class UnitRenderSystem extends EntitySystem {
             } else {
                 batch.setColor(1f, 1f, 1f, alpha);
             }
-            float isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f);
-            float isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f);
+            // --- Iso position (with movement lerp during death) ---
+            float isoX, isoY;
+            if (move != null) {
+                float moveAlpha = Math.min(move.time / move.duration, 1.0f);
+                float startIsoX = (move.startX - move.startY) * (GameConfig.TILE_WIDTH / 2.0f);
+                float startIsoY = (move.startX + move.startY) * (GameConfig.TILE_HEIGHT / 2.0f);
+                float endIsoX = (move.targetX - move.targetY) * (GameConfig.TILE_WIDTH / 2.0f);
+                float endIsoY = (move.targetX + move.targetY) * (GameConfig.TILE_HEIGHT / 2.0f);
+                isoX = MathUtils.lerp(startIsoX, endIsoX, moveAlpha) + pos.visualOffsetX;
+                isoY = MathUtils.lerp(startIsoY, endIsoY, moveAlpha) + pos.visualOffsetY;
+            } else {
+                isoX = (pos.x - pos.y) * (GameConfig.TILE_WIDTH / 2.0f) + pos.visualOffsetX;
+                isoY = (pos.x + pos.y) * (GameConfig.TILE_HEIGHT / 2.0f) + pos.visualOffsetY;
+            }
+
             String deathKey = (stats != null) ? stats.unitTypeKey : "";
             DisplayAssetConfig.AssetData deathCfg = DisplayAssetConfig.get(deathKey);
             float xOff = (deathCfg.width - GameConfig.TILE_WIDTH) / 2f;
             float yOff = (deathCfg.height - GameConfig.TILE_HEIGHT) / 2f;
-            batch.draw(tex.region, isoX - xOff + deathCfg.offsetX, isoY - yOff + deathCfg.offsetY, deathCfg.width, deathCfg.height);
+            batch.draw(tex.region, isoX - xOff + deathCfg.offsetX, isoY - yOff + deathCfg.offsetY, deathCfg.width,
+                    deathCfg.height);
             batch.setColor(Color.WHITE);
             return;
         }
@@ -220,8 +246,8 @@ public class UnitRenderSystem extends EntitySystem {
             assetKey = "BASE_" + Math.min(stats.level, 10);
         }
         DisplayAssetConfig.AssetData cfg = DisplayAssetConfig.get(assetKey);
-        float drawW   = cfg.width;
-        float drawH   = cfg.height;
+        float drawW = cfg.width;
+        float drawH = cfg.height;
         float xOffset = (drawW - GameConfig.TILE_WIDTH) / 2f;
         float yOffset = (drawH - GameConfig.TILE_HEIGHT) / 2f;
         float verticalOff = isMarker || isAttackMarker ? 5f : cfg.offsetY;
@@ -240,9 +266,7 @@ public class UnitRenderSystem extends EntitySystem {
         }
 
         // --- Colour tinting ---
-        AbilitiesComponent unitAbilities = e.getComponent(AbilitiesComponent.class);
-        boolean invincible = (unitAbilities != null && unitAbilities.isInvincible);
-        float tintAlpha = invincible ? CombatConstants.INVINCIBLE_TINT_ALPHA : 1.0f;
+        // (unreachable/tintAlpha logic removed: Recon Drones now 100% opacity)
 
         if (isAttackMarker) {
             // New enemy marker (draw with original colours)
@@ -252,17 +276,17 @@ public class UnitRenderSystem extends EntitySystem {
         } else if (typeC.type == TypeComponent.Type.UNIT) {
             if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
                 if (stats.owner == 1)
-                    batch.setColor(0.3f, 0.3f, 0.6f, tintAlpha);
+                    batch.setColor(0.3f, 0.3f, 0.6f, 1.0f);
                 else if (stats.owner == 2)
-                    batch.setColor(0.6f, 0.3f, 0.3f, tintAlpha);
+                    batch.setColor(0.6f, 0.3f, 0.3f, 1.0f);
                 else
-                    batch.setColor(0.3f, 0.3f, 0.3f, tintAlpha);
+                    batch.setColor(0.3f, 0.3f, 0.3f, 1.0f);
             } else if (stats != null && stats.owner == 2) {
-                batch.setColor(1.0f, 0.6f, 0.6f, tintAlpha);
+                batch.setColor(1.0f, 0.6f, 0.6f, 1.0f);
             } else if (stats != null && stats.owner == 1) {
-                batch.setColor(0.6f, 0.6f, 1.0f, tintAlpha);
+                batch.setColor(0.6f, 0.6f, 1.0f, 1.0f);
             } else {
-                batch.setColor(1f, 1f, 1f, tintAlpha);
+                batch.setColor(1f, 1f, 1f, 1.0f);
             }
         } else {
             batch.setColor(Color.WHITE);
@@ -274,9 +298,10 @@ public class UnitRenderSystem extends EntitySystem {
                     isoY - yOffset + verticalOff + animY,
                     drawW, drawH);
         }
-        
+
         if (spriteAnim != null && spriteAnim.animation != null && spriteAnim.stateTime >= 0) {
-            com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime, spriteAnim.loop);
+            com.badlogic.gdx.graphics.g2d.TextureRegion frame = spriteAnim.animation.getKeyFrame(spriteAnim.stateTime,
+                    spriteAnim.loop);
             if (frame != null) {
                 float dW = (spriteAnim.drawWidth > 0) ? spriteAnim.drawWidth : GameConfig.DRAW_WIDTH;
                 float dH = (spriteAnim.drawHeight > 0) ? spriteAnim.drawHeight : GameConfig.DRAW_HEIGHT;
@@ -297,6 +322,19 @@ public class UnitRenderSystem extends EntitySystem {
 
         batch.setColor(Color.WHITE);
 
+        // Dig-In sandbag VFX: drawn in front of the unit sprite
+        if (digInRegion != null && typeC.type == TypeComponent.Type.UNIT
+                && stats != null && stats.unitType == UnitType.RECRUIT) {
+            AbilitiesComponent abilities = e.getComponent(AbilitiesComponent.class);
+            if (abilities != null && abilities.isDiggingIn) {
+                DisplayAssetConfig.AssetData sbCfg = DisplayAssetConfig.get("DIG_IN");
+                batch.draw(digInRegion,
+                        isoX - sbCfg.width / 2f + GameConfig.TILE_WIDTH / 2f + sbCfg.offsetX,
+                        isoY + sbCfg.offsetY + animY,
+                        sbCfg.width, sbCfg.height);
+            }
+        }
+
         // Selection glow
         if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {
             Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
@@ -308,6 +346,39 @@ public class UnitRenderSystem extends EntitySystem {
                     drawW, drawH);
             batch.setBlendFunction(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
             batch.setColor(Color.WHITE);
+        }
+
+        // --- Invincibility/Cloaking Indicator ---
+        boolean isMyUnit = (stats != null && stats.owner == activePlayer);
+        if (isMyUnit && tex != null && stats != null && (stats.unitType == UnitType.SNIPER
+                || stats.unitType == UnitType.B2 || stats.unitType == UnitType.SUBMARINE)) {
+            com.badlogic.gdx.graphics.g2d.TextureRegion indicator = (stats.owner == 1) ? invincibleBlue : invincibleRed;
+            if (indicator != null) {
+                AbilitiesComponent abilities = e.getComponent(AbilitiesComponent.class);
+                boolean isCurrentlyCloaked = (abilities != null && abilities.isCloaked && !abilities.isCloakBroken);
+
+                // Sniper dynamic stealth check
+                if (stats.unitType == UnitType.SNIPER && (abilities == null || !abilities.isCloakBroken)) {
+                    MapGenerator.TerrainType terrain = gameMap.terrain[pos.x][pos.y];
+                    MapGenerator.ObjectType obj = gameMap.objects[pos.x][pos.y];
+                    if (terrain == MapGenerator.TerrainType.MOUNTAIN || obj == MapGenerator.ObjectType.TREE
+                            || obj == MapGenerator.ObjectType.RUINS || obj == MapGenerator.ObjectType.MOUNTAIN_OBJ) {
+                        isCurrentlyCloaked = true;
+                    }
+                }
+
+                // Opacity: 100% if currently cloaked, 50% if cloak is broken or sniper in the open
+                float alpha = isCurrentlyCloaked ? 1.0f : 0.5f;
+
+                // Position: upper right of the unit sprite
+                float indicatorSize = 2.5f;
+                float indicatorX = isoX - xOffset + cfg.offsetX + drawW; // Shifted right
+                float indicatorY = isoY - yOffset + verticalOff + animY + drawH - 1f; // Shifted higher
+
+                batch.setColor(1f, 1f, 1f, alpha);
+                batch.draw(indicator, indicatorX, indicatorY, indicatorSize, indicatorSize);
+                batch.setColor(Color.WHITE);
+            }
         }
     }
 
@@ -397,7 +468,8 @@ public class UnitRenderSystem extends EntitySystem {
 
     private void drawXPBar(float x, float y, StatsComponent stats) {
         Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA,
+                com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         float width = 32f, height = 4f, radius = 2f;

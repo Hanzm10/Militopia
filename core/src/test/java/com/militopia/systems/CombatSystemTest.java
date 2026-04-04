@@ -285,4 +285,96 @@ public class CombatSystemTest {
 
         assertEquals(initialHP, dStats.currentHP, "ReconDrone should be immune to range-1 land attacks");
     }
+
+    // -------------------------------------------------------------------------
+    // Stealth & Cloaking Tests
+    // -------------------------------------------------------------------------
+
+    @Test
+    public void testSniperStealthImmunityInCover() {
+        // Sniper in forest (TREE) should not be counterattacked
+        gameMap.objects[1][1] = MapGenerator.ObjectType.TREE;
+        Entity sniper = createUnit(UnitType.SNIPER, 1, 1, 1);
+        Entity defender = createUnit(UnitType.RECRUIT, 1, 0, 2);
+
+        StatsComponent sStats = sniper.getComponent(StatsComponent.class);
+        int initialHP = sStats.currentHP;
+
+        combatSystem.resolveAttack(sniper, defender);
+
+        assertEquals(initialHP, sStats.currentHP, "Sniper in cover should skip counterattack");
+    }
+
+    @Test
+    public void testSniperRevealedInOpen() {
+        // Sniper in open should be counterattacked
+        gameMap.objects[1][1] = MapGenerator.ObjectType.NONE;
+        Entity sniper = createUnit(UnitType.SNIPER, 1, 1, 1);
+        Entity defender = createUnit(UnitType.JUGGERNAUT, 1, 0, 2); // Tougher defender
+
+        StatsComponent sStats = sniper.getComponent(StatsComponent.class);
+        int initialHP = sStats.currentHP;
+
+        combatSystem.resolveAttack(sniper, defender);
+
+        assertTrue(sStats.currentHP < initialHP, "Sniper in open should receive counterattack");
+    }
+
+    @Test
+    public void testSubmarineStealthImmunity() {
+        // Submarine should always skip counterattack (unless cloak broken)
+        Entity submarine = createUnit(UnitType.SUBMARINE, 1, 1, 1);
+        AbilitiesComponent ab = submarine.getComponent(AbilitiesComponent.class);
+        ab.isCloaked = true; // Submarines are always cloaked unless broken
+
+        Entity defender = createUnit(UnitType.JUGGERNAUT, 1, 0, 2); // Tougher defender
+        StatsComponent sStats = submarine.getComponent(StatsComponent.class);
+        int initialHP = sStats.currentHP;
+
+        combatSystem.resolveAttack(submarine, defender);
+
+        assertEquals(initialHP, sStats.currentHP, "Submarine should skip counterattack");
+        assertTrue(ab.isCloakBroken, "Cloak should be broken after attack");
+    }
+
+    @Test
+    public void testBrokenStealthReceivesCounter() {
+        // A unit with a broken cloak should receive a counterattack
+        Entity submarine = createUnit(UnitType.SUBMARINE, 1, 1, 1);
+        AbilitiesComponent ab = submarine.getComponent(AbilitiesComponent.class);
+        ab.isCloaked = true;
+        ab.isCloakBroken = true; // Already revealed
+
+        Entity defender = createUnit(UnitType.JUGGERNAUT, 1, 0, 2); // Tougher defender
+        StatsComponent sStats = submarine.getComponent(StatsComponent.class);
+        int initialHP = sStats.currentHP;
+
+        combatSystem.resolveAttack(submarine, defender);
+
+        assertTrue(sStats.currentHP < initialHP, "Unit with broken cloak should receive counterattack");
+    }
+
+    @Test
+    public void testSuicideDroneRangeAndSelfDestruction() {
+        // Suicide Drone (rng=2) attacks RECRUIT from distance 2
+        Entity drone = createUnit(UnitType.SUICIDE_DRONE, 0, 0, 1);
+        Entity recruit = createUnit(UnitType.RECRUIT, 2, 0, 2);
+
+        StatsComponent aStats = drone.getComponent(StatsComponent.class);
+        GridPositionComponent aPos = drone.getComponent(GridPositionComponent.class);
+        GridPositionComponent dPos = recruit.getComponent(GridPositionComponent.class);
+
+        // Before attack
+        assertEquals(0, aPos.x);
+        assertEquals(0, aPos.y);
+
+        combatSystem.resolveAttack(drone, recruit);
+
+        // Position should move to target tile (dive-attack)
+        assertEquals(dPos.x, aPos.x);
+        assertEquals(dPos.y, aPos.y);
+
+        // Drone should be marked for death
+        assertNotNull(drone.getComponent(DeathAnimComponent.class), "Suicide Drone should have DeathAnimComponent after attack");
+    }
 }

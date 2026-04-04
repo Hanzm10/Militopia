@@ -21,8 +21,9 @@ public class UnitSnapshot {
     public boolean hasUsedDigIn;
     public boolean isOverwatchActive;
     public boolean isCloaked;
+    public boolean isCloakBroken;
     public boolean pendingSkirmishMove;
-    public boolean isInvincible;
+    public boolean isUnreachable;
     public int fuel;
     public int nukeCooldown;
 
@@ -40,8 +41,9 @@ public class UnitSnapshot {
         this.hasUsedDigIn = false;
         this.isOverwatchActive = false;
         this.isCloaked = false;
+        this.isCloakBroken = false;
         this.pendingSkirmishMove = false;
-        this.isInvincible = false;
+        this.isUnreachable = false;
         this.fuel = -1;
         this.nukeCooldown = 0;
     }
@@ -50,8 +52,8 @@ public class UnitSnapshot {
             int currentHP, boolean hasActed, boolean hasMoved,
             StatsComponent.MoveType moveType, boolean isDiggingIn,
             boolean hasUsedDigIn, boolean isOverwatchActive,
-            boolean isCloaked, boolean pendingSkirmishMove,
-            boolean isInvincible, int fuel, int nukeCooldown) {
+            boolean isCloaked, boolean isCloakBroken, boolean pendingSkirmishMove,
+            boolean isUnreachable, int fuel, int nukeCooldown) {
         this.unitTypeKey = unitTypeKey;
         this.x = x;
         this.y = y;
@@ -64,8 +66,9 @@ public class UnitSnapshot {
         this.hasUsedDigIn = hasUsedDigIn;
         this.isOverwatchActive = isOverwatchActive;
         this.isCloaked = isCloaked;
+        this.isCloakBroken = isCloakBroken;
         this.pendingSkirmishMove = pendingSkirmishMove;
-        this.isInvincible = isInvincible;
+        this.isUnreachable = isUnreachable;
         this.fuel = fuel;
         this.nukeCooldown = nukeCooldown;
     }

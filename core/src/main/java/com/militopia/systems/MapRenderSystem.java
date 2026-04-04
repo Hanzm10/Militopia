@@ -159,6 +159,7 @@ public class MapRenderSystem extends EntitySystem {
                 }
             }
         }
+        drawRailPass();
         renderSelectionIndicator();
         shapeRenderer.end();
     }
@@ -287,5 +288,85 @@ public class MapRenderSystem extends EntitySystem {
             return obj == MapGenerator.ObjectType.BASE_P2;
         }
         return false;
+    }
+
+    private boolean hasRail(int x, int y) {
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) return false;
+        return gameMap.rails[x][y];
+    }
+
+    private boolean hasBase(int x, int y) {
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) return false;
+        MapGenerator.ObjectType obj = gameMap.objects[x][y];
+        if (obj == null) return false;
+        String name = obj.name();
+        return name.startsWith("BASE_P1") || name.startsWith("BASE_P2");
+    }
+
+    private void drawRailPass() {
+        float thick = GameConfig.SELECTION_LINE_THICKNESS;
+        float jointSize = thick / 2f;
+        shapeRenderer.setColor(0.65f, 0.65f, 0.65f, 1.0f); // slightly brighter steel gray
+
+        for (int x = gameMap.width - 1; x >= 0; x--) {
+            for (int y = gameMap.height - 1; y >= 0; y--) {
+                if (!gameMap.rails[x][y]) continue;
+                if (fogEnabled && !gameMap.visibleTiles[x][y]) continue;
+
+                float xOffset = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;
+                float[] coords = getIsoCoords(x, y);
+                float cx = coords[0] - xOffset + (GameConfig.DRAW_WIDTH / 2f);
+                float cy = coords[1] + 10f + coords[2]; // surface lift + bounce anim
+                float halfW = GameConfig.TILE_WIDTH / 2.0f;
+                float halfH = GameConfig.TILE_HEIGHT / 2.0f;
+
+                float neX = cx + halfW / 2f, neY = cy + halfH / 2f; // grid +X midpoint
+                float seX = cx + halfW / 2f, seY = cy - halfH / 2f; // grid -Y midpoint
+                float swX = cx - halfW / 2f, swY = cy - halfH / 2f; // grid -X midpoint
+                float nwX = cx - halfW / 2f, nwY = cy + halfH / 2f; // grid +Y midpoint
+
+                boolean toNE = hasRail(x + 1, y) || hasBase(x + 1, y);
+                boolean toSE = hasRail(x, y - 1) || hasBase(x, y - 1);
+                boolean toSW = hasRail(x - 1, y) || hasBase(x - 1, y);
+                boolean toNW = hasRail(x, y + 1) || hasBase(x, y + 1);
+
+                if (toNE || toSE || toSW || toNW) {
+                    shapeRenderer.circle(cx, cy, jointSize);
+                    
+                    if (toNE) {
+                        float tx = neX, ty = neY;
+                        if (hasBase(x + 1, y)) { tx = cx + halfW; ty = cy + halfH; }
+                        shapeRenderer.rectLine(cx, cy, tx, ty, thick);
+                        shapeRenderer.circle(tx, ty, jointSize);
+                    }
+                    if (toSE) {
+                        float tx = seX, ty = seY;
+                        if (hasBase(x, y - 1)) { tx = cx + halfW; ty = cy - halfH; }
+                        shapeRenderer.rectLine(cx, cy, tx, ty, thick);
+                        shapeRenderer.circle(tx, ty, jointSize);
+                    }
+                    if (toSW) {
+                        float tx = swX, ty = swY;
+                        if (hasBase(x - 1, y)) { tx = cx - halfW; ty = cy - halfH; }
+                        shapeRenderer.rectLine(cx, cy, tx, ty, thick);
+                        shapeRenderer.circle(tx, ty, jointSize);
+                    }
+                    if (toNW) {
+                        float tx = nwX, ty = nwY;
+                        if (hasBase(x, y + 1)) { tx = cx - halfW; ty = cy + halfH; }
+                        shapeRenderer.rectLine(cx, cy, tx, ty, thick);
+                        shapeRenderer.circle(tx, ty, jointSize);
+                    }
+                } else {
+                    // Isolated rail: draw a straight line through the middle of the tile
+                    // Use a slightly longer segment than just edge-midpoints to make it clear it's a line
+                    float diagX = halfW * 0.4f;
+                    float diagY = halfH * 0.4f;
+                    shapeRenderer.rectLine(cx - diagX, cy - diagY, cx + diagX, cy + diagY, thick);
+                    shapeRenderer.circle(cx - diagX, cy - diagY, jointSize);
+                    shapeRenderer.circle(cx + diagX, cy + diagY, jointSize);
+                }
+            }
+        }
     }
 }

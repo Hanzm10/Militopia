@@ -144,6 +144,7 @@ public class UnitFactory {
         structRegions.put("TOWN",  townRegion);
         structRegions.put("RUINS", ruinsRegion);
         structRegions.put("OIL",   oilRegion);
+        structRegions.put("RAILWAY", new TextureRegion(assets.get(AssetManager.RAILWAY_ICON)));
 
         // Animals
         this.horseRegion = new TextureRegion(assets.get(AssetManager.HORSE));
@@ -192,18 +193,20 @@ public class UnitFactory {
         stats.unitTypeKey = unitType.name(); // store raw key for snapshot restoration
         stats.unitType = unitType;
         stats.hasActed = isSummoned;
+        stats.hasMoved = isSummoned;
 
         // --- Post-processing for specific abilities ---
         AbilitiesComponent abilities = entity.getComponent(AbilitiesComponent.class);
         if (stats.unitType == UnitType.APACHE) {
             abilities.fuel = 5;
             abilities.fuelMax = 5;
+            abilities.isUnreachable = true; // High Altitude: immune to melee land attacks
         }
         if (stats.unitType == UnitType.SUBMARINE || stats.unitType == UnitType.B2) {
             abilities.isCloaked = true;
         }
         if (stats.unitType == UnitType.RECON_DRONE) {
-            abilities.isInvincible = true; // High Altitude: immune to melee land attacks
+            abilities.isUnreachable = true; // High Altitude: immune to melee land attacks
         }
 
         entity.add(stats);
@@ -252,7 +255,7 @@ public class UnitFactory {
 
             if (type.type == TypeComponent.Type.UNIT) {
                 AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
-                boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isInvincible = false;
+                boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isUnreachable = false;
                 int fuel = -1, nukeCooldown = 0;
                 if (a != null) {
                     isDiggingIn = a.isDiggingIn;
@@ -260,7 +263,7 @@ public class UnitFactory {
                     isOverwatchActive = a.isOverwatchActive;
                     isCloaked = a.isCloaked;
                     pendingSkirmishMove = a.pendingSkirmishMove;
-                    isInvincible = a.isInvincible;
+                    isUnreachable = a.isUnreachable;
                     fuel = a.fuel;
                     nukeCooldown = a.nukeCooldown;
                 }
@@ -268,8 +271,8 @@ public class UnitFactory {
                 unitSnaps.add(new UnitSnapshot(
                         s.unitTypeKey, p.x, p.y, s.owner,
                         s.currentHP, s.hasActed, s.hasMoved, s.moveType,
-                        isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked,
-                        pendingSkirmishMove, isInvincible, fuel, nukeCooldown));
+                        isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked, a != null ? a.isCloakBroken : false,
+                        pendingSkirmishMove, isUnreachable, fuel, nukeCooldown));
 
             } else if (type.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
                 // Capture ALL non-animal static objects/structures so they can be restored

@@ -11,10 +11,6 @@ public class CombatConstants {
     }
 
     // -----------------------------------------------------------------------
-    // Rendering
-    // -----------------------------------------------------------------------
-    /** Alpha applied to invincible units so they appear translucent. */
-    public static final float INVINCIBLE_TINT_ALPHA = 0.9f;
 
     // -----------------------------------------------------------------------
     // Jump animation (Juggernaut)
@@ -60,13 +56,6 @@ public class CombatConstants {
     public static final int DIG_IN_DEFENSE_BONUS = 3;
     public static final int MAX_RANGE_ATTACK_PENALTY = 1;
     public static final int SHORE_BOMBARDMENT_BONUS = 5; // Destroyer vs Land
-
-    // -----------------------------------------------------------------------
-    // Nuke ability
-    // -----------------------------------------------------------------------
-    public static final int NUKE_RADIUS = 1;
-    public static final int NUKE_DAMAGE = 15;
-    public static final int NUKE_COOLDOWN_TURNS = 3;
 
     // -----------------------------------------------------------------------
     // Fog of War / Vision
