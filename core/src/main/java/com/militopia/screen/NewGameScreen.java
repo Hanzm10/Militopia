@@ -70,8 +70,8 @@ public class NewGameScreen implements Screen {
 
         // --- MODE SELECTOR ---
         modeSelectBox = new SelectBox<>(game.skin);
-        modeSelectBox.setItems("Game mode", "Blitz", "Marathon");
-        modeSelectBox.setSelected("Game mode");
+        modeSelectBox.setItems("Select Game Mode...", "Blitz", "Marathon");
+        modeSelectBox.setSelected("Select Game Mode...");
 
         modeInfoLabel = new Label("16x16 map", game.skin);
         modeInfoLabel.setColor(Color.LIGHT_GRAY);
@@ -84,13 +84,16 @@ public class NewGameScreen implements Screen {
                 String selected = modeSelectBox.getSelected();
                 if (selected.contains("Blitz")) {
                     modeInfoLabel.setText("16x16 map");
-                    selectedWidth = 16; selectedHeight = 16;
+                    selectedWidth = 16;
+                    selectedHeight = 16;
                 } else if (selected.contains("Marathon")) {
                     modeInfoLabel.setText("32x32 map");
-                    selectedWidth = 32; selectedHeight = 32;
+                    selectedWidth = 32;
+                    selectedHeight = 32;
                 } else {
                     modeInfoLabel.setText("16x16 map");
-                    selectedWidth = 16; selectedHeight = 16;
+                    selectedWidth = 16;
+                    selectedHeight = 16;
                 }
             }
         });
@@ -98,11 +101,14 @@ public class NewGameScreen implements Screen {
         modeSelectBox.addListener(new InputListener() {
             @Override
             public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-                if (pointer == -1) modeInfoLabel.setVisible(true);
+                if (pointer == -1)
+                    modeInfoLabel.setVisible(true);
             }
+
             @Override
             public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-                if (pointer == -1) modeInfoLabel.setVisible(false);
+                if (pointer == -1)
+                    modeInfoLabel.setVisible(false);
             }
         });
 
@@ -112,18 +118,18 @@ public class NewGameScreen implements Screen {
         backBtn.addListener(new HoverListener());
         table.clear(); // Clear to rebuild neatly
         table.setFillParent(true);
-        
-        table.add(titleLabel).padBottom(40).row();
-        addLabeledField(table, "Game Name", nameField);
-        addLabeledField(table, "Seed", seedField);
-        addLabeledField(table, "Player 1 Name", p1NameField);
-        addLabeledField(table, "Player 2 Name", p2NameField);
+        table.add(titleLabel).colspan(2).pad(15).row();
+        table.add(nameField).width(300).pad(10).row();
+        table.add(seedField).width(300).pad(10).row();
+        table.add(p1NameField).width(300).pad(10).row();
+        table.add(p2NameField).width(300).pad(10).row();
 
+        // Add Mode Selection Row using balancing spacer trick
         Table modeTable = new Table();
-        modeTable.add().width(110); 
+        modeTable.add().width(110);
         modeTable.add(modeSelectBox).width(300).pad(5);
         modeTable.add(modeInfoLabel).width(100).padLeft(10);
-        
+
         table.row().pad(10);
         table.add(modeTable).left().row();
 
@@ -138,12 +144,12 @@ public class NewGameScreen implements Screen {
                 AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
             }
         });
-        table.add(devModeBtn).width(320).pad(5).padLeft(120).left().row();
 
         Table btnRow = new Table();
+        btnRow.add(devModeBtn).width(300).pad(10).colspan(2).row();
         btnRow.add(backBtn).fillX().width(200).pad(10);
         btnRow.add(startBtn).fillX().width(200).pad(10);
-        table.add(btnRow).padTop(100).row();
+        table.add(btnRow).colspan(2).padTop(120).row();
 
         table.row();
         table.add(errorLabel).colspan(2).pad(10).row();
@@ -174,7 +180,8 @@ public class NewGameScreen implements Screen {
                     newState.p1Name = p1.isEmpty() ? "Player 1" : p1;
                     newState.p2Name = p2.isEmpty() ? "Player 2" : p2;
                     newState.isDevMode = devModeEnabled;
-                    if (devModeEnabled) GameLogger.logScreen("[DEV MODE] Starting dev session");
+                    if (devModeEnabled)
+                        GameLogger.logScreen("[DEV MODE] Starting dev session");
                     game.setScreen(new GameScreen(game, newState));
                 }
             }
@@ -192,13 +199,6 @@ public class NewGameScreen implements Screen {
 
     private boolean isEmpty(TextField field) {
         return field.getText() == null || field.getText().trim().isEmpty();
-    }
-
-    private void addLabeledField(Table t, String labelText, TextField field) {
-        Label label = new Label(labelText, game.skin);
-        label.setColor(Color.LIGHT_GRAY);
-        t.add(label).width(320).padTop(10).padLeft(10).left().row();
-        t.add(field).width(320).padBottom(4).padLeft(10).padRight(10).row();
     }
 
     @Override

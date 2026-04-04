@@ -236,7 +236,9 @@ public class HudBottomBar {
             }
         });
 
-        menuBox.add(undoRedoBtn).fillX().width(340).pad(10).row();
+        if (!screen.getGameState().isLanGame) {
+            menuBox.add(undoRedoBtn).fillX().width(340).pad(10).row();
+        }
         menuBox.add(soundSettingsBtn).fillX().width(340).pad(10).row();
         menuBox.add(saveExitBtn).fillX().width(340).pad(10).row();
         menuBox.add(resumeBtn).fillX().width(340).pad(10);

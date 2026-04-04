@@ -60,6 +60,8 @@ public class GameHUD {
     private GameStatsPopup gameStatsPopup;
     private EconomyPopup economyPopup;
     private DisconnectPopup disconnectPopup;
+    private ScavengeSystem scavengeSystem;
+    private StructurePlacementSystem placementSystem;
 
     private GameScreen screen;
     private GameInputController inputController;
@@ -74,6 +76,9 @@ public class GameHUD {
     private Table snapshotList;
     private TurnHistoryManager turnHistory;
     private boolean snapshotPanelVisible = false;
+
+    public ScavengeSystem getScavengeSystem() { return scavengeSystem; }
+    public StructurePlacementSystem getStructurePlacementSystem() { return placementSystem; }
 
     // Dev Mode panel
     private DevPanel devPanel;
@@ -112,9 +117,9 @@ public class GameHUD {
         this.gameState = state;
 
         // 1. Create components
-        ScavengeSystem scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, screen.getEntityFactory(),
+        this.scavengeSystem = new ScavengeSystem(screen.getEngine(), unitFactory, screen.getEntityFactory(),
                 state, screen.getGameMap());
-        StructurePlacementSystem placementSystem = new StructurePlacementSystem(screen.getEngine(), unitFactory, state,
+        this.placementSystem = new StructurePlacementSystem(screen.getEngine(), unitFactory, state,
                 screen.getGameMap());
 
         topBar = new HudTopBar(game, assets);
@@ -144,10 +149,14 @@ public class GameHUD {
         buildSnapshotPanel(screen);
 
         // 4. Prime the HUD with the initial state
-        updateTurn(state.turnCount, state.currentPlayer, screen.getActiveLocalPlayer());
-        updateXP(state.p1XP);
-        int startIncome = screen.calculateIncome(1);
-        updateFunding(state.p1Funding, startIncome);
+        int localID = screen.getActiveLocalPlayer();
+        int localXP = (localID == 1) ? state.p1XP : state.p2XP;
+        int localFunding = (localID == 1) ? state.p1Funding : state.p2Funding;
+        int localIncome = screen.calculateIncome(localID);
+        
+        updateTurn(state.turnCount, state.currentPlayer, localID);
+        updateXP(localID, localXP);
+        updateFunding(localID, localFunding, localIncome);
     }
 
     /**
@@ -297,8 +306,10 @@ public class GameHUD {
     // Top-bar delegation
     // -------------------------------------------------------------------------
 
-    public void updateXP(int xp) {
-        topBar.updateXP(xp);
+    public void updateXP(int owner, int xp) {
+        if (owner == screen.getActiveLocalPlayer()) {
+            topBar.updateXP(xp);
+        }
     }
 
     public void updateTurn(int turn, int currentPlayer, int localPlayerID) {
@@ -306,9 +317,11 @@ public class GameHUD {
         bottomBar.updateTurnState(currentPlayer, localPlayerID);
     }
 
-    public void updateFunding(int funding, int income) {
-        topBar.updateFunding(funding, income);
-        slideMenu.setCurrentIncome(income);
+    public void updateFunding(int owner, int funding, int income) {
+        if (owner == screen.getActiveLocalPlayer()) {
+            topBar.updateFunding(funding, income);
+            slideMenu.setCurrentIncome(income);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -404,7 +417,8 @@ public class GameHUD {
 
     public void showLevelUpPopup(int owner, String baseName, int newLevel, int bonusFunds,
             String[] units, String[] structs, UnitFactory factory) {
-        levelUpPopup.show(owner, baseName, newLevel, bonusFunds, units, structs, factory);
+        boolean isLocal = (owner == screen.getActiveLocalPlayer());
+        levelUpPopup.show(owner, baseName, newLevel, bonusFunds, units, structs, factory, isLocal);
     }
 
     /** Returns true if the level-up popup is currently on screen. */

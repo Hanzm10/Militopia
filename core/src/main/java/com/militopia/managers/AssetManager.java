@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGeneratorLoader;
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.militopia.map.MapGenerator;
 
 public class AssetManager {
 
@@ -329,6 +331,18 @@ public class AssetManager {
 
     public BitmapFont getRussoBtnFont() {
         return manager.get(RUSSO_FONT_BTN, BitmapFont.class);
+    }
+
+    public com.badlogic.gdx.graphics.g2d.TextureRegion getTerrainRegion(MapGenerator.TerrainType type) {
+        String path = TILE_GRASS;
+        switch (type) {
+            case WATER: path = TILE_WATER; break;
+            case DEEP_WATER: path = TILE_DEEPWATER; break;
+            case SAND: path = TILE_SAND; break;
+            case MOUNTAIN: path = TILE_MOUNTAIN; break;
+            case GRASS: default: path = TILE_GRASS; break;
+        }
+        return new com.badlogic.gdx.graphics.g2d.TextureRegion(get(path));
     }
 
     public void dispose() {

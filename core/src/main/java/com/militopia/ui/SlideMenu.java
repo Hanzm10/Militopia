@@ -21,6 +21,7 @@ import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
+import com.militopia.net.NetworkMessage;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.systems.ScavengeSystem;
@@ -110,6 +111,14 @@ public class SlideMenu {
                 new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
+                        if (gameScreen.getGameState().isLanGame) {
+                            GridPositionComponent hPos = hunterUnit.getComponent(GridPositionComponent.class);
+                            GridPositionComponent aPos = animalEntity.getComponent(GridPositionComponent.class);
+                            if (hPos != null && aPos != null) {
+                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ATTACK,
+                                        hPos.x + "," + hPos.y + "," + aPos.x + "," + aPos.y));
+                            }
+                        }
                         controller.performHunt(animalEntity, hunterUnit);
                     }
                 });
@@ -147,6 +156,14 @@ public class SlideMenu {
                 new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
+                        if (gameScreen.getGameState().isLanGame) {
+                            GridPositionComponent sPos = structureEntity.getComponent(GridPositionComponent.class);
+                            if (sPos != null) {
+                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_CAPTURE,
+                                        sPos.x + "," + sPos.y + "," + newOwner));
+                                gameScreen.syncEconomy(newOwner);
+                            }
+                        }
                         factory.captureStructure(structureEntity, newOwner, map, state);
                         AudioManager.getInstance().playSFX(SFXKeys.STRUCTURE_CAPTURE);
                         // Logging
@@ -163,8 +180,8 @@ public class SlideMenu {
                         int newXP = (newOwner == 1) ? state.p1XP : state.p2XP;
                         int curFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
                         int newIncome = gameScreen.calculateIncome(newOwner);
-                        gameScreen.gameHUD.updateXP(newXP);
-                        gameScreen.gameHUD.updateFunding(curFunds, newIncome);
+                        gameScreen.gameHUD.updateXP(newOwner, newXP);
+                        gameScreen.gameHUD.updateFunding(newOwner, curFunds, newIncome);
                         hide();
                         controller.deselect();
                     }
@@ -201,6 +218,15 @@ public class SlideMenu {
         int owner = unitStats.owner;
         GameState state = gameScreen.getGameState();
 
+        if (state.isLanGame) {
+            GridPositionComponent rPos = ruinsEntity.getComponent(GridPositionComponent.class);
+            if (rPos != null) {
+                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SCAVENGE,
+                        rPos.x + "," + rPos.y + "," + owner));
+                gameScreen.syncEconomy(owner);
+            }
+        }
+
         ScavengeSystem.ScavengeReward reward = scavengeSystem.performScavenge(ruinsEntity, unit);
         if (reward == null)
             return;
@@ -208,8 +234,8 @@ public class SlideMenu {
 
         // Update HUD (ScavengeSystem already updated the GameState numbers, but UI
         // needs snap)
-        gameScreen.gameHUD.updateXP((owner == 1) ? state.p1XP : state.p2XP);
-        gameScreen.gameHUD.updateFunding((owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
+        gameScreen.gameHUD.updateXP(owner, (owner == 1) ? state.p1XP : state.p2XP);
+        gameScreen.gameHUD.updateFunding(owner, (owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
 
         hide();
         controller.deselect();
@@ -314,6 +340,12 @@ public class SlideMenu {
                             else
                                 state.p2Funding -= cost;
 
+                            if (state.isLanGame) {
+                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SUMMON,
+                                        unit.name() + "," + spawn[0] + "," + spawn[1] + "," + currentBaseOwner));
+                                gameScreen.syncEconomy(currentBaseOwner);
+                            }
+
                             unitFactory.createUnit(unit, spawn[0], spawn[1], currentBaseOwner, true);
                             AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
@@ -323,7 +355,7 @@ public class SlideMenu {
 
                             // Use fresh income calculation for HUD update
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                             hide();
                             inputController.resetLastClicked();
                         }
@@ -374,11 +406,17 @@ public class SlideMenu {
                                 if (currentBaseOwner == 1) state.p1Funding -= cost;
                                 else state.p2Funding -= cost;
 
+                                if (state.isLanGame) {
+                                    gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SUMMON,
+                                            superUnit.name() + "," + spawn[0] + "," + spawn[1] + "," + currentBaseOwner));
+                                    gameScreen.syncEconomy(currentBaseOwner);
+                                }
+
                                 unitFactory.createUnit(superUnit, spawn[0], spawn[1], currentBaseOwner, true);
                                 AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                                 int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                                 int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                                gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                                gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                                 hide();
                                 inputController.resetLastClicked();
                             }
@@ -450,13 +488,19 @@ public class SlideMenu {
                                 return;
                             }
 
+                            if (state.isLanGame) {
+                                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_BUILD,
+                                        struct + "," + buildX + "," + buildY + "," + currentBaseOwner));
+                                gameScreen.syncEconomy(currentBaseOwner);
+                            }
+
                             placementSystem.performBuild(struct, buildX, buildY, currentBaseOwner, cost, buildParentX,
                                     buildParentY);
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_BUILD);
 
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                             hide();
                             inputController.resetLastClicked();
                         }

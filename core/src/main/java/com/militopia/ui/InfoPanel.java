@@ -35,6 +35,7 @@ import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
+import com.militopia.net.NetworkMessage;
 
 import java.util.Set;
 
@@ -217,10 +218,14 @@ public class InfoPanel {
                     int player = stats.owner;
                     if (player == 1) state.p1Funding += demolishRefund;
                     else state.p2Funding += demolishRefund;
+                    if (screen.getGameState().isLanGame && pos != null) {
+                        screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_DEMOLISH,
+                                pos.x + "," + pos.y + "," + player));
+                    }
                     AudioManager.getInstance().playSFX(SFXKeys.ACTION_DEMOLISH);
                     screen.getEngine().removeEntity(base);
                     int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                    screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                    screen.gameHUD.updateFunding(player, newFunds, screen.calculateIncome(player));
                     GameLogger.log(GameLogger.UI, "InfoPanel: Demolish | " + stats.name
                             + (pos != null ? " at (" + pos.x + "," + pos.y + ")" : "")
                             + " | refund=" + demolishRefund);
@@ -301,7 +306,7 @@ public class InfoPanel {
                             GameLogger.log(GameLogger.SUMMON, bs.owner,
                                     "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
                                             + " | cost=" + cost + " | funds remaining=" + remaining);
-                            screen.gameHUD.updateFunding(remaining, bs.income);
+                            screen.gameHUD.updateFunding(bs.owner, remaining, bs.income);
                             hideTileInfo();
                             controller.resetLastClicked();
                         }
@@ -339,7 +344,7 @@ public class InfoPanel {
 
                                     factory.createUnit(superUnit, spawn[0], spawn[1], bs.owner, true);
                                     AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
-                                    screen.gameHUD.updateFunding((bs.owner == 1) ? state.p1Funding : state.p2Funding, bs.income);
+                                    screen.gameHUD.updateFunding(bs.owner, (bs.owner == 1) ? state.p1Funding : state.p2Funding, bs.income);
                                     hideTileInfo();
                                     controller.resetLastClicked();
                                 }
@@ -461,6 +466,12 @@ public class InfoPanel {
                     new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
+                            final int playerID = stats.owner;
+                            if (screen.getGameState().isLanGame) {
+                                screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SCAVENGE,
+                                        unitPos.x + "," + unitPos.y + "," + playerID));
+                                screen.syncEconomy(playerID);
+                            }
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
                             screen.getGameMap().objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
                             // Remove the tree entity from the engine so it disappears visually
@@ -477,16 +488,16 @@ public class InfoPanel {
                                 }
                             }
                             GameState state = screen.getGameState();
-                            int player = stats.owner;
-                            if (player == 1) state.p1Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
+                            if (playerID == 1) state.p1Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
                             else state.p2Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
                             stats.hasActed = true;
                             stats.hasMoved = true;
-                            int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                            screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                            int newFunds = (playerID == 1) ? state.p1Funding : state.p2Funding;
+                            screen.gameHUD.updateFunding(playerID, newFunds, screen.calculateIncome(playerID));
                             GameLogger.log(GameLogger.UI, "InfoPanel: Cut Tree at ("
                                     + unitPos.x + "," + unitPos.y + ") | +"
                                     + com.militopia.config.CombatConstants.TREE_CUT_FUNDING + " funding");
+                            controller.deselect();
                             hideTileInfo();
                         }
                     });
@@ -501,6 +512,12 @@ public class InfoPanel {
                     new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
+                            final int playerID = stats.owner;
+                            if (screen.getGameState().isLanGame) {
+                                screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SCAVENGE,
+                                        unitPos.x + "," + unitPos.y + "," + playerID));
+                                screen.syncEconomy(playerID);
+                            }
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
                             screen.getGameMap().objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
                             // Remove the cactus entity from the engine so it disappears visually
@@ -517,16 +534,16 @@ public class InfoPanel {
                                 }
                             }
                             GameState state = screen.getGameState();
-                            int player = stats.owner;
-                            if (player == 1) state.p1Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
+                            if (playerID == 1) state.p1Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
                             else state.p2Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
                             stats.hasActed = true;
                             stats.hasMoved = true;
-                            int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                            screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                            int newFunds = (playerID == 1) ? state.p1Funding : state.p2Funding;
+                            screen.gameHUD.updateFunding(playerID, newFunds, screen.calculateIncome(playerID));
                             GameLogger.log(GameLogger.UI, "InfoPanel: Cut Cactus at ("
                                     + unitPos.x + "," + unitPos.y + ") | +"
                                     + com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING + " funding");
+                            controller.deselect();
                             hideTileInfo();
                         }
                     });
@@ -545,9 +562,17 @@ public class InfoPanel {
                                 int player = stats.owner;
                                 if (player == 1) state.p1Funding += disbandRefund;
                                 else state.p2Funding += disbandRefund;
+                                if (screen.getGameState().isLanGame) {
+                                    GridPositionComponent p = unit.getComponent(GridPositionComponent.class);
+                                    if (p != null) {
+                                        screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_DISBAND,
+                                                p.x + "," + p.y + "," + player));
+                                        screen.syncEconomy(player);
+                                    }
+                                }
                                 screen.getEngine().removeEntity(unit);
                                 int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                                screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                                screen.gameHUD.updateFunding(player, newFunds, screen.calculateIncome(player));
                                 GameLogger.log(GameLogger.UI, "InfoPanel: Disband " + stats.name
                                         + " | refund=" + disbandRefund);
                                 hideTileInfo();

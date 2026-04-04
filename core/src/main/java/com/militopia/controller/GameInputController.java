@@ -12,12 +12,13 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
-import com.militopia.components.*;
 import com.militopia.config.AnimalType;
 import com.militopia.config.CombatConstants;
 import com.militopia.config.GameConfig;
 import com.militopia.config.UnitType;
+import com.militopia.components.*;
 import com.militopia.data.GameState;
+import com.militopia.net.NetworkMessage;
 import com.militopia.factories.EntityFactory;
 import com.militopia.factories.UnitFactory;
 import com.militopia.map.MapGenerator;
@@ -161,6 +162,7 @@ public class GameInputController extends InputAdapter {
 
         // Undo Shortcut (Ctrl+Z)
         if (keycode == Input.Keys.Z && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT))) {
+            if (screen.getGameState().isLanGame) return false;
             screen.undoTurn();
             return true;
         }
@@ -182,31 +184,30 @@ public class GameInputController extends InputAdapter {
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        if (!inputEnabled)
-            return false;
-
-        // --- LAN LOCKDOWN ---
-        // Prevent all map interaction if it's not the local hardware's turn!
-        if (screen.getGameState().currentPlayer != screen.getActiveLocalPlayer()) {
-            return false;
-        }
-
-        lastTouchX = screenX;
-        lastTouchY = screenY;
+        // Convert screen coordinates to world coordinates
         Vector3 worldCoords = camera.unproject(new Vector3(screenX, screenY, 0),
                 viewport.getScreenX(), viewport.getScreenY(),
                 viewport.getScreenWidth(), viewport.getScreenHeight());
-        // INPUT_OFFSET shifts world coords to align with the rendered tile origin
         float adjustedY = worldCoords.y + GameConfig.INPUT_OFFSET_Y;
         float adjustedX = worldCoords.x + GameConfig.INPUT_OFFSET_X;
         float halfW = GameConfig.TILE_WIDTH / 2.0f;
         float halfH = GameConfig.TILE_HEIGHT / 2.0f;
-        // Inverse isometric projection: convert 2D screen position back to grid (x, y).
-        // Standard iso formula: screenX = (gridX - gridY) * halfW,
-        //                       screenY = (gridX + gridY) * halfH
-        // Solving for gridX and gridY gives the expressions below.
+
         int gridX = MathUtils.floor((adjustedY / halfH + adjustedX / halfW) / 2);
         int gridY = MathUtils.floor((adjustedY / halfH - adjustedX / halfW) / 2);
+
+        // --- LAN LOCKDOWN ---
+        // Allow inspection (selecting units/terrain) even if it's not our turn, 
+        // but block all commands (movement, attack, summon, build).
+        boolean isMyTurn = (screen.getGameState().currentPlayer == screen.getActiveLocalPlayer());
+        if (!isMyTurn) {
+            boolean isVisible = !screen.isFogEnabled() || (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height && gameMap.visibleTiles[gridX][gridY]);
+            handleInspection(gridX, gridY, isVisible);
+            return true;
+        }
+
+        lastTouchX = screenX;
+        lastTouchY = screenY;
 
         if (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height) {
             // Reset HUD stage scroll focus so map zoom (scroll wheel) works even
@@ -375,6 +376,15 @@ public class GameInputController extends InputAdapter {
     /** Delegates to CombatSystem, then cleans up selection state. */
     private void performAttack(Entity attacker, Entity defender) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        GridPositionComponent aPos = attacker.getComponent(GridPositionComponent.class);
+        GridPositionComponent dPos = defender.getComponent(GridPositionComponent.class);
+
+        if (screen.getGameState().isLanGame && aPos != null && dPos != null) {
+            screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ATTACK,
+                    aPos.x + "," + aPos.y + "," + dPos.x + "," + dPos.y));
+            screen.syncEconomy(aStats.owner);
+        }
+
         combatSystem.resolveAttack(attacker, defender);
         // Snap HP in the HUD if the attacker survived (still selectable next turn)
         if (aStats != null && aStats.currentHP > 0) {
@@ -388,6 +398,16 @@ public class GameInputController extends InputAdapter {
     /** Triggers a Juggernaut jump to the target tile. Target may be null for empty-tile jumps. */
     private void performJump(Entity attacker, Entity target, int tx, int ty) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        GridPositionComponent aPos = attacker.getComponent(GridPositionComponent.class);
+        GridPositionComponent dPos = target != null ? target.getComponent(GridPositionComponent.class) : null;
+
+        if (screen.getGameState().isLanGame && aPos != null) {
+            String targetPart = (dPos != null) ? (dPos.x + "," + dPos.y) : "-1,-1";
+            screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ATTACK,
+                    aPos.x + "," + aPos.y + "," + targetPart + "," + tx + "," + ty));
+            screen.syncEconomy(aStats.owner);
+        }
+
         // Block jump onto water terrain
         MapGenerator.TerrainType terrain = gameMap.terrain[tx][ty];
         if (terrain == MapGenerator.TerrainType.WATER || terrain == MapGenerator.TerrainType.DEEP_WATER) return;
@@ -409,6 +429,33 @@ public class GameInputController extends InputAdapter {
     /** Chebyshev distance for range checks. */
     private int chebyshev(int ax, int ay, int bx, int by) {
         return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+    }
+
+    private void handleInspection(int gridX, int gridY, boolean isVisible) {
+        if (gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height) {
+            triggerBounce(gridX, gridY);
+        }
+
+        boolean withinBounds = gridX >= 0 && gridX < gameMap.width && gridY >= 0 && gridY < gameMap.height;
+        Entity foundUnit = (withinBounds && isVisible) ? getEntityAt(gridX, gridY, TypeComponent.Type.UNIT) : null;
+        Entity foundStructure = (withinBounds && isVisible) ? getEntityAt(gridX, gridY, TypeComponent.Type.OBJECT) : null;
+        MapGenerator.TerrainType clickedTerrain = withinBounds ? gameMap.terrain[gridX][gridY] : null;
+
+        if (foundUnit != null) {
+            StatsComponent stats = foundUnit.getComponent(StatsComponent.class);
+            UnitFactory.UiInfo info = unitFactory.getUnitUi(stats.unitType);
+            String label = stats.owner == screen.getActiveLocalPlayer() ? stats.name : stats.name + " (Enemy)";
+            gameHUD.showUnitInfo(foundUnit, label, info.region, stats.currentHP, stats.maxHP);
+            AudioManager.getInstance().playSFX(SFXKeys.UNIT_SELECT);
+        } else if (foundStructure != null) {
+            StatsComponent stats = foundStructure.getComponent(StatsComponent.class);
+            gameHUD.showBaseInfoUnified(foundStructure, screen.getGameState(), stats.level, "");
+            AudioManager.getInstance().playSFX(SFXKeys.TILE_CLICK);
+        } else {
+             gameHUD.showTileInfo((withinBounds && isVisible) ? clickedTerrain.name() : "Undiscovered",
+                     (withinBounds && isVisible) ? screen.getGame().assets.getTerrainRegion(clickedTerrain) : unitFactory.fogRegion);
+             AudioManager.getInstance().playSFX(SFXKeys.TILE_CLICK);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -566,12 +613,17 @@ public class GameInputController extends InputAdapter {
             state.p1Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
         else
             state.p2Funding += CombatConstants.ANIMAL_HUNT_FUNDING;
+        
+        if (screen.getGameState().isLanGame) {
+            screen.syncEconomy(hunterStats.owner);
+        }
+
         AudioManager.getInstance().playSFX(SFXKeys.ACTION_HUNT);
         engine.removeEntity(animal);
         hunterStats.hasActed = true;
         hunterStats.hasMoved = true;
         int income = screen.calculateIncome(hunterStats.owner);
-        gameHUD.updateFunding((hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
+        gameHUD.updateFunding(hunterStats.owner, (hunterStats.owner == 1) ? state.p1Funding : state.p2Funding, income);
         gameHUD.hideSummonMenu();
         deselect();
     }
@@ -582,6 +634,18 @@ public class GameInputController extends InputAdapter {
 
     public void performAbility(Entity unit, String abilityKey) {
         StatsComponent stats = unit.getComponent(StatsComponent.class);
+        if (screen.getGameState().isLanGame) {
+            GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+            if (pos != null) {
+                // Targeted abilities wait for executeTargetingAbility to sync
+                if (!abilityKey.equals("LAUNCH_NUKE")) {
+                    screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ABILITY,
+                            pos.x + "," + pos.y + "," + abilityKey));
+                    screen.syncEconomy(stats.owner);
+                }
+            }
+        }
+
         AbilitiesComponent abilities = unit.getComponent(AbilitiesComponent.class);
         if (stats == null || abilities == null)
             return;
@@ -621,6 +685,14 @@ public class GameInputController extends InputAdapter {
     private void executeTargetingAbility(int tx, int ty) {
         if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
             StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
+            GridPositionComponent tPos = targetingUnit != null ? targetingUnit.getComponent(GridPositionComponent.class) : null;
+
+            if (screen.getGameState().isLanGame && tPos != null) {
+                screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ABILITY,
+                        tPos.x + "," + tPos.y + "," + targetingAbilityKey + "," + tx + "," + ty));
+                screen.syncEconomy(tStats.owner);
+            }
+
             String name = tStats != null ? tStats.name : "?";
             int owner = tStats != null ? tStats.owner : 0;
             GameLogger.log(GameLogger.ABILITY, owner,
@@ -797,6 +869,7 @@ public class GameInputController extends InputAdapter {
     // -------------------------------------------------------------------------
 
     private void triggerBounce(int x, int y) {
+        if (x < 0 || x >= gameMap.width || y < 0 || y >= gameMap.height) return;
         this.bouncingX = x;
         this.bouncingY = y;
         this.bounceTimer = GameConfig.BOUNCE_DURATION;
@@ -807,10 +880,17 @@ public class GameInputController extends InputAdapter {
         GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
         if (pos == null)
             return;
+        int oldX = pos.x, oldY = pos.y;
+
         StatsComponent stats = unit.getComponent(StatsComponent.class);
+        if (screen.getGameState().isLanGame) {
+            screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_MOVE,
+                    oldX + "," + oldY + "," + targetX + "," + targetY));
+            screen.syncEconomy(stats.owner);
+        }
+
         String unitName = (stats != null) ? stats.name : "?";
         int owner = (stats != null) ? stats.owner : 0;
-        int oldX = pos.x, oldY = pos.y;
         GameLogger.log(GameLogger.MOVE, owner,
                 unitName + " moves " + GameLogger.move(oldX, oldY, targetX, targetY));
         unit.add(new MovementComponent(pos.x, pos.y, targetX, targetY));
