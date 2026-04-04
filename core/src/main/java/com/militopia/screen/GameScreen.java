@@ -784,7 +784,7 @@ public class GameScreen implements Screen {
     private void startActiveTurn() {
         int grossIncome = calculateIncome(gameState.currentPlayer);
         int maintenance = structureEconomySystem.calculateMaintenance(gameState.currentPlayer);
-        int netIncome = grossIncome - maintenance;
+        int netIncome = Math.max(0, grossIncome - maintenance);
         
         // XP distribution, Hospital healing, and base leveling
         int xpGain = structureEconomySystem.processTurn(gameState.currentPlayer);
@@ -794,10 +794,10 @@ public class GameScreen implements Screen {
         // Apply net income (skip Turn 1 income if logic dictates)
         if (gameState.turnCount > 1) {
             if (gameState.currentPlayer == 1) {
-                gameState.p1Funding += netIncome;
+                gameState.p1Funding = Math.max(0, gameState.p1Funding + netIncome);
                 currentTotal = gameState.p1Funding;
             } else {
-                gameState.p2Funding += netIncome;
+                gameState.p2Funding = Math.max(0, gameState.p2Funding + netIncome);
                 currentTotal = gameState.p2Funding;
             }
 
