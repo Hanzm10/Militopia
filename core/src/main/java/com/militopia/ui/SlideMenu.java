@@ -454,7 +454,7 @@ public class SlideMenu {
                                 AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                                 int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                                 int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                                gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
+                             gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                                 hide();
                                 inputController.resetLastClicked();
                             }
@@ -593,7 +593,7 @@ public class SlideMenu {
                                     "Built Railway at (" + buildX + "," + buildY + ")");
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                             hide();
                             inputController.resetLastClicked();
                         }

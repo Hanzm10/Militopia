@@ -381,6 +381,43 @@ public class CombatSystem extends EntitySystem {
     }
 
     /**
+     * Launches a high-yield tactical nuke from a Submarine.
+     * Deals massive AoE damage in a radius of 2.
+     *
+     * @param attacker The Submarine entity.
+     * @param tx       Target tile X.
+     * @param ty       Target tile Y.
+     */
+    public void launchNuke(Entity attacker, int tx, int ty) {
+        StatsComponent aStats = attacker.getComponent(StatsComponent.class);
+        if (aStats == null)
+            return;
+
+        GameLogger.log(GameLogger.ABILITY, aStats.owner, "NUKE LAUNCHED at " + GameLogger.pos(tx, ty));
+
+        // Visuals & Sound (Launch phase)
+        AudioManager.getInstance().playSFX(SFXKeys.ATTACK_SUBMARINE);
+
+        // Defer visuals/damage logic (simulated immediate impact for now)
+        if (entityFactory != null) {
+            entityFactory.createDramaticExplosion(tx, ty);
+        }
+        AudioManager.getInstance().playSFX(SFXKeys.ATTACK_B2); // Impact sound
+
+        // Damage (Radius 2, High Damage 50)
+        triggerExplosion(tx, ty, 2, 50, "NUKE");
+
+        // Set Cooldown
+        AbilitiesComponent abilities = attacker.getComponent(AbilitiesComponent.class);
+        if (abilities != null) {
+            abilities.nukeCooldown = 4; // it will be decremented to 3 at turn start
+            abilities.isCloakBroken = true;
+        }
+
+        exhaustAttacker(attacker, aStats, true);
+    }
+
+    /**
      * Checks if any enemy "Ranger" with Overwatch active is in range of the moving
      * unit.
      */
