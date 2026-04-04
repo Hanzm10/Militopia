@@ -17,7 +17,7 @@ public class GameConfig {
     public static final float WORLD_HEIGHT = 360f;
 
     // Animation Settings
-    public static final float BOUNCE_DURATION = 0.2f;
+    public static final float BOUNCE_DURATION = 0.4f;
     public static final float BOUNCE_HEIGHT = 1.5f;
 
     // mouse/touch x & y adjustment Settings

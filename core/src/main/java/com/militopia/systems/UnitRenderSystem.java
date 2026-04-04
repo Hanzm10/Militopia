@@ -44,6 +44,10 @@ public class UnitRenderSystem extends EntitySystem {
     private com.badlogic.gdx.graphics.g2d.TextureRegion shadowRegion;
     private com.badlogic.gdx.graphics.g2d.TextureRegion invincibleRed, invincibleBlue;
     private com.badlogic.gdx.graphics.g2d.TextureRegion digInRegion;
+    private com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> recruitRunAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> rangerRunAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> sniperRunAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> juggernautJumpAnim;
 
     public void setInvincibleRegions(com.badlogic.gdx.graphics.g2d.TextureRegion red,
             com.badlogic.gdx.graphics.g2d.TextureRegion blue) {
@@ -57,6 +61,22 @@ public class UnitRenderSystem extends EntitySystem {
 
     public void setDigInRegion(com.badlogic.gdx.graphics.g2d.TextureRegion r) {
         this.digInRegion = r;
+    }
+
+    public void setRecruitRunAnim(com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> anim) {
+        this.recruitRunAnim = anim;
+    }
+
+    public void setRangerRunAnim(com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> anim) {
+        this.rangerRunAnim = anim;
+    }
+
+    public void setSniperRunAnim(com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> anim) {
+        this.sniperRunAnim = anim;
+    }
+
+    public void setJuggernautJumpAnim(com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> anim) {
+        this.juggernautJumpAnim = anim;
     }
 
     // Reusable removal list (avoids per-frame allocation accumulation)
@@ -129,6 +149,7 @@ public class UnitRenderSystem extends EntitySystem {
         StatsComponent stats = e.getComponent(StatsComponent.class);
         DeathAnimComponent death = e.getComponent(DeathAnimComponent.class);
         SpriteAnimationComponent spriteAnim = e.getComponent(SpriteAnimationComponent.class);
+        com.militopia.components.AnimationComponent animComp = e.getComponent(com.militopia.components.AnimationComponent.class);
 
         boolean isMarker = (typeC.type == TypeComponent.Type.MARKER
                 || typeC.type == TypeComponent.Type.TRANSFORM_MARKER);
@@ -268,13 +289,18 @@ public class UnitRenderSystem extends EntitySystem {
         // --- Colour tinting ---
         // (unreachable/tintAlpha logic removed: Recon Drones now 100% opacity)
 
+        boolean isJumpingEarly = (animComp != null
+                && animComp.type == com.militopia.components.AnimationComponent.Type.JUMP
+                && stats != null && stats.unitType == UnitType.JUGGERNAUT
+                && juggernautJumpAnim != null);
+
         if (isAttackMarker) {
             // New enemy marker (draw with original colours)
             batch.setColor(Color.WHITE);
         } else if (isMarker) {
             batch.setColor(Color.WHITE);
         } else if (typeC.type == TypeComponent.Type.UNIT) {
-            if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed) {
+            if (!GameConfig.TESTING_MODE && stats != null && stats.hasActed && move == null && !isJumpingEarly) {
                 if (stats.owner == 1)
                     batch.setColor(0.3f, 0.3f, 0.6f, 1.0f);
                 else if (stats.owner == 2)
@@ -292,11 +318,50 @@ public class UnitRenderSystem extends EntitySystem {
             batch.setColor(Color.WHITE);
         }
 
-        if (tex != null && tex.region != null) {
+        boolean isMovingRecruit = (move != null && stats != null && stats.unitType == UnitType.RECRUIT && recruitRunAnim != null);
+        boolean isMovingRanger  = (move != null && stats != null && stats.unitType == UnitType.RANGER  && rangerRunAnim  != null);
+        boolean isMovingSniper  = (move != null && stats != null && stats.unitType == UnitType.SNIPER   && sniperRunAnim  != null);
+        com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion> activeRunAnim =
+                isMovingRecruit ? recruitRunAnim
+                : isMovingRanger  ? rangerRunAnim
+                : isMovingSniper  ? sniperRunAnim
+                : null;
+
+        boolean isJumping = isJumpingEarly;
+
+        if (tex != null && tex.region != null && activeRunAnim == null && !isJumping) {
             batch.draw(tex.region,
                     isoX - xOffset + cfg.offsetX,
                     isoY - yOffset + verticalOff + animY,
                     drawW, drawH);
+        }
+
+        if (activeRunAnim != null) {
+            com.badlogic.gdx.graphics.g2d.TextureRegion runFrame = activeRunAnim.getKeyFrame(move.time, true);
+            if (runFrame != null) {
+                boolean facingLeft = tex != null && tex.region != null && tex.region.isFlipX();
+                float frameX = isoX - xOffset + cfg.offsetX;
+                float frameW = drawW;
+                if (facingLeft) {
+                    frameX += drawW;
+                    frameW = -drawW;
+                }
+                batch.draw(runFrame, frameX, isoY - yOffset + verticalOff + animY, frameW, drawH);
+            }
+        }
+
+        if (isJumping) {
+            com.badlogic.gdx.graphics.g2d.TextureRegion jumpFrame = juggernautJumpAnim.getKeyFrame(animComp.stateTime, false);
+            if (jumpFrame != null) {
+                boolean facingLeft = tex != null && tex.region != null && tex.region.isFlipX();
+                float frameX = isoX - xOffset + cfg.offsetX;
+                float frameW = drawW;
+                if (facingLeft) {
+                    frameX += drawW;
+                    frameW = -drawW;
+                }
+                batch.draw(jumpFrame, frameX, isoY - yOffset + verticalOff + animY, frameW, drawH);
+            }
         }
 
         if (spriteAnim != null && spriteAnim.animation != null && spriteAnim.stateTime >= 0) {
@@ -336,7 +401,8 @@ public class UnitRenderSystem extends EntitySystem {
         }
 
         // Selection glow
-        if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY) {
+        if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY
+                && activeRunAnim == null && !isJumping) {
             Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
             batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
             batch.setColor(0.4f, 0.4f, 0.4f, 1f);

@@ -192,6 +192,10 @@ public class GameScreen implements Screen {
         unitRenderSystem.setDigInRegion(
                 new com.badlogic.gdx.graphics.g2d.TextureRegion(game.assets.get(com.militopia.managers.AssetManager.DIG_IN))
         );
+        unitRenderSystem.setRecruitRunAnim(entityFactory.getRecruitRunAnim());
+        unitRenderSystem.setRangerRunAnim(entityFactory.getRangerRunAnim());
+        unitRenderSystem.setSniperRunAnim(entityFactory.getSniperRunAnim());
+        unitRenderSystem.setJuggernautJumpAnim(entityFactory.getJuggernautJumpAnim());
 
         engine.addSystem(unitRenderSystem);
         engine.addSystem(fogSystem);

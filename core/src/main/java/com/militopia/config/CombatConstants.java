@@ -17,6 +17,7 @@ public class CombatConstants {
     // -----------------------------------------------------------------------
     public static final float JUMP_ARC_HEIGHT = 25f;
     public static final float JUMP_DURATION = 0.7f;
+    public static final float JUMP_DAMAGE_TIME = 12 * 0.033f; // fire damage at frame 12
 
     // -----------------------------------------------------------------------
     // Attack animations
@@ -68,4 +69,10 @@ public class CombatConstants {
     public static final int JAMMER_SUPPRESSED_VISION = 1;
     /** Radius within which any unit can spot a cloaked (stealthed) enemy. */
     public static final int STEALTH_DETECTION_RADIUS = 1;
+
+    // -----------------------------------------------------------------------
+    // Juggernaut jump — super unit interaction
+    // -----------------------------------------------------------------------
+    /** Damage multiplier applied to the primary super-unit target on a Juggernaut jump. */
+    public static final float JUMP_SUPER_UNIT_DAMAGE_MULTIPLIER = 1.5f;
 }

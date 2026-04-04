@@ -101,6 +101,8 @@ public class CombatSystem extends EntitySystem {
         anim.jumpStartOffY = -dIsoY;
         anim.arcHeight = CombatConstants.JUMP_ARC_HEIGHT;
         anim.duration = CombatConstants.JUMP_DURATION;
+        anim.damageTime = CombatConstants.JUMP_DAMAGE_TIME;
+        anim.damageFired = false;
         anim.stateTime = 0;
 
         // Attach landing payload
@@ -577,17 +579,31 @@ public class CombatSystem extends EntitySystem {
         StatsComponent aStats = jumper.getComponent(StatsComponent.class);
         if (landPos == null || aStats == null) return;
 
-        // 1. Instantly kill primary target
+        // 1. Resolve primary target — instant kill for normal units, damage + bounce for super units
+        boolean superUnitSurvived = false;
+
         if (jlc.primaryTarget != null) {
             StatsComponent tStats = jlc.primaryTarget.getComponent(StatsComponent.class);
             if (tStats != null && tStats.currentHP > 0) {
-                tStats.currentHP = 0;
-                flagDeath(jlc.primaryTarget);
+                if (isSuperUnit(tStats.unitType)) {
+                    int dmg = (int)(aStats.attack * CombatConstants.JUMP_SUPER_UNIT_DAMAGE_MULTIPLIER);
+                    tStats.currentHP = Math.max(0, tStats.currentHP - dmg);
+                    spawnFloatingText(dmg, landPos.x, landPos.y, false);
+                    if (tStats.currentHP <= 0) {
+                        tStats.currentHP = 0;
+                        flagDeath(jlc.primaryTarget);
+                    } else {
+                        superUnitSurvived = true;
+                    }
+                } else {
+                    tStats.currentHP = 0;
+                    flagDeath(jlc.primaryTarget);
+                }
             }
         }
         entityFactory.createExplosion(landPos.x, landPos.y);
 
-        // 2. AoE damage to adjacent enemies on landing
+        // 2. AoE damage to adjacent enemies on landing (fires BEFORE bounce so freed tiles are available)
         resolveJumpLandingAoE(jumper, landPos.x, landPos.y, jlc.primaryTarget);
 
         // 3. Dramatic explosion sequence exactly on landing
@@ -595,6 +611,15 @@ public class CombatSystem extends EntitySystem {
 
         // 4. SFX on landing
         AudioManager.getInstance().playSFX(SFXKeys.ATTACK_JUGGERNAUT);
+
+        // 5. Bounce — relocate Juggernaut when super unit survived the landing
+        if (superUnitSurvived) {
+            int[] bounce = findNearestFreeTile(landPos.x, landPos.y);
+            if (bounce != null) {
+                landPos.x = bounce[0];
+                landPos.y = bounce[1];
+            }
+        }
 
         GameLogger.log(GameLogger.ABILITY, aStats.owner,
                 "Juggernaut LANDED at " + GameLogger.pos(landPos.x, landPos.y));
@@ -654,6 +679,34 @@ public class CombatSystem extends EntitySystem {
         float worldX = EntityFactory.gridToIsoX(gx, gy);
         float worldY = EntityFactory.gridToIsoY(gx, gy);
         entityFactory.createFloatingText(label, worldX, worldY, type);
+    }
+
+    private boolean isSuperUnit(UnitType type) {
+        return type == UnitType.JUGGERNAUT || type == UnitType.B2 || type == UnitType.SUBMARINE;
+    }
+
+    private int[] findNearestFreeTile(int cx, int cy) {
+        ImmutableArray<Entity> entities = engine.getEntitiesFor(
+                Family.all(GridPositionComponent.class).get());
+        for (int radius = 1; radius <= 10; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dy = -radius; dy <= radius; dy++) {
+                    if (Math.abs(dx) != radius && Math.abs(dy) != radius) continue; // perimeter only
+                    int tx = cx + dx, ty = cy + dy;
+                    if (tx < 0 || ty < 0) continue;
+                    boolean occupied = false;
+                    for (Entity e : entities) {
+                        GridPositionComponent p = e.getComponent(GridPositionComponent.class);
+                        if (p.x == tx && p.y == ty && p.zIndex == 3) {
+                            occupied = true;
+                            break;
+                        }
+                    }
+                    if (!occupied) return new int[]{tx, ty};
+                }
+            }
+        }
+        return null;
     }
 
     private void triggerAttackAnimation(Entity attacker, Entity defender) {

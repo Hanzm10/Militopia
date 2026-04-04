@@ -25,13 +25,18 @@ public class AnimationSystem extends IteratingSystem {
 
         anim.stateTime += deltaTime;
 
-        if (anim.stateTime >= anim.duration) {
-            pos.visualOffsetX = 0;
-            pos.visualOffsetY = 0;
+        // Early damage trigger (e.g. Juggernaut jump fires damage before animation ends)
+        if (anim.damageTime > 0 && !anim.damageFired && anim.stateTime >= anim.damageTime) {
+            anim.damageFired = true;
             if (anim.type == AnimationComponent.Type.JUMP) {
                 JumpLandingComponent jlc = entity.getComponent(JumpLandingComponent.class);
                 if (jlc != null) jlc.landed = true;
             }
+        }
+
+        if (anim.stateTime >= anim.duration) {
+            pos.visualOffsetX = 0;
+            pos.visualOffsetY = 0;
             anim.type = AnimationComponent.Type.NONE;
             return;
         }

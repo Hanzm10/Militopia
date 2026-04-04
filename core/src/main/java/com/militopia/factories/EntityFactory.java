@@ -17,6 +17,10 @@ public class EntityFactory {
     private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> tankAttackAnim;
     private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> nuclearAttackAnim;
     private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> gunNozzleFlashAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> recruitRunAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> rangerRunAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> sniperRunAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> juggernautJumpAnim;
 
     public EntityFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
@@ -28,21 +32,69 @@ public class EntityFactory {
         explosionAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.1f, placeholder);
         hitAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.05f, enemyMarkerRegion);
 
-        // --- New Attack Animations ---
-        recruitAttackAnim = createAnim(assets, AssetManager.ATTACK_RECRUIT_FRAMES, 0.08f);
-        tankAttackAnim = createAnim(assets, AssetManager.ATTACK_TANK_FRAMES, 0.06f);
-        nuclearAttackAnim = createAnim(assets, AssetManager.ATTACK_NUCLEAR_FRAMES, 0.07f);
-        gunNozzleFlashAnim = createAnim(assets, AssetManager.GUN_NOZZLE_FLASH_FRAMES, 0.05f);
+        // --- Animations (from packed atlases) ---
+        com.badlogic.gdx.graphics.g2d.TextureAtlas recruitAttackAtlas = assets.getAtlas(AssetManager.RECRUIT_ATTACK_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> recruitAttackFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 1; i <= 7; i++)
+            recruitAttackFrames.add(recruitAttackAtlas.findRegion("warrior_skill4_frame" + i));
+        recruitAttackAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.08f, recruitAttackFrames);
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas tankAttackAtlas = assets.getAtlas(AssetManager.TANK_ATTACK_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> tankAttackFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 0; i <= 13; i++)
+            tankAttackFrames.add(tankAttackAtlas.findRegion(String.format("frame%04d", i)));
+        tankAttackAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.06f, tankAttackFrames);
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas nuclearAttackAtlas = assets.getAtlas(AssetManager.NUCLEAR_ATTACK_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> nuclearAttackFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 0; i <= 12; i++)
+            nuclearAttackFrames.add(nuclearAttackAtlas.findRegion(String.format("frame%04d", i)));
+        nuclearAttackAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.07f, nuclearAttackFrames);
+
+        gunNozzleFlashAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.05f,
+                assets.getAtlas(AssetManager.GUN_NOZZLE_ATLAS).findRegions("frame"));
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas runAtlas = assets.getAtlas(AssetManager.RECRUIT_RUN_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> runFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 0; i <= 11; i++)
+            runFrames.add(runAtlas.findRegion(String.format("recruit_run%08d", 86400 + i)));
+        recruitRunAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.033f, runFrames);
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas rangerRunAtlas = assets.getAtlas(AssetManager.RANGER_RUN_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> rangerRunFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 0; i <= 11; i++)
+            rangerRunFrames.add(rangerRunAtlas.findRegion(String.format("ranger_run%08d", 86445 + i)));
+        rangerRunAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.033f, rangerRunFrames);
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas sniperRunAtlas = assets.getAtlas(AssetManager.SNIPER_RUN_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> sniperRunFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 0; i <= 11; i++)
+            sniperRunFrames.add(sniperRunAtlas.findRegion(String.format("sniper_run%08d", 86446 + i)));
+        sniperRunAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.033f, sniperRunFrames);
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas juggernautJumpAtlas = assets.getAtlas(AssetManager.JUGGERNAUT_JUMP_ATLAS);
+        com.badlogic.gdx.utils.Array<TextureRegion> juggernautJumpFrames = new com.badlogic.gdx.utils.Array<>();
+        for (int i = 0; i <= 20; i++)
+            juggernautJumpFrames.add(juggernautJumpAtlas.findRegion(String.format("juggernaut_jump%08d", 86484 + i)));
+        juggernautJumpAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.033f, juggernautJumpFrames);
     }
 
-    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> createAnim(AssetManager assets, String[] paths,
-            float frameDuration) {
-        com.badlogic.gdx.utils.Array<TextureRegion> frames = new com.badlogic.gdx.utils.Array<>();
-        for (String path : paths) {
-            frames.add(new TextureRegion(assets.get(path)));
-        }
-        return new com.badlogic.gdx.graphics.g2d.Animation<>(frameDuration, frames);
+    public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getRecruitRunAnim() {
+        return recruitRunAnim;
     }
+
+    public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getRangerRunAnim() {
+        return rangerRunAnim;
+    }
+
+    public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getSniperRunAnim() {
+        return sniperRunAnim;
+    }
+
+    public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getJuggernautJumpAnim() {
+        return juggernautJumpAnim;
+    }
+
 
     /** Blue movement-range marker. */
     public void createMovementMarker(int x, int y) {
