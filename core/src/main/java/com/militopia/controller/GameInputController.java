@@ -730,12 +730,9 @@ public class GameInputController extends InputAdapter {
         if (screen.getGameState().isLanGame) {
             GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
             if (pos != null) {
-                // Targeted abilities wait for executeTargetingAbility to sync
-                if (!abilityKey.equals("LAUNCH_NUKE")) {
-                    screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ABILITY,
-                            pos.x + "," + pos.y + "," + abilityKey));
-                    screen.syncEconomy(stats.owner);
-                }
+                screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ABILITY,
+                        pos.x + "," + pos.y + "," + abilityKey));
+                screen.syncEconomy(stats.owner);
             }
         }
 
@@ -768,23 +765,6 @@ public class GameInputController extends InputAdapter {
     }
 
     private void executeTargetingAbility(int tx, int ty) {
-        if (targetingAbilityKey.equals("LAUNCH_NUKE")) {
-            StatsComponent tStats = targetingUnit != null ? targetingUnit.getComponent(StatsComponent.class) : null;
-            GridPositionComponent tPos = targetingUnit != null ? targetingUnit.getComponent(GridPositionComponent.class)
-                    : null;
-
-            if (screen.getGameState().isLanGame && tPos != null) {
-                screen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ABILITY,
-                        tPos.x + "," + tPos.y + "," + targetingAbilityKey + "," + tx + "," + ty));
-                screen.syncEconomy(tStats.owner);
-            }
-
-            String name = tStats != null ? tStats.name : "?";
-            int owner = tStats != null ? tStats.owner : 0;
-            GameLogger.log(GameLogger.ABILITY, owner,
-                    "NUKE launched by " + name + " → target " + GameLogger.pos(tx, ty));
-            combatSystem.launchNuke(targetingUnit, tx, ty);
-        }
         isTargetingAbility = false;
         targetingAbilityKey = null;
         targetingUnit = null;
