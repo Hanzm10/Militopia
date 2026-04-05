@@ -95,7 +95,8 @@ public class HudTopBar {
             }
         }
         if (fundingTitleLabel != null) {
-            String newIncomeText = "Funding (+" + income + ")";
+            String prefix = (income >= 0) ? "+" : "-";
+            String newIncomeText = "Funding (" + prefix + Math.abs(income) + ")";
             if (!fundingTitleLabel.getText().toString().equals(newIncomeText)) {
                 fundingTitleLabel.setText(newIncomeText);
                 fundingTitleLabel.clearActions();

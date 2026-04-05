@@ -481,13 +481,13 @@ public class UnitRenderSystem extends EntitySystem {
         if (tex != null && !isMarker && !isAttackMarker && pos.x == selectedX && pos.y == selectedY
                 && activeRunAnim == null && !isJumping) {
             Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
-            batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
+            batch.setBlendFunction(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE);
             batch.setColor(0.4f, 0.4f, 0.4f, 1f);
             batch.draw(tex.region,
                     isoX - xOffset + cfg.offsetX,
                     isoY - yOffset + verticalOff + animY,
                     drawW, drawH);
-            batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+            batch.setBlendFunction(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
             batch.setColor(Color.WHITE);
         }
 

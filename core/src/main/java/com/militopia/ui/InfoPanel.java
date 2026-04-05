@@ -35,6 +35,7 @@ import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
+import com.militopia.net.NetworkMessage;
 
 import java.util.Set;
 
@@ -67,19 +68,19 @@ public class InfoPanel {
     private static final java.util.Map<StructureType, String> STRUCTURE_DESC;
     static {
         ABILITY_DESC = new java.util.EnumMap<UnitType, String>(UnitType.class);
-        ABILITY_DESC.put(UnitType.RECRUIT,      "Dig In: +3 Def for 1 turn");
-        ABILITY_DESC.put(UnitType.RANGER,       "Overwatch: Auto-attacks enemy entering range");
-        ABILITY_DESC.put(UnitType.SNIPER,       "Camouflage: Invisible in Forest/Ruins");
-        ABILITY_DESC.put(UnitType.TANK,         "Blitz: Move again on lethal kill");
-        ABILITY_DESC.put(UnitType.JUGGERNAUT,   "Jump Strike: Leaps to target tile; AoE damage on landing");
-        ABILITY_DESC.put(UnitType.RECON_DRONE,  "High Altitude: Immune to melee land attacks");
-        ABILITY_DESC.put(UnitType.SUICIDE_DRONE,"Kamikaze: Dies after attacking");
-        ABILITY_DESC.put(UnitType.APACHE,       "Fuel Gauge: Crashes after 5 turns unfueled");
-        ABILITY_DESC.put(UnitType.B2,           "Stealth Cloak: Invisible until it attacks");
-        ABILITY_DESC.put(UnitType.GUNBOAT,      "Skirmish: Move 1 tile after attacking");
-        ABILITY_DESC.put(UnitType.DESTROYER,    "Shore Bombardment: +5 dmg vs Land units");
-        ABILITY_DESC.put(UnitType.CARRIER,      "Mobile Airfield: Heals+refuels adjacent air");
-        ABILITY_DESC.put(UnitType.SUBMARINE,    "Deep Dive: Cloaked; Nuke on 3-turn cooldown");
+        ABILITY_DESC.put(UnitType.RECRUIT, "Dig In: +3 Def for 1 turn");
+        ABILITY_DESC.put(UnitType.RANGER, "Overwatch: Auto-attacks enemy entering range");
+        ABILITY_DESC.put(UnitType.SNIPER, "Camouflage: Invisible in Forest/Ruins");
+        ABILITY_DESC.put(UnitType.TANK, "Blitz: Move again on lethal kill");
+        ABILITY_DESC.put(UnitType.JUGGERNAUT, "Jump Strike: Leaps to target tile; AoE damage on landing");
+        ABILITY_DESC.put(UnitType.RECON_DRONE, "High Altitude: Immune to melee land attacks");
+        ABILITY_DESC.put(UnitType.SUICIDE_DRONE, "Kamikaze: Dies after attacking");
+        ABILITY_DESC.put(UnitType.APACHE, "Fuel Gauge: Crashes after 5 turns unfueled");
+        ABILITY_DESC.put(UnitType.B2, "Stealth Cloak: Invisible until it attacks");
+        ABILITY_DESC.put(UnitType.GUNBOAT, "Skirmish: Move 1 tile after attacking");
+        ABILITY_DESC.put(UnitType.DESTROYER, "Shore Bombardment: +5 dmg vs Land units");
+        ABILITY_DESC.put(UnitType.CARRIER, "Mobile Airfield: Heals+refuels adjacent air");
+        ABILITY_DESC.put(UnitType.SUBMARINE, "Deep Dive: Cloaked; Nuke on 3-turn cooldown");
 
         STRUCTURE_DESC = new java.util.EnumMap<StructureType, String>(StructureType.class);
         STRUCTURE_DESC.put(StructureType.HOSPITAL, "Field Hospital: Heals adjacent units +3 HP at turn start");
@@ -221,33 +222,45 @@ public class InfoPanel {
             }
         }
 
-        // Demolish button: only for the current player's built (non-base, non-town) structures
+        // Demolish button: only for the current player's built (non-base, non-town)
+        // structures
         if (stats != null && stats.xpGain > 0 && stats.owner == screen.getCurrentPlayer()) {
-            final com.militopia.components.GridPositionComponent pos = base.getComponent(com.militopia.components.GridPositionComponent.class);
+            final com.militopia.components.GridPositionComponent pos = base
+                    .getComponent(com.militopia.components.GridPositionComponent.class);
             final int demolishRefund = factory.getStructureCost(stats.unitTypeKey) / 2;
-            addAbilityButton("Demolish (+" + demolishRefund + ")", factory.getTextureForPopup(stats.unitTypeKey), new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    GameState state = screen.getGameState();
-                    int player = stats.owner;
-                    if (player == 1) state.p1Funding += demolishRefund;
-                    else state.p2Funding += demolishRefund;
-                    AudioManager.getInstance().playSFX(SFXKeys.ACTION_DEMOLISH);
-                    screen.getEngine().removeEntity(base);
-                    int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                    screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
-                    GameLogger.log(GameLogger.UI, "InfoPanel: Demolish | " + stats.name
-                            + (pos != null ? " at (" + pos.x + "," + pos.y + ")" : "")
-                            + " | refund=" + demolishRefund);
+            addAbilityButton("Demolish (+" + demolishRefund + ")", factory.getTextureForPopup(stats.unitTypeKey),
+                    new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            GameState state = screen.getGameState();
+                            int player = stats.owner;
+                            if (player == 1)
+                                state.p1Funding += demolishRefund;
+                            else
+                                state.p2Funding += demolishRefund;
+                            if (screen.getGameState().isLanGame && pos != null) {
+                                screen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_DEMOLISH,
+                                                pos.x + "," + pos.y + "," + player));
+                            }
+                            AudioManager.getInstance().playSFX(SFXKeys.ACTION_DEMOLISH);
+                            screen.getEngine().removeEntity(base);
+                            int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
+                            screen.gameHUD.updateFunding(player, newFunds, screen.calculateIncome(player));
+                            GameLogger.log(GameLogger.UI, "InfoPanel: Demolish | " + stats.name
+                                    + (pos != null ? " at (" + pos.x + "," + pos.y + ")" : "")
+                                    + " | refund=" + demolishRefund);
 
-                    // Tutorial Hook: Demolish Structure
-                    if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.DEMOLISH_STRUCT) {
-                        com.militopia.managers.TutorialManager.getInstance().nextStep();
-                    }
+                            // Tutorial Hook: Demolish Structure
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.DEMOLISH_STRUCT) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
 
-                    hideTileInfo();
-                }
-            });
+                            hideTileInfo();
+                        }
+                    });
         }
 
         GameLogger.log(GameLogger.UI, "InfoPanel: Show Structure Info | " + name
@@ -322,7 +335,7 @@ public class InfoPanel {
                             GameLogger.log(GameLogger.SUMMON, bs.owner,
                                     "Summoned " + unit.name() + " at " + GameLogger.pos(spawn[0], spawn[1])
                                             + " | cost=" + cost + " | funds remaining=" + remaining);
-                            screen.gameHUD.updateFunding(remaining, bs.income);
+                            screen.gameHUD.updateFunding(bs.owner, remaining, bs.income);
                             hideTileInfo();
                             controller.resetLastClicked();
                         }
@@ -350,17 +363,22 @@ public class InfoPanel {
                                     }
                                     int tx = controller.getLastClickedX();
                                     int ty = controller.getLastClickedY();
-                                    if (tx == -1 || ty == -1) return;
+                                    if (tx == -1 || ty == -1)
+                                        return;
 
                                     int[] spawn = factory.findValidSpawnPoint(tx, ty, moveType, screen.getGameMap());
-                                    if (spawn == null) return;
+                                    if (spawn == null)
+                                        return;
 
-                                    if (bs.owner == 1) state.p1Funding -= cost;
-                                    else state.p2Funding -= cost;
+                                    if (bs.owner == 1)
+                                        state.p1Funding -= cost;
+                                    else
+                                        state.p2Funding -= cost;
 
                                     factory.createUnit(superUnit, spawn[0], spawn[1], bs.owner, true);
                                     AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
-                                    screen.gameHUD.updateFunding((bs.owner == 1) ? state.p1Funding : state.p2Funding, bs.income);
+                                    screen.gameHUD.updateFunding(bs.owner,
+                                            (bs.owner == 1) ? state.p1Funding : state.p2Funding, bs.income);
                                     hideTileInfo();
                                     controller.resetLastClicked();
                                 }
@@ -472,6 +490,13 @@ public class InfoPanel {
                     new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
+                            final int playerID = stats.owner;
+                            if (screen.getGameState().isLanGame) {
+                                screen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SCAVENGE,
+                                                unitPos.x + "," + unitPos.y + "," + playerID));
+                                screen.syncEconomy(playerID);
+                            }
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
                             screen.getGameMap().objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
                             // Remove the tree entity from the engine so it disappears visually
@@ -488,22 +513,26 @@ public class InfoPanel {
                                 }
                             }
                             GameState state = screen.getGameState();
-                            int player = stats.owner;
-                            if (player == 1) state.p1Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
-                            else state.p2Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
+                            if (playerID == 1)
+                                state.p1Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
+                            else
+                                state.p2Funding += com.militopia.config.CombatConstants.TREE_CUT_FUNDING;
                             stats.hasActed = true;
                             stats.hasMoved = true;
-                            int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                            screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                            int newFunds = (playerID == 1) ? state.p1Funding : state.p2Funding;
+                            screen.gameHUD.updateFunding(playerID, newFunds, screen.calculateIncome(playerID));
                             GameLogger.log(GameLogger.UI, "InfoPanel: Cut Tree at ("
                                     + unitPos.x + "," + unitPos.y + ") | +"
                                     + com.militopia.config.CombatConstants.TREE_CUT_FUNDING + " funding");
 
+                            controller.deselect();
+
                             // Tutorial Hook: Cut Tree
-                            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CUT_TREE) {
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.CUT_TREE) {
                                 com.militopia.managers.TutorialManager.getInstance().nextStep();
                             }
-
                             hideTileInfo();
                         }
                     });
@@ -518,6 +547,13 @@ public class InfoPanel {
                     new ClickListener() {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
+                            final int playerID = stats.owner;
+                            if (screen.getGameState().isLanGame) {
+                                screen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SCAVENGE,
+                                                unitPos.x + "," + unitPos.y + "," + playerID));
+                                screen.syncEconomy(playerID);
+                            }
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_CUT_TREE);
                             screen.getGameMap().objects[unitPos.x][unitPos.y] = MapGenerator.ObjectType.NONE;
                             // Remove the cactus entity from the engine so it disappears visually
@@ -534,16 +570,18 @@ public class InfoPanel {
                                 }
                             }
                             GameState state = screen.getGameState();
-                            int player = stats.owner;
-                            if (player == 1) state.p1Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
-                            else state.p2Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
+                            if (playerID == 1)
+                                state.p1Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
+                            else
+                                state.p2Funding += com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING;
                             stats.hasActed = true;
                             stats.hasMoved = true;
-                            int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                            screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                            int newFunds = (playerID == 1) ? state.p1Funding : state.p2Funding;
+                            screen.gameHUD.updateFunding(playerID, newFunds, screen.calculateIncome(playerID));
                             GameLogger.log(GameLogger.UI, "InfoPanel: Cut Cactus at ("
                                     + unitPos.x + "," + unitPos.y + ") | +"
                                     + com.militopia.config.CombatConstants.CACTUS_CUT_FUNDING + " funding");
+                            controller.deselect();
                             hideTileInfo();
                         }
                     });
@@ -560,16 +598,29 @@ public class InfoPanel {
                             public void clicked(InputEvent event, float x, float y) {
                                 GameState state = screen.getGameState();
                                 int player = stats.owner;
-                                if (player == 1) state.p1Funding += disbandRefund;
-                                else state.p2Funding += disbandRefund;
+                                if (player == 1)
+                                    state.p1Funding += disbandRefund;
+                                else
+                                    state.p2Funding += disbandRefund;
+                                if (screen.getGameState().isLanGame) {
+                                    GridPositionComponent p = unit.getComponent(GridPositionComponent.class);
+                                    if (p != null) {
+                                        screen.getNetworkManager()
+                                                .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_DISBAND,
+                                                        p.x + "," + p.y + "," + player));
+                                        screen.syncEconomy(player);
+                                    }
+                                }
                                 screen.getEngine().removeEntity(unit);
                                 int newFunds = (player == 1) ? state.p1Funding : state.p2Funding;
-                                screen.gameHUD.updateFunding(newFunds, screen.calculateIncome(player));
+                                screen.gameHUD.updateFunding(player, newFunds, screen.calculateIncome(player));
                                 GameLogger.log(GameLogger.UI, "InfoPanel: Disband " + stats.name
                                         + " | refund=" + disbandRefund);
 
                                 // Tutorial Hook: Disband Unit
-                                if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.DISBAND_UNIT) {
+                                if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                        && com.militopia.managers.TutorialManager.getInstance()
+                                                .getCurrentStep() == com.militopia.managers.TutorialManager.Step.DISBAND_UNIT) {
                                     com.militopia.managers.TutorialManager.getInstance().nextStep();
                                 }
 

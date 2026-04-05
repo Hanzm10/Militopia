@@ -66,18 +66,18 @@ public class LevelUpPopup {
      * adding to stage so the input block is effective on the very first frame.
      */
     public void show(int owner, String baseName, int newLevel, int bonusFunds,
-            String[] units, String[] structs, UnitFactory factory) {
+            String[] units, String[] structs, UnitFactory factory, boolean isLocal) {
         if (isVisible()) {
             // Another popup is on screen — queue this one for after dismiss.
-            pendingPopups.add(() -> showImmediate(owner, baseName, newLevel, bonusFunds, units, structs, factory));
+            pendingPopups.add(() -> showImmediate(owner, baseName, newLevel, bonusFunds, units, structs, factory, isLocal));
             return;
         }
-        showImmediate(owner, baseName, newLevel, bonusFunds, units, structs, factory);
+        showImmediate(owner, baseName, newLevel, bonusFunds, units, structs, factory, isLocal);
     }
 
     private void showImmediate(int owner, String baseName, int newLevel, int bonusFunds,
-            String[] units, String[] structs, UnitFactory factory) {
-        buildPopup(owner, baseName, newLevel, bonusFunds, units, structs, factory);
+            String[] units, String[] structs, UnitFactory factory, boolean isLocal) {
+        buildPopup(owner, baseName, newLevel, bonusFunds, units, structs, factory, isLocal);
 
         // Set explicit pixel bounds immediately — do NOT rely solely on
         // setFillParent which only resolves after layout.
@@ -98,7 +98,7 @@ public class LevelUpPopup {
     // -------------------------------------------------------------------------
 
     private void buildPopup(int owner, String baseName, int newLevel, int bonusFunds,
-            String[] units, String[] structs, UnitFactory factory) {
+            String[] units, String[] structs, UnitFactory factory, boolean isLocal) {
         popupTable = new Table();
         popupTable.setFillParent(true);
         popupTable.setBackground(game.skin.newDrawable("white", new Color(0, 0, 0, 0.85f)));
@@ -138,7 +138,8 @@ public class LevelUpPopup {
         // --- Modal content ---
         Table modal = new Table();
 
-        Label title = new Label(baseName + " Leveled Up!", game.skin, "default-font", Color.YELLOW);
+        Color titleColor = isLocal ? Color.YELLOW : Color.RED;
+        Label title = new Label(baseName + " Leveled Up!", game.skin, "default-font", titleColor);
         title.setFontScale(1.2f);
         modal.add(title).pad(20).row();
 

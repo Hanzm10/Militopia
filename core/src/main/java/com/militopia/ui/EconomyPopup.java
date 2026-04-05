@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class EconomyPopup {
     private final Stage stage;
@@ -47,7 +48,8 @@ public class EconomyPopup {
         modal.add(title).padBottom(20).row();
 
         // Income section
-        Label incomeLbl = new Label("Income Generated: +$" + income, game.skin, "default-font", Color.GREEN);
+        String incomePrefix = (income >= 0) ? "+$" : "-$";
+        Label incomeLbl = new Label("Income Generated: " + incomePrefix + Math.abs(income), game.skin, "default-font", Color.GREEN);
         incomeLbl.setFontScale(1.1f);
         modal.add(incomeLbl).left().row();
 
@@ -57,7 +59,8 @@ public class EconomyPopup {
                 Label nameLbl = new Label(entry.getKey(), game.skin, "default-font", Color.LIGHT_GRAY);
                 nameLbl.setFontScale(0.75f);
                 nameLbl.setAlignment(Align.left);
-                Label amtLbl = new Label("+$" + entry.getValue(), game.skin, "default-font", Color.LIGHT_GRAY);
+                String entryIdxPrefix = (entry.getValue() >= 0) ? "+$" : "-$";
+                Label amtLbl = new Label(entryIdxPrefix + Math.abs(entry.getValue()), game.skin, "default-font", Color.LIGHT_GRAY);
                 amtLbl.setFontScale(0.75f);
                 amtLbl.setAlignment(Align.right);
                 incomeTable.add(nameLbl).width(140).left().padBottom(2);
@@ -69,7 +72,8 @@ public class EconomyPopup {
         }
 
         // XP section
-        Label xpLbl = new Label("XP Gained: +" + xpGain, game.skin, "default-font", Color.CYAN);
+        String xpPrefix = (xpGain >= 0) ? "+" : "-";
+        Label xpLbl = new Label("XP Gained: " + xpPrefix + Math.abs(xpGain), game.skin, "default-font", Color.CYAN);
         xpLbl.setFontScale(1.1f);
         modal.add(xpLbl).left().row();
 
@@ -79,7 +83,8 @@ public class EconomyPopup {
                 Label nameLbl = new Label(entry.getKey(), game.skin, "default-font", Color.LIGHT_GRAY);
                 nameLbl.setFontScale(0.75f);
                 nameLbl.setAlignment(Align.left);
-                Label amtLbl = new Label("+" + entry.getValue(), game.skin, "default-font", Color.LIGHT_GRAY);
+                String xpEntryIdxPrefix = (entry.getValue() >= 0) ? "+" : "-";
+                Label amtLbl = new Label(xpEntryIdxPrefix + Math.abs(entry.getValue()), game.skin, "default-font", Color.LIGHT_GRAY);
                 amtLbl.setFontScale(0.75f);
                 amtLbl.setAlignment(Align.right);
                 xpTable.add(nameLbl).width(140).left().padBottom(2);

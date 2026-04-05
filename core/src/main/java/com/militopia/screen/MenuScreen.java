@@ -115,19 +115,19 @@ public class MenuScreen implements Screen {
         Image logoImage = new Image(new TextureRegionDrawable(new TextureRegion(logoTex)));
         logoImage.setScaling(Scaling.fit);
 
-        table.add(logoImage).width(800).height(300).padBottom(30);
+        table.add(logoImage).width(600).height(200).padBottom(15);
         table.row();
-        table.add(newGameBtn).fillX().width(400).pad(10);
+        table.add(newGameBtn).fillX().width(400).pad(4);
         table.row();
-        table.add(tutorialBtn).fillX().width(400).pad(10);
+        table.add(lanBtn).fillX().width(400).pad(4);
         table.row();
-        table.add(lanBtn).fillX().width(400).pad(10);
+        table.add(tutorialBtn).fillX().width(400).pad(4);
         table.row();
-        table.add(resumeBtn).fillX().width(400).pad(10);
+        table.add(resumeBtn).fillX().width(400).pad(4);
         table.row();
-        table.add(soundBtn).fillX().width(400).pad(10);
+        table.add(soundBtn).fillX().width(400).pad(4);
         table.row();
-        table.add(exitBtn).fillX().width(400).pad(10);
+        table.add(exitBtn).fillX().width(400).pad(4);
     }
 
     @Override

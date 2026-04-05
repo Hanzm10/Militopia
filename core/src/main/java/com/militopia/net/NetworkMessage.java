@@ -11,6 +11,19 @@ public class NetworkMessage {
     public static final String TYPE_DISCONNECT = "DISCONNECT";
     public static final String TYPE_PLAYER_NAME = "PLAYER_NAME";
 
+    // --- REAL-TIME ACTIONS ---
+    public static final String TYPE_ACTION_MOVE = "MOVE";
+    public static final String TYPE_ACTION_ATTACK = "ATTACK";
+    public static final String TYPE_ACTION_SUMMON = "SUMMON";
+    public static final String TYPE_ACTION_BUILD = "BUILD";
+    public static final String TYPE_ACTION_SCAVENGE = "SCAVENGE";
+    public static final String TYPE_ACTION_CAPTURE = "CAPTURE";
+    public static final String TYPE_ACTION_ABILITY = "ABILITY";
+    public static final String TYPE_ACTION_DEMOLISH = "DEMOLISH";
+    public static final String TYPE_ACTION_DISBAND = "DISBAND";
+    public static final String TYPE_SYNC_ECONOMY = "SYNC_ECONOMY";
+    public static final String TYPE_SYNC_BASE = "SYNC_BASE";
+
     public String type;
     public String payload;
 
@@ -37,5 +50,9 @@ public class NetworkMessage {
 
     public static NetworkMessage playerName(String name) {
         return new NetworkMessage(TYPE_PLAYER_NAME, name);
+    }
+
+    public static NetworkMessage action(String type, String payload) {
+        return new NetworkMessage(type, payload);
     }
 }

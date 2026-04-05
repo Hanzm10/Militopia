@@ -21,6 +21,7 @@ import com.militopia.factories.UnitFactory;
 import com.militopia.managers.AssetManager;
 import com.militopia.managers.AudioManager;
 import com.militopia.managers.SFXKeys;
+import com.militopia.net.NetworkMessage;
 import com.militopia.map.MapGenerator;
 import com.militopia.screen.GameScreen;
 import com.militopia.systems.ScavengeSystem;
@@ -110,6 +111,15 @@ public class SlideMenu {
                 new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
+                        if (gameScreen.getGameState().isLanGame) {
+                            GridPositionComponent hPos = hunterUnit.getComponent(GridPositionComponent.class);
+                            GridPositionComponent aPos = animalEntity.getComponent(GridPositionComponent.class);
+                            if (hPos != null && aPos != null) {
+                                gameScreen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_ATTACK,
+                                                hPos.x + "," + hPos.y + "," + aPos.x + "," + aPos.y));
+                            }
+                        }
                         controller.performHunt(animalEntity, hunterUnit);
                     }
                 });
@@ -147,6 +157,15 @@ public class SlideMenu {
                 new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
+                        if (gameScreen.getGameState().isLanGame) {
+                            GridPositionComponent sPos = structureEntity.getComponent(GridPositionComponent.class);
+                            if (sPos != null) {
+                                gameScreen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_CAPTURE,
+                                                sPos.x + "," + sPos.y + "," + newOwner));
+                                gameScreen.syncEconomy(newOwner);
+                            }
+                        }
                         factory.captureStructure(structureEntity, newOwner, map, state);
                         AudioManager.getInstance().playSFX(SFXKeys.STRUCTURE_CAPTURE);
                         // Logging
@@ -165,11 +184,14 @@ public class SlideMenu {
                         int newXP = (newOwner == 1) ? state.p1XP : state.p2XP;
                         int curFunds = (newOwner == 1) ? state.p1Funding : state.p2Funding;
                         int newIncome = gameScreen.calculateIncome(newOwner);
-                        gameScreen.gameHUD.updateXP(newXP);
-                        gameScreen.gameHUD.updateFunding(curFunds, newIncome);
+
+                        gameScreen.gameHUD.updateXP(newOwner, newXP);
+                        gameScreen.gameHUD.updateFunding(newOwner, curFunds, newIncome);
 
                         // Tutorial Hook: Capture Town
-                        if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.CAPTURE_TOWN) {
+                        if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                && com.militopia.managers.TutorialManager.getInstance()
+                                        .getCurrentStep() == com.militopia.managers.TutorialManager.Step.CAPTURE_TOWN) {
                             com.militopia.managers.TutorialManager.getInstance().nextStep();
                         }
 
@@ -209,6 +231,15 @@ public class SlideMenu {
         int owner = unitStats.owner;
         GameState state = gameScreen.getGameState();
 
+        if (state.isLanGame) {
+            GridPositionComponent rPos = ruinsEntity.getComponent(GridPositionComponent.class);
+            if (rPos != null) {
+                gameScreen.getNetworkManager().send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SCAVENGE,
+                        rPos.x + "," + rPos.y + "," + owner));
+                gameScreen.syncEconomy(owner);
+            }
+        }
+
         ScavengeSystem.ScavengeReward reward = scavengeSystem.performScavenge(ruinsEntity, unit);
         if (reward == null)
             return;
@@ -216,11 +247,12 @@ public class SlideMenu {
 
         // Update HUD (ScavengeSystem already updated the GameState numbers, but UI
         // needs snap)
-        gameScreen.gameHUD.updateXP((owner == 1) ? state.p1XP : state.p2XP);
-        gameScreen.gameHUD.updateFunding((owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
+        gameScreen.gameHUD.updateXP(owner, (owner == 1) ? state.p1XP : state.p2XP);
+        gameScreen.gameHUD.updateFunding(owner, (owner == 1) ? state.p1Funding : state.p2Funding, currentIncome);
 
         // Tutorial Hook: Scavenge Ruins
-        if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SCAVENGE_RUINS) {
+        if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager
+                .getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SCAVENGE_RUINS) {
             com.militopia.managers.TutorialManager.getInstance().nextStep();
         }
 
@@ -327,6 +359,13 @@ public class SlideMenu {
                             else
                                 state.p2Funding -= cost;
 
+                            if (state.isLanGame) {
+                                gameScreen.getNetworkManager().send(NetworkMessage.action(
+                                        NetworkMessage.TYPE_ACTION_SUMMON,
+                                        unit.name() + "," + spawn[0] + "," + spawn[1] + "," + currentBaseOwner));
+                                gameScreen.syncEconomy(currentBaseOwner);
+                            }
+
                             unitFactory.createUnit(unit, spawn[0], spawn[1], currentBaseOwner, true);
                             AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
@@ -336,10 +375,12 @@ public class SlideMenu {
 
                             // Use fresh income calculation for HUD update
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
 
                             // Tutorial Hook: Summon Unit
-                            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.SUMMON_UNIT) {
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.SUMMON_UNIT) {
                                 com.militopia.managers.TutorialManager.getInstance().nextStep();
                             }
 
@@ -358,17 +399,20 @@ public class SlideMenu {
         for (Entity base : allBases) {
             StatsComponent bs = base.getComponent(StatsComponent.class);
             if (bs.owner == currentBaseOwner && bs.chosenSuperUnit != null && !bs.chosenSuperUnit.isEmpty()) {
-                if (superUnitsAdded.contains(bs.chosenSuperUnit)) continue;
+                if (superUnitsAdded.contains(bs.chosenSuperUnit))
+                    continue;
 
                 final UnitType superUnit = UnitType.fromKey(bs.chosenSuperUnit);
-                if (superUnit == null) continue;
+                if (superUnit == null)
+                    continue;
 
                 StatsComponent.MoveType moveType = unitFactory.getUnitMoveType(superUnit);
                 boolean show = producerType.equals("PORT")
                         ? moveType == StatsComponent.MoveType.SEA
                         : moveType == StatsComponent.MoveType.LAND || moveType == StatsComponent.MoveType.AIR;
 
-                if (!show) continue;
+                if (!show)
+                    continue;
 
                 superUnitsAdded.add(bs.chosenSuperUnit);
                 UnitFactory.UiInfo info = unitFactory.getUnitUi(superUnit);
@@ -385,19 +429,32 @@ public class SlideMenu {
                                 }
                                 int tx = inputController.getLastClickedX();
                                 int ty = inputController.getLastClickedY();
-                                if (tx == -1 || ty == -1) return;
+                                if (tx == -1 || ty == -1)
+                                    return;
 
-                                int[] spawn = unitFactory.findValidSpawnPoint(tx, ty, moveType, gameScreen.getGameMap());
-                                if (spawn == null) return;
+                                int[] spawn = unitFactory.findValidSpawnPoint(tx, ty, moveType,
+                                        gameScreen.getGameMap());
+                                if (spawn == null)
+                                    return;
 
-                                if (currentBaseOwner == 1) state.p1Funding -= cost;
-                                else state.p2Funding -= cost;
+                                if (currentBaseOwner == 1)
+                                    state.p1Funding -= cost;
+                                else
+                                    state.p2Funding -= cost;
+
+                                if (state.isLanGame) {
+                                    gameScreen.getNetworkManager()
+                                            .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_SUMMON,
+                                                    superUnit.name() + "," + spawn[0] + "," + spawn[1] + ","
+                                                            + currentBaseOwner));
+                                    gameScreen.syncEconomy(currentBaseOwner);
+                                }
 
                                 unitFactory.createUnit(superUnit, spawn[0], spawn[1], currentBaseOwner, true);
                                 AudioManager.getInstance().playSFX(SFXKeys.UNIT_DEPLOY);
                                 int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                                 int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                                gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                             gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                                 hide();
                                 inputController.resetLastClicked();
                             }
@@ -481,16 +538,26 @@ public class SlideMenu {
                                 return;
                             }
 
+                            if (state.isLanGame) {
+                                gameScreen.getNetworkManager()
+                                        .send(NetworkMessage.action(NetworkMessage.TYPE_ACTION_BUILD,
+                                                struct + "," + buildX + "," + buildY + "," + currentBaseOwner));
+                                gameScreen.syncEconomy(currentBaseOwner);
+                            }
+
                             placementSystem.performBuild(struct, buildX, buildY, currentBaseOwner, cost, buildParentX,
                                     buildParentY);
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_BUILD);
 
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+
+                            gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
 
                             // Tutorial Hook: Build Structure
-                            if (com.militopia.managers.TutorialManager.getInstance().isActive() && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.BUILD_STRUCTURE) {
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.BUILD_STRUCTURE) {
                                 com.militopia.managers.TutorialManager.getInstance().nextStep();
                             }
 
@@ -514,16 +581,19 @@ public class SlideMenu {
                         @Override
                         public void clicked(InputEvent event, float x, float y) {
                             int funds = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
-                            if (funds < railCost) return;
-                            if (currentBaseOwner == 1) state.p1Funding -= railCost;
-                            else state.p2Funding -= railCost;
+                            if (funds < railCost)
+                                return;
+                            if (currentBaseOwner == 1)
+                                state.p1Funding -= railCost;
+                            else
+                                state.p2Funding -= railCost;
                             gameScreen.getGameMap().rails[buildX][buildY] = true;
                             AudioManager.getInstance().playSFX(SFXKeys.ACTION_BUILD);
                             GameLogger.log(GameLogger.BUILD, currentBaseOwner,
                                     "Built Railway at (" + buildX + "," + buildY + ")");
                             int remaining = (currentBaseOwner == 1) ? state.p1Funding : state.p2Funding;
                             int newIncome = gameScreen.calculateIncome(currentBaseOwner);
-                            gameScreen.gameHUD.updateFunding(remaining, newIncome);
+                            gameScreen.gameHUD.updateFunding(currentBaseOwner, remaining, newIncome);
                             hide();
                             inputController.resetLastClicked();
                         }
