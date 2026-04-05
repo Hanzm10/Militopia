@@ -100,9 +100,9 @@ public class CombatSystem extends EntitySystem {
         anim.jumpStartOffX = -dIsoX;
         anim.jumpStartOffY = -dIsoY;
         anim.arcHeight = CombatConstants.JUMP_ARC_HEIGHT;
+        anim.arcDuration = CombatConstants.JUMP_ARC_DURATION;
         anim.duration = CombatConstants.JUMP_DURATION;
-        anim.damageTime = CombatConstants.JUMP_DAMAGE_TIME;
-        anim.damageFired = false;
+        anim.landingFired = false;
         anim.stateTime = 0;
 
         // Attach landing payload

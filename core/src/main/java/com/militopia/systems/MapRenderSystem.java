@@ -215,7 +215,7 @@ public class MapRenderSystem extends EntitySystem {
         batch.setBlendFunction(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE);
         batch.setColor(0.4f, 0.4f, 0.4f, 1f);
         batch.draw(t, x, y, w, h);
-        batch.setBlendFunction(com.badlogic.gdx.graphics.GL20.GL_ONE, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+        batch.setBlendFunction(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
         batch.setColor(Color.WHITE);
     }
 

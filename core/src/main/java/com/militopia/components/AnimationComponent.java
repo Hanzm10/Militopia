@@ -26,8 +26,8 @@ public class AnimationComponent implements Component {
     // For JUMP animation
     public float jumpStartOffX, jumpStartOffY; // visual offset at start (negative of travel delta)
     public float arcHeight = 50f;              // peak height in world pixels
-    public float damageTime = -1f;             // time to fire landing damage (-1 = disabled, fires at duration)
-    public boolean damageFired = false;
+    public float arcDuration = -1f;            // duration of the in-air arc phase; landing fires when arc Y drops to threshold on descent
+    public boolean landingFired = false;
 
     // For frame-based animations (placeholder support)
     public boolean isFrameBased = false;
@@ -39,7 +39,7 @@ public class AnimationComponent implements Component {
         stateTime = 0;
         isFrameBased = false;
         animationKey = null;
-        damageTime = -1f;
-        damageFired = false;
+        arcDuration = -1f;
+        landingFired = false;
     }
 }

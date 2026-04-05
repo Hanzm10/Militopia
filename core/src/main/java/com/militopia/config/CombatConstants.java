@@ -16,8 +16,9 @@ public class CombatConstants {
     // Jump animation (Juggernaut)
     // -----------------------------------------------------------------------
     public static final float JUMP_ARC_HEIGHT = 25f;
-    public static final float JUMP_DURATION = 0.7f;
-    public static final float JUMP_DAMAGE_TIME = 12 * 0.033f; // fire damage at frame 12
+    public static final float JUMP_ARC_DURATION = 0.5f;  // how long the in-air arc lasts; post-landing frames fill the rest
+    public static final float JUMP_DURATION = 0.7f;      // full animation duration including post-landing frames
+    public static final float JUMP_LANDING_THRESHOLD = 2f; // arc Y (px) below which landing is triggered on descent
 
     // -----------------------------------------------------------------------
     // Attack animations
