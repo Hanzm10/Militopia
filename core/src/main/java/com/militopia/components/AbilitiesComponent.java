@@ -19,6 +19,7 @@ public class AbilitiesComponent implements Component {
     // --- Resources / Cooldowns ---
     public int fuel = -1; // Apache (-1 = N/A)
     public int nukeCooldown = 0; // Submarine
+    public float idleTimer = 0f; // Tank idle animation timer
 
     // --- Ability Specific Data ---
     public int fuelMax = 5;

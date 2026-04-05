@@ -115,6 +115,9 @@ public class AssetManager {
     public static final String RANGER_RUN_ATLAS      = "sprites/ranger-run.atlas";
     public static final String SNIPER_RUN_ATLAS      = "sprites/sniper-run.atlas";
     public static final String JUGGERNAUT_JUMP_ATLAS = "sprites/juggernaut-jump.atlas";
+    public static final String HELICOPTER_MOVE_ATLAS     = "sprites/helicoper-move.atlas";
+    public static final String TANK_IDLE_ATLAS           = "sprites/tank-idle.atlas";
+    public static final String JUGGERNAUT_BOOSTERS_ATLAS = "sprites/juggernaut-boosters.atlas";
 
     public static final String FUNDING_ICON  = "ui/funding_icon.png";
     public static final String FUNDING_ICON2 = "ui/funding_icon2.png";
@@ -231,7 +234,10 @@ public class AssetManager {
         manager.load(GUN_NOZZLE_ATLAS,     TextureAtlas.class);
         manager.load(RANGER_RUN_ATLAS,      TextureAtlas.class);
         manager.load(SNIPER_RUN_ATLAS,      TextureAtlas.class);
-        manager.load(JUGGERNAUT_JUMP_ATLAS, TextureAtlas.class);
+        manager.load(JUGGERNAUT_JUMP_ATLAS,      TextureAtlas.class);
+        manager.load(HELICOPTER_MOVE_ATLAS,     TextureAtlas.class);
+        manager.load(TANK_IDLE_ATLAS,           TextureAtlas.class);
+        manager.load(JUGGERNAUT_BOOSTERS_ATLAS, TextureAtlas.class);
 
         manager.load(FUNDING_ICON, Texture.class);
         manager.load(FUNDING_ICON2, Texture.class);

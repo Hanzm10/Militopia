@@ -41,7 +41,7 @@ public class SaveManager {
                 String savedTypeKey = (stats.unitType != null) ? stats.unitType.name() : stats.unitTypeKey;
                 AbilitiesComponent ab = e.getComponent(AbilitiesComponent.class);
 
-                state.units.add(new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
+                UnitData ud = new UnitData(pos.x, pos.y, stats.name, stats.owner, savedTypeKey,
                         stats.currentHP, stats.maxHP, stats.hasMoved, stats.hasActed,
                         ab != null && ab.isCloaked,
                         ab != null && ab.isCloakBroken,
@@ -50,7 +50,10 @@ public class SaveManager {
                         ab != null && ab.isOverwatchActive,
                         ab != null && ab.pendingSkirmishMove,
                         ab != null && ab.isUnreachable,
-                        ab != null ? ab.fuel : -1));
+                        ab != null ? ab.fuel : -1);
+                ud.nukeCooldown = ab != null ? ab.nukeCooldown : 0;
+                ud.idleTimer    = ab != null ? ab.idleTimer : 0f;
+                state.units.add(ud);
             } else if (type.type == TypeComponent.Type.OBJECT) {
 
                 // --- DETECT ANIMALS VIA COMPONENT TAG ---

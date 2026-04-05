@@ -196,6 +196,9 @@ public class GameScreen implements Screen {
         unitRenderSystem.setRangerRunAnim(entityFactory.getRangerRunAnim());
         unitRenderSystem.setSniperRunAnim(entityFactory.getSniperRunAnim());
         unitRenderSystem.setJuggernautJumpAnim(entityFactory.getJuggernautJumpAnim());
+        unitRenderSystem.setHelicopterMoveAnim(entityFactory.getHelicopterMoveAnim());
+        unitRenderSystem.setTankIdleAnim(entityFactory.getTankIdleAnim());
+        unitRenderSystem.setJuggernautBoostersAnim(entityFactory.getJuggernautBoostersAnim());
 
         engine.addSystem(unitRenderSystem);
         engine.addSystem(fogSystem);
@@ -252,6 +255,7 @@ public class GameScreen implements Screen {
                              ab.pendingSkirmishMove = u.pendingSkirmishMove;
                              ab.isUnreachable = u.isUnreachable;
                              if (u.fuel >= 0) ab.fuel = u.fuel;
+                             ab.idleTimer = u.idleTimer;
                          }
                      }
                 }
@@ -619,6 +623,7 @@ public class GameScreen implements Screen {
                         a.isUnreachable = us.isUnreachable;
                         a.fuel = us.fuel;
                         a.nukeCooldown = us.nukeCooldown;
+                        a.idleTimer = us.idleTimer;
                     }
                     break;
                 }

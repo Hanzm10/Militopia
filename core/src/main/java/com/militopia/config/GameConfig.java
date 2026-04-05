@@ -53,4 +53,10 @@ public class GameConfig {
     // Selection Indicator
     public static final float SELECTION_LINE_THICKNESS = 0.8f;
     public static final float SELECTION_ALPHA = 1f;
+
+    // Animation Offsets
+    public static final float TANK_IDLE_OFFSET_X           = 0f;
+    public static final float TANK_IDLE_OFFSET_Y           = 0f;
+    public static final float JUGGERNAUT_BOOSTERS_OFFSET_X = 0f;
+    public static final float JUGGERNAUT_BOOSTERS_OFFSET_Y = -4f;
 }

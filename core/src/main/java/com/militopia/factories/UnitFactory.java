@@ -257,6 +257,7 @@ public class UnitFactory {
                 AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
                 boolean isDiggingIn = false, hasUsedDigIn = false, isOverwatchActive = false, isCloaked = false, pendingSkirmishMove = false, isUnreachable = false;
                 int fuel = -1, nukeCooldown = 0;
+                float idleTimer = 0f;
                 if (a != null) {
                     isDiggingIn = a.isDiggingIn;
                     hasUsedDigIn = a.hasUsedDigIn;
@@ -266,13 +267,16 @@ public class UnitFactory {
                     isUnreachable = a.isUnreachable;
                     fuel = a.fuel;
                     nukeCooldown = a.nukeCooldown;
+                    idleTimer = a.idleTimer;
                 }
 
-                unitSnaps.add(new UnitSnapshot(
+                UnitSnapshot unitSnap = new UnitSnapshot(
                         s.unitTypeKey, p.x, p.y, s.owner,
                         s.currentHP, s.hasActed, s.hasMoved, s.moveType,
                         isDiggingIn, hasUsedDigIn, isOverwatchActive, isCloaked, a != null ? a.isCloakBroken : false,
-                        pendingSkirmishMove, isUnreachable, fuel, nukeCooldown));
+                        pendingSkirmishMove, isUnreachable, fuel, nukeCooldown);
+                unitSnap.idleTimer = idleTimer;
+                unitSnaps.add(unitSnap);
 
             } else if (type.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
                 // Capture ALL non-animal static objects/structures so they can be restored
