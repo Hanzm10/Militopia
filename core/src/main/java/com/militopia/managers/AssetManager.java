@@ -99,6 +99,7 @@ public class AssetManager {
     public static final String CIRCLE_UI     = "ui/circle_ui.png";
     public static final String CIRCLE_UI2    = "ui/circle_ui2.png";
     public static final String MILITOPIA_BTN = "ui/militopia-button.png";
+    public static final String MENU_PANEL    = "ui/menu-panel.png";
     public static final String INVINCIBLE_RED = "ui/INVINCIBLE_RED.png";
     public static final String INVINCIBLE_BLUE = "ui/INVINCIBLE_BLUE.png";
     public static final String RAILWAY_ICON = "ui/RAILWAY.png";
@@ -236,6 +237,7 @@ public class AssetManager {
         manager.load(CIRCLE_UI, Texture.class);
         manager.load(CIRCLE_UI2, Texture.class);
         manager.load(MILITOPIA_BTN, Texture.class);
+        manager.load(MENU_PANEL, Texture.class);
         manager.load(INVINCIBLE_RED, Texture.class);
         manager.load(INVINCIBLE_BLUE, Texture.class);
         manager.load(RAILWAY_ICON, Texture.class);
