@@ -329,6 +329,13 @@ public class InfoPanel {
                             screen.gameHUD.updateFunding(bs.owner, remaining, bs.income);
                             hideTileInfo();
                             controller.resetLastClicked();
+
+                            // Tutorial Hook: Summon Unit
+                            if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                    && com.militopia.managers.TutorialManager.getInstance()
+                                            .getCurrentStep() == com.militopia.managers.TutorialManager.Step.SUMMON_UNIT) {
+                                com.militopia.managers.TutorialManager.getInstance().nextStep();
+                            }
                         }
                     });
         }

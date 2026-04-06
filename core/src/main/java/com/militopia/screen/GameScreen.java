@@ -591,6 +591,12 @@ public class GameScreen implements Screen {
                 winConditionSystem.setPlaying(true);
                 // Snapshot the start of this new turn (before player acts)
                 turnHistory.push(unitFactory.captureSnapshot(engine, gameState, gameMap));
+
+                // Tutorial: auto-skip P2's turn so the player stays in control
+                if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                        && gameState.currentPlayer == 2) {
+                    endTurnAction();
+                }
             }
         }
 

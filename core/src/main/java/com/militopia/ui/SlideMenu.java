@@ -121,6 +121,12 @@ public class SlideMenu {
                             }
                         }
                         controller.performHunt(animalEntity, hunterUnit);
+
+                        // Tutorial Hook: Hunt Animal
+                        if (com.militopia.managers.TutorialManager.getInstance().isActive()
+                                && com.militopia.managers.TutorialManager.getInstance().getCurrentStep() == com.militopia.managers.TutorialManager.Step.HUNT_ANIMAL) {
+                            com.militopia.managers.TutorialManager.getInstance().nextStep();
+                        }
                     }
                 });
 

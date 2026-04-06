@@ -661,6 +661,61 @@ public class UnitSelectionHandler {
                 && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_UNIT) {
             TutorialManager.getInstance().nextStep();
         }
+
+        // Tutorial Hook: Move to Town
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_TO_TOWN
+                && gameMap.objects[targetX][targetY] == com.militopia.map.MapGenerator.ObjectType.TOWN) {
+            TutorialManager.getInstance().nextStep();
+        }
+
+        // Tutorial Hook: Move to Tree
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_TO_TREE
+                && gameMap.objects[targetX][targetY] == com.militopia.map.MapGenerator.ObjectType.TREE) {
+            TutorialManager.getInstance().nextStep();
+        }
+
+        // Tutorial Hook: Move to Deer (onto the same tile as the deer entity)
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_TO_DEER) {
+            ImmutableArray<Entity> allEntities = engine.getEntitiesFor(
+                    Family.all(GridPositionComponent.class).get());
+            for (Entity e : allEntities) {
+                GridPositionComponent ePos = e.getComponent(GridPositionComponent.class);
+                if (ePos != null && ePos.x == targetX && ePos.y == targetY
+                        && e.getComponent(com.militopia.components.AnimalComponent.class) != null) {
+                    TutorialManager.getInstance().nextStep();
+                    break;
+                }
+            }
+        }
+
+        // Tutorial Hook: Move adjacent to enemy (for attack step)
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_TO_ATTACK) {
+            StatsComponent movedStats = unit.getComponent(StatsComponent.class);
+            ImmutableArray<Entity> allEntities = engine.getEntitiesFor(
+                    Family.all(GridPositionComponent.class, StatsComponent.class).get());
+            for (Entity e : allEntities) {
+                if (e == unit) continue;
+                GridPositionComponent ePos = e.getComponent(GridPositionComponent.class);
+                StatsComponent eStats = e.getComponent(StatsComponent.class);
+                if (ePos != null && eStats != null && movedStats != null
+                        && eStats.owner != movedStats.owner
+                        && chebyshev(ePos.x, ePos.y, targetX, targetY) == 1) {
+                    TutorialManager.getInstance().nextStep();
+                    break;
+                }
+            }
+        }
+
+        // Tutorial Hook: Move to Ruins
+        if (TutorialManager.getInstance().isActive()
+                && TutorialManager.getInstance().getCurrentStep() == TutorialManager.Step.MOVE_TO_RUINS
+                && gameMap.objects[targetX][targetY] == com.militopia.map.MapGenerator.ObjectType.RUINS) {
+            TutorialManager.getInstance().nextStep();
+        }
     }
 
     public void transformUnit(Entity unit, int targetX, int targetY) {
