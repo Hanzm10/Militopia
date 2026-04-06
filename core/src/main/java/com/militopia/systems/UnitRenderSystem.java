@@ -479,7 +479,7 @@ public class UnitRenderSystem extends EntitySystem {
                 && stats != null && stats.unitType == UnitType.RECRUIT) {
             AbilitiesComponent abilities = e.getComponent(AbilitiesComponent.class);
             if (abilities != null && abilities.isDiggingIn) {
-                DisplayAssetConfig.AssetData sbCfg = DisplayAssetConfig.get("DIG_IN");
+                DisplayAssetConfig.AssetData sbCfg = DisplayAssetConfig.get(AbilitiesComponent.KEY_DIG_IN);
                 batch.draw(digInRegion,
                         isoX - sbCfg.width / 2f + GameConfig.TILE_WIDTH / 2f + sbCfg.offsetX,
                         isoY + sbCfg.offsetY + animY,
@@ -610,7 +610,7 @@ public class UnitRenderSystem extends EntitySystem {
             TypeComponent type = selectedEntity.getComponent(TypeComponent.class);
             if (stats != null && type.type == TypeComponent.Type.OBJECT
                     && (stats.owner == 1 || stats.owner == 2)
-                    && StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
+                    && StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
                 float isoX = (selectedX - selectedY) * (GameConfig.TILE_WIDTH / 2.0f);
                 float isoY = (selectedX + selectedY) * (GameConfig.TILE_HEIGHT / 2.0f);
                 float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;

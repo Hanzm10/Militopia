@@ -54,7 +54,7 @@ public class FogSystem extends EntitySystem {
         // 2. Identify Enemy Jammers (Blocking our vision)
         for (Entity e : entities) {
             StatsComponent stats = e.getComponent(StatsComponent.class);
-            if (stats.owner != playerID && StructureType.fromDisplayName(stats.name) == StructureType.SIGNAL_JAMMER) {
+            if (stats.owner != playerID && StructureType.fromKey(stats.unitTypeKey) == StructureType.SIGNAL_JAMMER) {
                 GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
                 markJammingZone(pos.x, pos.y, CombatConstants.JAMMER_RADIUS);
             }
@@ -68,7 +68,7 @@ public class FogSystem extends EntitySystem {
             if (stats.owner == playerID) {
                 int radius = stats.vision;
                 // RADAR STATION: Scanner bonus vision
-                if (StructureType.fromDisplayName(stats.name) == StructureType.RADAR) {
+                if (StructureType.fromKey(stats.unitTypeKey) == StructureType.RADAR) {
                     radius += CombatConstants.RADAR_VISION_BONUS;
                 }
 
