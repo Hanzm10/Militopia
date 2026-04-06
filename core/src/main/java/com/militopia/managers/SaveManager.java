@@ -69,15 +69,18 @@ public class SaveManager {
                             stats.xpGain, stats.chosenSuperUnit);
                     sd.parentBaseX = stats.parentBaseX;
                     sd.parentBaseY = stats.parentBaseY;
+                    sd.unitTypeKey = stats.unitTypeKey;
                     state.structures.add(sd);
                 } else if (stats != null) {
                     // Check for neutral Towns
                     MapGenerator.ObjectType objType = map.objects[pos.x][pos.y];
                     if (objType == MapGenerator.ObjectType.TOWN) {
-                        state.structures.add(new StructureData(
+                        StructureData sdTown = new StructureData(
                                 pos.x, pos.y, stats.owner, stats.level,
                                 stats.currentBaseXP, stats.name, stats.baseOrdinal,
-                                stats.xpGain, stats.chosenSuperUnit));
+                                stats.xpGain, stats.chosenSuperUnit);
+                        sdTown.unitTypeKey = stats.unitTypeKey;
+                        state.structures.add(sdTown);
                     }
                 }
             }

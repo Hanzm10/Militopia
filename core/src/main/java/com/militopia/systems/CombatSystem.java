@@ -156,7 +156,7 @@ public class CombatSystem extends EntitySystem {
         }
 
         // OIL DERRICK & NUCLEAR PLANT: Indestructible
-        StructureType dStructType = StructureType.fromDisplayName(dStats.name);
+        StructureType dStructType = StructureType.fromKey(dStats.unitTypeKey);
         if (dStructType == StructureType.OIL_DERRICK || dStructType == StructureType.NUCLEAR_PLANT) {
             GameLogger.log(GameLogger.ATTACK, aStats.owner,
                     aStats.name + " attacks indestructible " + dStats.name + " at "
@@ -278,7 +278,7 @@ public class CombatSystem extends EntitySystem {
 
         // B2 / SUBMARINE: AoE splash on primary target tile (radius 1, skip primary target)
         if (unitType == UnitType.B2 || unitType == UnitType.SUBMARINE) {
-            applyAttackBasedAoE(attacker, dPos.x, dPos.y, 1, defender);
+            applyAttackBasedAoE(attacker, dPos.x, dPos.y, CombatConstants.AOE_SPLASH_RADIUS, defender);
         }
 
         // --- 2. Defender death? ---
@@ -466,7 +466,7 @@ public class CombatSystem extends EntitySystem {
         }
 
         // --- NEW: Track Base Destruction ---
-        if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
+        if (StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
             if (stats.owner == 1) {
                 gameState.p1BaseCount = Math.max(0, gameState.p1BaseCount - 1);
             } else if (stats.owner == 2) {
@@ -497,7 +497,7 @@ public class CombatSystem extends EntitySystem {
 
             if (chebyshev(centerX, centerY, vPos.x, vPos.y) <= radius) {
                 // OIL DERRICK & NUCLEAR PLANT: Indestructible
-                StructureType vStructType = StructureType.fromDisplayName(vStats.name);
+                StructureType vStructType = StructureType.fromKey(vStats.unitTypeKey);
                 if (vStructType == StructureType.OIL_DERRICK || vStructType == StructureType.NUCLEAR_PLANT) {
                     continue;
                 }
@@ -626,7 +626,7 @@ public class CombatSystem extends EntitySystem {
     }
 
     private void resolveJumpLandingAoE(Entity jumper, int cx, int cy, Entity skipTarget) {
-        applyAttackBasedAoE(jumper, cx, cy, 1, skipTarget);
+        applyAttackBasedAoE(jumper, cx, cy, CombatConstants.AOE_SPLASH_RADIUS, skipTarget);
     }
 
     /**
@@ -688,7 +688,7 @@ public class CombatSystem extends EntitySystem {
     private int[] findNearestFreeTile(int cx, int cy) {
         ImmutableArray<Entity> entities = engine.getEntitiesFor(
                 Family.all(GridPositionComponent.class).get());
-        for (int radius = 1; radius <= 10; radius++) {
+        for (int radius = 1; radius <= CombatConstants.NEAREST_FREE_TILE_MAX_RADIUS; radius++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dy = -radius; dy <= radius; dy++) {
                     if (Math.abs(dx) != radius && Math.abs(dy) != radius) continue; // perimeter only

@@ -83,6 +83,7 @@ public class GameScreen implements Screen {
     private boolean isFogEnabled = true;
     private BitmapFont font;
     private TurnHistoryManager turnHistory = new TurnHistoryManager();
+    private SnapshotRestorer snapshotRestorer;
 
     private enum TurnState {
         PLAYING, FADING_OUT, FADING_IN
@@ -223,7 +224,6 @@ public class GameScreen implements Screen {
         });
         engine.addSystem(winConditionSystem);
 
-
         engine.addSystem(new FloatingTextSystem());
 
         if (loadedState.units != null) {
@@ -271,8 +271,9 @@ public class GameScreen implements Screen {
                 if (e == null) {
                     // Built structure (Solar, Hospital, Jammer, etc.) — not in gameMap.objects
                     // so no entity was created during map init. Recreate it now.
-                    com.militopia.config.StructureType st = com.militopia.config.StructureType
-                            .fromDisplayName(s.baseName);
+                    com.militopia.config.StructureType st = (s.unitTypeKey != null && !s.unitTypeKey.isEmpty())
+                            ? com.militopia.config.StructureType.fromKey(s.unitTypeKey)
+                            : com.militopia.config.StructureType.fromDisplayName(s.baseName);
                     if (st != null && st != com.militopia.config.StructureType.BASE) {
                         unitFactory.createStructure(st.getKey(), s.x, s.y, s.owner,
                                 s.parentBaseX, s.parentBaseY);
@@ -288,7 +289,15 @@ public class GameScreen implements Screen {
         inputController = new GameInputController(
                 this, camera, viewport, engine, gameMap, unitFactory, entityFactory, gameHUD, combatSystem);
 
-        gameHUD.build(this, inputController, unitFactory, gameState, turnHistory);
+        snapshotRestorer = new SnapshotRestorer(
+                engine, gameState, gameMap, unitFactory,
+                fogSystem, unitRenderSystem, gameHUD, inputController,
+                turnHistory, structureEconomySystem
+        );
+
+        ScavengeSystem scavengeSystem = new ScavengeSystem(engine, unitFactory, entityFactory, gameState, gameMap);
+        StructurePlacementSystem placementSystem = new StructurePlacementSystem(engine, unitFactory, gameState, gameMap);
+        gameHUD.build(this, inputController, unitFactory, gameState, turnHistory, scavengeSystem, placementSystem);
         gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
         gameHUD.updateXP(1, gameState.p1XP);
 
@@ -375,6 +384,10 @@ public class GameScreen implements Screen {
 
     public MapGenerator.GameMap getGameMap() {
         return gameMap;
+    }
+
+    public GameInputController getInputController() {
+        return inputController;
     }
 
     public int getCurrentPlayer() {
@@ -479,7 +492,7 @@ public class GameScreen implements Screen {
             return;
         GameLogger.log(GameLogger.INPUT,
                 "Undo — reverting to P" + snap.currentPlayer + " T" + snap.turn);
-        restoreSnapshot(snap);
+        snapshotRestorer.restore(snap);
     }
 
     /**
@@ -491,7 +504,7 @@ public class GameScreen implements Screen {
             return;
         GameLogger.log(GameLogger.INPUT,
                 "Jump to P" + snap.currentPlayer + " T" + snap.turn);
-        restoreSnapshot(snap);
+        snapshotRestorer.restore(snap);
     }
 
     /** Steps forward one turn (redo). */
@@ -501,7 +514,7 @@ public class GameScreen implements Screen {
             return;
         GameLogger.log(GameLogger.INPUT,
                 "Redo — forward to P" + snap.currentPlayer + " T" + snap.turn);
-        restoreSnapshot(snap);
+        snapshotRestorer.restore(snap);
     }
 
     /**
@@ -514,146 +527,7 @@ public class GameScreen implements Screen {
             return;
         GameLogger.log(GameLogger.INPUT,
                 "Redo jump to P" + snap.currentPlayer + " T" + snap.turn);
-        restoreSnapshot(snap);
-    }
-
-    private void restoreSnapshot(TurnSnapshot snap) {
-        // 1. Remove all UNIT entities and non-animal OBJECT entities from the engine
-        List<Entity> toRemove = new ArrayList<>();
-        ImmutableArray<Entity> all = engine.getEntitiesFor(
-                Family.all(TypeComponent.class).get());
-        for (Entity e : all) {
-            TypeComponent t = e.getComponent(TypeComponent.class);
-            if (t.type == TypeComponent.Type.UNIT) {
-                toRemove.add(e);
-            } else if (t.type == TypeComponent.Type.OBJECT && e.getComponent(AnimalComponent.class) == null) {
-                toRemove.add(e);
-            }
-        }
-        for (Entity e : toRemove)
-            engine.removeEntity(e);
-
-        // 2. Restore GameState scalars
-        gameState.p1Funding = snap.p1Funding;
-        gameState.p2Funding = snap.p2Funding;
-        gameState.p1XP = snap.p1XP;
-        gameState.p2XP = snap.p2XP;
-        gameState.turnCount = snap.turn;
-        gameState.currentPlayer = snap.currentPlayer;
-        gameState.p1BaseCount = snap.p1BaseCount;
-        gameState.p2BaseCount = snap.p2BaseCount;
-
-        // 3. Restore map objects array (captures/uncaptures)
-        for (int x = 0; x < gameMap.width; x++) {
-            System.arraycopy(snap.mapObjects[x], 0, gameMap.objects[x], 0, gameMap.height);
-        }
-
-        // 4. Recreate structures from snapshot
-        for (StructureSnapshot ss : snap.structures) {
-            boolean isMapGenObject = false;
-            MapGenerator.ObjectType objType = null;
-            try {
-                if (ss.unitTypeKey != null && !ss.unitTypeKey.isEmpty()) {
-                    objType = MapGenerator.ObjectType.valueOf(ss.unitTypeKey);
-                    isMapGenObject = true;
-                }
-            } catch (IllegalArgumentException ignored) {
-                // Not a MapGenerator ObjectType, likely a built structure
-            }
-
-            if (isMapGenObject && objType != null) {
-                unitFactory.createObjectEntity(ss.x, ss.y, objType, gameState);
-                // createObjectEntity increments base counts, but we already set them directly
-                // in step 2.
-                // We MUST undo the auto-increment here so we don't double count:
-                if (objType == MapGenerator.ObjectType.BASE_P1)
-                    gameState.p1BaseCount--;
-                if (objType == MapGenerator.ObjectType.BASE_P2)
-                    gameState.p2BaseCount--;
-            } else {
-                unitFactory.createStructure(ss.unitTypeKey, ss.x, ss.y, ss.owner, ss.parentBaseX, ss.parentBaseY);
-            }
-
-            // After creation, find the entity and apply the snapshot stats
-            ImmutableArray<Entity> objects = engine.getEntitiesFor(
-                    Family.all(GridPositionComponent.class, TypeComponent.class, StatsComponent.class).get());
-            for (Entity e : objects) {
-                TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.OBJECT)
-                    continue;
-                GridPositionComponent pos = e.getComponent(GridPositionComponent.class);
-                if (pos.x == ss.x && pos.y == ss.y) {
-                    com.militopia.data.StructureData sd = new com.militopia.data.StructureData();
-                    sd.x = ss.x;
-                    sd.y = ss.y;
-                    sd.owner = ss.owner;
-                    sd.level = ss.level;
-                    sd.currentBaseXP = ss.currentBaseXP;
-                    sd.baseName = ss.name;
-                    sd.baseOrdinal = ss.baseOrdinal;
-                    sd.chosenSuperUnit = ss.chosenSuperUnit;
-                    sd.xpGain = ss.xpGain;
-                    unitFactory.updateStructureFromSave(e, sd, gameMap);
-                    e.getComponent(StatsComponent.class).income = ss.income;
-                    break;
-                }
-            }
-        }
-
-        // 5. Recreate unit entities from snapshot
-        for (UnitSnapshot us : snap.units) {
-            UnitType ut = UnitType.fromKey(us.unitTypeKey);
-            if (ut == null)
-                ut = UnitType.RECRUIT;
-            unitFactory.createUnit(ut, us.x, us.y, us.owner, us.hasActed);
-            ImmutableArray<Entity> freshUnits = engine.getEntitiesFor(
-                    Family.all(GridPositionComponent.class, StatsComponent.class, TypeComponent.class).get());
-            for (Entity e : freshUnits) {
-                TypeComponent t = e.getComponent(TypeComponent.class);
-                if (t.type != TypeComponent.Type.UNIT)
-                    continue;
-                GridPositionComponent p = e.getComponent(GridPositionComponent.class);
-                StatsComponent s = e.getComponent(StatsComponent.class);
-                if (p.x == us.x && p.y == us.y && s.owner == us.owner) {
-                    s.currentHP = us.currentHP;
-                    s.hasActed = us.hasActed;
-                    s.hasMoved = us.hasMoved;
-
-                    AbilitiesComponent a = e.getComponent(AbilitiesComponent.class);
-                    if (a != null) {
-                        a.isDiggingIn = us.isDiggingIn;
-                        a.hasUsedDigIn = us.hasUsedDigIn;
-                        a.isOverwatchActive = us.isOverwatchActive;
-                        a.isCloaked = us.isCloaked;
-                        a.isCloakBroken = us.isCloakBroken;
-                        a.pendingSkirmishMove = us.pendingSkirmishMove;
-                        a.isUnreachable = us.isUnreachable;
-                        a.fuel = us.fuel;
-                        a.nukeCooldown = us.nukeCooldown;
-                        a.idleTimer = us.idleTimer;
-                    }
-                    break;
-                }
-            }
-        }
-
-        // 6. Refresh fog, HUD
-        // In LAN, visibility is ALWAYS locked to the local player.
-        int fogPlayer = getActiveLocalPlayer();
-        fogSystem.setPlayer(fogPlayer);
-        fogSystem.update(0);
-        unitRenderSystem.setPlayer(fogPlayer);
-        int currentFunds = (gameState.currentPlayer == 1) ? gameState.p1Funding : gameState.p2Funding;
-        int income = calculateIncome(gameState.currentPlayer);
-        gameHUD.updateTurn(gameState.turnCount, gameState.currentPlayer, getActiveLocalPlayer());
-        gameHUD.updateFunding(gameState.currentPlayer, currentFunds, income);
-        gameHUD.updateXP(gameState.currentPlayer, (gameState.currentPlayer == 1) ? gameState.p1XP : gameState.p2XP);
-        gameHUD.hideTileInfo();
-        inputController.clearMarkersPublic();
-
-        // 7. Re-push restored state (preserves redo stack) and refresh panel
-        turnHistory.pushRestore(unitFactory.captureSnapshot(engine, gameState, gameMap));
-        gameHUD.refreshSnapshotPanel();
+        snapshotRestorer.restore(snap);
     }
 
     public int calculateBaseXPGain(Entity base) {
@@ -788,7 +662,7 @@ public class GameScreen implements Screen {
             if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
 
                 // --- FIX: Only list Bases in the log ---
-                if (StructureType.fromDisplayName(stats.name) == StructureType.BASE) {
+                if (StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
                     int bInc = calculateGroupedBaseIncome(e);
                     String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP (+%d) | Inc: +%d",
                             stats.name, stats.level, stats.currentBaseXP, stats.maxBaseXP, this.calculateBaseXPGain(e),
@@ -957,7 +831,7 @@ public class GameScreen implements Screen {
             // 1. Sync game state from snapshot
             Json json = new Json();
             TurnSnapshot snap = json.fromJson(TurnSnapshot.class, msg.payload);
-            restoreSnapshot(snap);
+            snapshotRestorer.restore(snap);
 
             // 2. The snapshot contains the state AFTER the opponent's moves,
             // but BEFORE the turn was swapped. We now advance the turn locally.
@@ -1204,7 +1078,7 @@ public class GameScreen implements Screen {
         for (Entity b : bases) {
             StatsComponent s = b.getComponent(StatsComponent.class);
             if (s.owner == owner && com.militopia.config.StructureType
-                    .fromDisplayName(s.name) == com.militopia.config.StructureType.BASE) {
+                    .fromKey(s.unitTypeKey) == com.militopia.config.StructureType.BASE) {
                 syncBaseState(b);
             }
         }

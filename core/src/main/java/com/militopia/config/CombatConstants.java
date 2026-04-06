@@ -76,4 +76,16 @@ public class CombatConstants {
     // -----------------------------------------------------------------------
     /** Damage multiplier applied to the primary super-unit target on a Juggernaut jump. */
     public static final float JUMP_SUPER_UNIT_DAMAGE_MULTIPLIER = 1.5f;
+
+    // -----------------------------------------------------------------------
+    // AoE splash (Juggernaut jump landing, B2, Submarine)
+    // -----------------------------------------------------------------------
+    /** Chebyshev radius of AoE splash applied on Juggernaut jump landing and B2/Submarine attacks. */
+    public static final int AOE_SPLASH_RADIUS = 1;
+
+    // -----------------------------------------------------------------------
+    // Entity search limits
+    // -----------------------------------------------------------------------
+    /** Maximum search radius used by findNearestFreeTile when placing units. */
+    public static final int NEAREST_FREE_TILE_MAX_RADIUS = 10;
 }

@@ -7,6 +7,10 @@ import com.badlogic.ashley.core.Component;
  */
 public class AbilitiesComponent implements Component {
 
+    // --- Ability key constants ---
+    public static final String KEY_DIG_IN = "DIG_IN";
+    public static final String KEY_OVERWATCH = "OVERWATCH";
+
     // --- State flags ---
     public boolean isDiggingIn = false; // Recruit
     public boolean hasUsedDigIn = false; // Recruit
