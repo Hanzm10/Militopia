@@ -121,6 +121,23 @@ public class AssetManager {
     public static final String TANK_IDLE_ATLAS           = "sprites/tank-idle.atlas";
     public static final String JUGGERNAUT_BOOSTERS_ATLAS = "sprites/juggernaut-boosters.atlas";
 
+    // Idle / movement atlases
+    public static final String RECRUIT_ATTACKING_ATLAS      = "sprites/recruit-attacking.atlas";
+    public static final String DRONE_MOVING_ATLAS           = "sprites/drone-moving.atlas";
+    public static final String WATER_ANIM_ATLAS             = "sprites/water-anim.atlas";
+    public static final String DEEP_WATER_ANIM_ATLAS        = "sprites/deep-water-anim.atlas";
+    public static final String DEER_IDLE_ATLAS              = "sprites/deer-idle.atlas";
+    public static final String FISH_IDLE_ATLAS              = "sprites/fish-idle.atlas";
+    public static final String HORSE_IDLE_ATLAS             = "sprites/horse-idle.atlas";
+    public static final String ZEBRA_IDLE_ATLAS             = "sprites/zebra-idle.atlas";
+    public static final String JAMMER_IDLE_ATLAS            = "sprites/jammer-idle.atlas";
+    public static final String MUNITION_FACTORY_IDLE_ATLAS  = "sprites/munition-factory-idle.atlas";
+    public static final String NUCLEAR_PLANT_IDLE_ATLAS     = "sprites/nuclear-plant-idle.atlas";
+    public static final String OIL_DERRICK_IDLE_ATLAS       = "sprites/oil-derrick-idle.atlas";
+    public static final String PORT_IDLE_ATLAS              = "sprites/port-idle.atlas";
+    public static final String RADAR_IDLE_ATLAS             = "sprites/radar-idle.atlas";
+    public static final String SOLAR_ARRAY_IDLE_ATLAS       = "sprites/solar-array-idle.atlas";
+
     public static final String FUNDING_ICON  = "ui/funding_icon.png";
     public static final String FUNDING_ICON2 = "ui/funding_icon2.png";
 
@@ -240,6 +257,21 @@ public class AssetManager {
         manager.load(HELICOPTER_MOVE_ATLAS,     TextureAtlas.class);
         manager.load(TANK_IDLE_ATLAS,           TextureAtlas.class);
         manager.load(JUGGERNAUT_BOOSTERS_ATLAS, TextureAtlas.class);
+        manager.load(RECRUIT_ATTACKING_ATLAS,     TextureAtlas.class);
+        manager.load(DRONE_MOVING_ATLAS,          TextureAtlas.class);
+        manager.load(WATER_ANIM_ATLAS,            TextureAtlas.class);
+        manager.load(DEEP_WATER_ANIM_ATLAS,       TextureAtlas.class);
+        manager.load(DEER_IDLE_ATLAS,             TextureAtlas.class);
+        manager.load(FISH_IDLE_ATLAS,             TextureAtlas.class);
+        manager.load(HORSE_IDLE_ATLAS,            TextureAtlas.class);
+        manager.load(ZEBRA_IDLE_ATLAS,            TextureAtlas.class);
+        manager.load(JAMMER_IDLE_ATLAS,           TextureAtlas.class);
+        manager.load(MUNITION_FACTORY_IDLE_ATLAS, TextureAtlas.class);
+        manager.load(NUCLEAR_PLANT_IDLE_ATLAS,    TextureAtlas.class);
+        manager.load(OIL_DERRICK_IDLE_ATLAS,      TextureAtlas.class);
+        manager.load(PORT_IDLE_ATLAS,             TextureAtlas.class);
+        manager.load(RADAR_IDLE_ATLAS,            TextureAtlas.class);
+        manager.load(SOLAR_ARRAY_IDLE_ATLAS,      TextureAtlas.class);
 
         manager.load(FUNDING_ICON, Texture.class);
         manager.load(FUNDING_ICON2, Texture.class);

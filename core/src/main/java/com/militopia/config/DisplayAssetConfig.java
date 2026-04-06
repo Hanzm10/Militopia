@@ -51,7 +51,7 @@ public class DisplayAssetConfig {
         DATA.put("PORT", new AssetData(15, 15, 0, 5.5f, 12, 6, 0, 0));
         DATA.put("SOLAR", new AssetData(8, 8, 0, 6.5f, 10, 5, 0, 0));
         DATA.put("OIL_DERRICK", new AssetData(8, 8, 0, 7f, 10, 5, 0, 0));
-        DATA.put("NUCLEAR", new AssetData(8, 8, 0, 6f, 10, 5, 0, 0));
+        DATA.put("NUCLEAR", new AssetData(10, 10, 0, 6f, 10, 5, 0, 0));
         DATA.put("HOSPITAL", new AssetData(8, 8, 0, 6f, 10, 5, 0, 0));
         DATA.put("RADAR", new AssetData(8, 8, 0, 7f, 10, 5, 0, 0));
         DATA.put("JAMMER", new AssetData(8, 8, 0, 7f, 10, 5, 0, 0));

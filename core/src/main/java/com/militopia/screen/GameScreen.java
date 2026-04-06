@@ -197,10 +197,11 @@ public class GameScreen implements Screen {
         unitRenderSystem.setSniperRunAnim(entityFactory.getSniperRunAnim());
         unitRenderSystem.setJuggernautJumpAnim(entityFactory.getJuggernautJumpAnim());
         unitRenderSystem.setHelicopterMoveAnim(entityFactory.getHelicopterMoveAnim());
-        unitRenderSystem.setTankIdleAnim(entityFactory.getTankIdleAnim());
+        unitFactory.setTankIdleAnim(entityFactory.getTankIdleAnim());
         unitRenderSystem.setJuggernautBoostersAnim(entityFactory.getJuggernautBoostersAnim());
+        unitRenderSystem.setDroneMovingAnim(entityFactory.getDroneMovingAnim());
 
-        mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap);
+        mapRenderSystem = new MapRenderSystem(game.batch, unitFactory, gameMap, game.assets);
 
         engine.addSystem(unitRenderSystem);
         engine.addSystem(mapRenderSystem);
@@ -273,7 +274,7 @@ public class GameScreen implements Screen {
                     com.militopia.config.StructureType st = com.militopia.config.StructureType
                             .fromDisplayName(s.baseName);
                     if (st != null && st != com.militopia.config.StructureType.BASE) {
-                        unitFactory.createStructure(st.name(), s.x, s.y, s.owner,
+                        unitFactory.createStructure(st.getKey(), s.x, s.y, s.owner,
                                 s.parentBaseX, s.parentBaseY);
                     }
                 } else {

@@ -6,6 +6,8 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.militopia.components.*;
@@ -58,6 +60,16 @@ public class UnitFactory {
     private final TextureRegion fishRegion;
     private final TextureRegion deerRegion;
     private final TextureRegion zebraRegion;
+
+    // Idle animations (animals + structures)
+    private final java.util.Map<String, Animation<TextureRegion>> idleAnims = new java.util.HashMap<>();
+
+    // Tank idle — injected after EntityFactory builds it
+    private Animation<TextureRegion> tankIdleAnim;
+
+    public void setTankIdleAnim(Animation<TextureRegion> anim) {
+        this.tankIdleAnim = anim;
+    }
 
     public PooledEngine getEngine() {
         return engine;
@@ -151,6 +163,25 @@ public class UnitFactory {
         this.fishRegion  = new TextureRegion(assets.get(AssetManager.FISH));
         this.deerRegion  = new TextureRegion(assets.get(AssetManager.DEER));
         this.zebraRegion = new TextureRegion(assets.get(AssetManager.ZEBRA));
+
+        // Idle animations
+        idleAnims.put("DEER",            buildIdleAnim(assets.getAtlas(AssetManager.DEER_IDLE_ATLAS)));
+        idleAnims.put("FISH",            buildIdleAnim(assets.getAtlas(AssetManager.FISH_IDLE_ATLAS)));
+        idleAnims.put("HORSE",           buildIdleAnim(assets.getAtlas(AssetManager.HORSE_IDLE_ATLAS)));
+        idleAnims.put("ZEBRA",           buildIdleAnim(assets.getAtlas(AssetManager.ZEBRA_IDLE_ATLAS)));
+        idleAnims.put("JAMMER",          buildIdleAnim(assets.getAtlas(AssetManager.JAMMER_IDLE_ATLAS)));
+        idleAnims.put("MUNITION_FACTORY",buildIdleAnim(assets.getAtlas(AssetManager.MUNITION_FACTORY_IDLE_ATLAS)));
+        idleAnims.put("NUCLEAR",         buildIdleAnim(assets.getAtlas(AssetManager.NUCLEAR_PLANT_IDLE_ATLAS)));
+        idleAnims.put("OIL_DERRICK",     buildIdleAnim(assets.getAtlas(AssetManager.OIL_DERRICK_IDLE_ATLAS)));
+        idleAnims.put("PORT",            buildIdleAnim(assets.getAtlas(AssetManager.PORT_IDLE_ATLAS)));
+        idleAnims.put("RADAR",           buildIdleAnim(assets.getAtlas(AssetManager.RADAR_IDLE_ATLAS)));
+        idleAnims.put("SOLAR",           buildIdleAnim(assets.getAtlas(AssetManager.SOLAR_ARRAY_IDLE_ATLAS)));
+    }
+
+    private Animation<TextureRegion> buildIdleAnim(TextureAtlas atlas) {
+        com.badlogic.gdx.utils.Array<TextureAtlas.AtlasRegion> regions = atlas.getRegions();
+        regions.sort((a, b) -> a.name.compareTo(b.name));
+        return new Animation<>(2f / 24f, regions, Animation.PlayMode.LOOP);
     }
 
     /** Builds a [right, left-flipped] pair from a single texture and stores it. */
@@ -210,6 +241,19 @@ public class UnitFactory {
         }
 
         entity.add(stats);
+
+        if (unitType == UnitType.TANK && tankIdleAnim != null) {
+            IdleAnimationComponent idleAnim = new IdleAnimationComponent();
+            idleAnim.animation = tankIdleAnim;
+            idleAnim.overlayOnly = true;
+            idleAnim.respectsFacing = true;
+            idleAnim.drawOffsetX = GameConfig.TANK_IDLE_OFFSET_X;
+            idleAnim.drawOffsetY = GameConfig.TANK_IDLE_OFFSET_Y;
+            idleAnim.paused = true;
+            idleAnim.pauseTimer = MathUtils.random(2f, 3f);
+            entity.add(idleAnim);
+        }
+
         engine.addEntity(entity);
     }
 
@@ -412,6 +456,16 @@ public class UnitFactory {
         }
 
         entity.add(stats);
+
+        Animation<TextureRegion> structAnim = idleAnims.get(type);
+        if (structAnim != null) {
+            IdleAnimationComponent idleAnim = new IdleAnimationComponent();
+            idleAnim.animation = structAnim;
+            idleAnim.paused = true;
+            idleAnim.pauseTimer = MathUtils.random(2f, 3f);
+            entity.add(idleAnim);
+        }
+
         engine.addEntity(entity);
     }
 
@@ -446,6 +500,20 @@ public class UnitFactory {
             animalStats.unitTypeKey = type.name();
             entity.add(animalStats);
             entity.add(new AnimalComponent(type.name()));
+            Animation<TextureRegion> animalAnim = idleAnims.get(type.name());
+            if (animalAnim != null) {
+                IdleAnimationComponent idleAnim = new IdleAnimationComponent();
+                idleAnim.animation = animalAnim;
+                boolean isFish = type.name().equals("FISH");
+                if (isFish) {
+                    idleAnim.looping = true;
+                    idleAnim.stateTime = MathUtils.random(0f, 2f);
+                } else {
+                    idleAnim.paused = true;
+                    idleAnim.pauseTimer = MathUtils.random(2f, 3f);
+                }
+                entity.add(idleAnim);
+            }
         } else if (type == MapGenerator.ObjectType.BASE_P1 || type == MapGenerator.ObjectType.BASE_P2) {
             int owner = (type == MapGenerator.ObjectType.BASE_P1) ? 1 : 2;
             state.p1BaseCount += (owner == 1 ? 1 : 0);

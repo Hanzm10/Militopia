@@ -24,6 +24,7 @@ public class EntityFactory {
     private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> helicopterMoveAnim;
     private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> tankIdleAnim;
     private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> juggernautBoostersAnim;
+    private com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> droneMovingAnim;
 
     public EntityFactory(PooledEngine engine, AssetManager assets) {
         this.engine = engine;
@@ -98,6 +99,11 @@ public class EntityFactory {
         for (int i = 0; i <= 9; i++)
             juggernautBoostersFrames.add(juggernautBoostersAtlas.findRegion(String.format("juggernaut-boosters%08d", 86509 + i)));
         juggernautBoostersAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(0.033f, juggernautBoostersFrames);
+
+        com.badlogic.gdx.graphics.g2d.TextureAtlas droneMovingAtlas = assets.getAtlas(AssetManager.DRONE_MOVING_ATLAS);
+        com.badlogic.gdx.utils.Array<com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion> droneRegions = droneMovingAtlas.getRegions();
+        droneRegions.sort((a, b) -> a.name.compareTo(b.name));
+        droneMovingAnim = new com.badlogic.gdx.graphics.g2d.Animation<>(2f / 24f, droneRegions, com.badlogic.gdx.graphics.g2d.Animation.PlayMode.LOOP);
     }
 
     public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getRecruitRunAnim() {
@@ -126,6 +132,10 @@ public class EntityFactory {
 
     public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getJuggernautBoostersAnim() {
         return juggernautBoostersAnim;
+    }
+
+    public com.badlogic.gdx.graphics.g2d.Animation<TextureRegion> getDroneMovingAnim() {
+        return droneMovingAnim;
     }
 
     /** Blue movement-range marker. */

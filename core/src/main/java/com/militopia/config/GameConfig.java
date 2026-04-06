@@ -11,7 +11,7 @@ public class GameConfig {
     public static final float DRAW_HEIGHT = 20f;
     // Water tile scale — increase if water tiles appear smaller than other tiles,
     // decrease if too big
-    public static final float WATER_TILE_SCALE = 1.11f;
+    public static final float WATER_TILE_SCALE = 1.25f;
 
     public static final float WORLD_WIDTH = 640f;
     public static final float WORLD_HEIGHT = 360f;
@@ -55,8 +55,8 @@ public class GameConfig {
     public static final float SELECTION_ALPHA = 1f;
 
     // Animation Offsets
-    public static final float TANK_IDLE_OFFSET_X           = 0f;
-    public static final float TANK_IDLE_OFFSET_Y           = 0f;
+    public static final float TANK_IDLE_OFFSET_X = 0f;
+    public static final float TANK_IDLE_OFFSET_Y = 0f;
     public static final float JUGGERNAUT_BOOSTERS_OFFSET_X = 0f;
     public static final float JUGGERNAUT_BOOSTERS_OFFSET_Y = -4f;
 }
