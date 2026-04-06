@@ -82,6 +82,8 @@ public class CombatConstants {
     // -----------------------------------------------------------------------
     /** Chebyshev radius of AoE splash applied on Juggernaut jump landing and B2/Submarine attacks. */
     public static final int AOE_SPLASH_RADIUS = 1;
+    /** Damage multiplier applied to AoE splash tiles for B2 and Submarine attacks (reduces splash damage). */
+    public static final float AOE_SPLASH_DAMAGE_MULTIPLIER = 1f / 1.5f;
 
     // -----------------------------------------------------------------------
     // Entity search limits

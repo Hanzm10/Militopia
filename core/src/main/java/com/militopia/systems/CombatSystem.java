@@ -278,7 +278,7 @@ public class CombatSystem extends EntitySystem {
 
         // B2 / SUBMARINE: AoE splash on primary target tile (radius 1, skip primary target)
         if (unitType == UnitType.B2 || unitType == UnitType.SUBMARINE) {
-            applyAttackBasedAoE(attacker, dPos.x, dPos.y, CombatConstants.AOE_SPLASH_RADIUS, defender);
+            applyAttackBasedAoE(attacker, dPos.x, dPos.y, CombatConstants.AOE_SPLASH_RADIUS, CombatConstants.AOE_SPLASH_DAMAGE_MULTIPLIER, defender);
         }
 
         // --- 2. Defender death? ---
@@ -626,7 +626,7 @@ public class CombatSystem extends EntitySystem {
     }
 
     private void resolveJumpLandingAoE(Entity jumper, int cx, int cy, Entity skipTarget) {
-        applyAttackBasedAoE(jumper, cx, cy, CombatConstants.AOE_SPLASH_RADIUS, skipTarget);
+        applyAttackBasedAoE(jumper, cx, cy, CombatConstants.AOE_SPLASH_RADIUS, 1.0f, skipTarget);
     }
 
     /**
@@ -634,7 +634,7 @@ public class CombatSystem extends EntitySystem {
      * ({@code cx}, {@code cy}). Skips the attacker, any additional {@code skipEntities}, friendly
      * units, and indestructible structures (Oil Derrick, Nuclear Plant).
      */
-    private void applyAttackBasedAoE(Entity attacker, int cx, int cy, int radius, Entity... skipEntities) {
+    private void applyAttackBasedAoE(Entity attacker, int cx, int cy, int radius, float multiplier, Entity... skipEntities) {
         StatsComponent aStats = attacker.getComponent(StatsComponent.class);
         ImmutableArray<Entity> entities = engine.getEntitiesFor(
                 Family.all(GridPositionComponent.class, StatsComponent.class).get());
@@ -656,7 +656,7 @@ public class CombatSystem extends EntitySystem {
             int defBonus = terrainDefBonus(p.x, p.y);
             AbilitiesComponent dAbilities = e.getComponent(AbilitiesComponent.class);
             int digInBonus = (dAbilities != null && dAbilities.isDiggingIn) ? CombatConstants.DIG_IN_DEFENSE_BONUS : 0;
-            int dmg = Math.max(0, aStats.attack - (s.defense + digInBonus) - defBonus);
+            int dmg = Math.max(0, (int)((aStats.attack - (s.defense + digInBonus) - defBonus) * multiplier));
             s.currentHP -= dmg;
             spawnFloatingText(dmg, p.x, p.y, false);
             if (s.currentHP <= 0) {
