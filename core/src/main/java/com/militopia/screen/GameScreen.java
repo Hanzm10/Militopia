@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.components.AbilitiesComponent;
 import com.militopia.components.AnimalComponent;
+import com.militopia.components.MovementComponent;
 import com.militopia.components.GridPositionComponent;
 import com.militopia.components.StatsComponent;
 import com.militopia.components.TypeComponent;
@@ -879,6 +880,7 @@ public class GameScreen implements Screen {
                 Entity unit = findUnitAt(x, y);
                 if (unit != null) {
                     GridPositionComponent pos = unit.getComponent(GridPositionComponent.class);
+                    unit.add(new MovementComponent(pos.x, pos.y, tx, ty));
                     pos.x = tx;
                     pos.y = ty;
                     StatsComponent stats = unit.getComponent(StatsComponent.class);
