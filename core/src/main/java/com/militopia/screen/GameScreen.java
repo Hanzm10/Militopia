@@ -668,7 +668,7 @@ public class GameScreen implements Screen {
             if (type.type == TypeComponent.Type.OBJECT && (stats.owner == 1 || stats.owner == 2)) {
 
                 // --- FIX: Only list Bases in the log ---
-                if (StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
+                if (stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE")) {
                     int bInc = calculateGroupedBaseIncome(e);
                     String entry = String.format("  - %-25s (Lv %d) : %4.0f / %4.0f XP (+%d) | Inc: +%d",
                             stats.name, stats.level, stats.currentBaseXP, stats.maxBaseXP, this.calculateBaseXPGain(e),
@@ -1083,8 +1083,7 @@ public class GameScreen implements Screen {
                 Family.all(GridPositionComponent.class, StatsComponent.class).get());
         for (Entity b : bases) {
             StatsComponent s = b.getComponent(StatsComponent.class);
-            if (s.owner == owner && com.militopia.config.StructureType
-                    .fromKey(s.unitTypeKey) == com.militopia.config.StructureType.BASE) {
+            if (s.owner == owner && s.unitTypeKey != null && s.unitTypeKey.startsWith("BASE")) {
                 syncBaseState(b);
             }
         }
@@ -1170,17 +1169,6 @@ public class GameScreen implements Screen {
         s.maxBaseXP = data.maxXP;
         unitFactory.updateBaseTexture(base, s);
         GameLogger.log(GameLogger.INPUT, "[DEV] Set base at (" + pos.x + "," + pos.y + ") to level " + targetLevel);
-    }
-
-    public void devResetNukeCooldowns() {
-        ImmutableArray<Entity> entities = engine.getEntitiesFor(
-                Family.all(com.militopia.components.AbilitiesComponent.class).get());
-        for (Entity e : entities) {
-            com.militopia.components.AbilitiesComponent ab = e
-                    .getComponent(com.militopia.components.AbilitiesComponent.class);
-            ab.nukeCooldown = 0;
-        }
-        GameLogger.log(GameLogger.INPUT, "[DEV] Reset all nuke cooldowns");
     }
 
     public void devToggleWinCondition(boolean enabled) {

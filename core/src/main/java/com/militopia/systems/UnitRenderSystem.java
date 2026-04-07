@@ -610,7 +610,7 @@ public class UnitRenderSystem extends EntitySystem {
             TypeComponent type = selectedEntity.getComponent(TypeComponent.class);
             if (stats != null && type.type == TypeComponent.Type.OBJECT
                     && (stats.owner == 1 || stats.owner == 2)
-                    && StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
+                    && stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE")) {
                 float isoX = (selectedX - selectedY) * (GameConfig.TILE_WIDTH / 2.0f);
                 float isoY = (selectedX + selectedY) * (GameConfig.TILE_HEIGHT / 2.0f);
                 float xOff = (GameConfig.DRAW_WIDTH - GameConfig.TILE_WIDTH) / 2f;

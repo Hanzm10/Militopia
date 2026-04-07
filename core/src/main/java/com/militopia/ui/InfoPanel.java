@@ -153,7 +153,7 @@ public class InfoPanel {
 
         StatsComponent stats = base.getComponent(StatsComponent.class);
         if (stats != null && statsTable != null) {
-            boolean isBase = StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE;
+            boolean isBase = stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE");
 
             // Level line: only for bases
             if (isBase) {

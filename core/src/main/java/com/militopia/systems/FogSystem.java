@@ -67,11 +67,6 @@ public class FogSystem extends EntitySystem {
 
             if (stats.owner == playerID) {
                 int radius = stats.vision;
-                // RADAR STATION: Scanner bonus vision
-                if (StructureType.fromKey(stats.unitTypeKey) == StructureType.RADAR) {
-                    radius += CombatConstants.RADAR_VISION_BONUS;
-                }
-
                 // Jammer Override: units inside a jammed zone see only 1 tile
                 if (jammerMask[pos.x][pos.y]) {
                     radius = CombatConstants.JAMMER_SUPPRESSED_VISION;

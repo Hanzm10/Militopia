@@ -466,7 +466,7 @@ public class CombatSystem extends EntitySystem {
         }
 
         // --- NEW: Track Base Destruction ---
-        if (StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
+        if (stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE")) {
             if (stats.owner == 1) {
                 gameState.p1BaseCount = Math.max(0, gameState.p1BaseCount - 1);
             } else if (stats.owner == 2) {

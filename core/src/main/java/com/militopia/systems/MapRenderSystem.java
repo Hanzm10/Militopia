@@ -100,7 +100,7 @@ public class MapRenderSystem extends EntitySystem {
                 continue;
 
             StatsComponent s = e.getComponent(StatsComponent.class);
-            if (StructureType.fromKey(s.unitTypeKey) == StructureType.BASE && s.income >= 2) {
+            if (s.unitTypeKey != null && s.unitTypeKey.startsWith("BASE") && s.income >= 2) {
                 GridPositionComponent p = e.getComponent(GridPositionComponent.class);
                 BaseInfo bi = new BaseInfo();
                 bi.x = p.x;

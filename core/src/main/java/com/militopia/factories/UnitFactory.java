@@ -624,7 +624,7 @@ public class UnitFactory {
 
             if ("PORT".equals(s.unitTypeKey)) {
                 myPorts.add(e);
-            } else if (StructureType.fromKey(s.unitTypeKey) == StructureType.BASE) {
+            } else if (s.unitTypeKey != null && s.unitTypeKey.startsWith("BASE")) {
                 myBases.add(e);
             }
         }
@@ -717,7 +717,7 @@ public class UnitFactory {
         // isTown check is not sufficient — Oil Derricks and other non-base owned structures
         // would pass the isTown=false branch and have their stats and texture overwritten.
         boolean isTown = (pos != null && map.objects[pos.x][pos.y] == MapGenerator.ObjectType.TOWN);
-        boolean isBase = StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE;
+        boolean isBase = stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE");
         if (isBase) {
             com.militopia.config.BaseLevelConfig.LevelData levelData = com.militopia.config.BaseLevelConfig
                     .getLevel(stats.level);

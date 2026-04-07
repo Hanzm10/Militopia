@@ -98,7 +98,7 @@ public class StructureEconomySystem extends EntitySystem {
             if (stats.owner != playerID)
                 continue;
 
-            if (stats.income >= 2 && StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
+            if (stats.income >= 2 && stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE")) {
                 myBases.add(entity);
             } else if (stats.xpGain > 0 && stats.parentBaseX != -1
                     && entity.getComponent(GridPositionComponent.class) != null) {
@@ -239,7 +239,7 @@ public class StructureEconomySystem extends EntitySystem {
                 StatsComponent oStats = other.getComponent(StatsComponent.class);
                 GridPositionComponent oPos = other.getComponent(GridPositionComponent.class);
                 if (oStats.owner == stats.owner
-                        && (oStats.income > 0 || StructureType.fromKey(oStats.unitTypeKey) == StructureType.BASE)
+                        && (oStats.income > 0 || (oStats.unitTypeKey != null && oStats.unitTypeKey.startsWith("BASE")))
                         && Math.max(Math.abs(pos.x - oPos.x), Math.abs(pos.y - oPos.y)) <= 1) {
                     income++;
                 }
@@ -251,7 +251,7 @@ public class StructureEconomySystem extends EntitySystem {
     /** Grouped income for a base: base income + all linked child structures. */
     public int calculateGroupedBaseIncome(Entity base) {
         StatsComponent stats = base.getComponent(StatsComponent.class);
-        if (stats == null || StructureType.fromKey(stats.unitTypeKey) != StructureType.BASE)
+        if (stats == null || stats.unitTypeKey == null || !stats.unitTypeKey.startsWith("BASE"))
             return calculateBaseIncome(base);
 
         int total = calculateBaseIncome(base);
@@ -382,7 +382,7 @@ public class StructureEconomySystem extends EntitySystem {
             StatsComponent stats = entity.getComponent(StatsComponent.class);
             if (stats.owner != playerID) continue;
 
-            if (stats.income >= 2 && StructureType.fromKey(stats.unitTypeKey) == StructureType.BASE) {
+            if (stats.income >= 2 && stats.unitTypeKey != null && stats.unitTypeKey.startsWith("BASE")) {
                 // Natural base XP
                 int naturalGain = 250 + ((stats.level - 1) * 10);
                 String key = (stats.baseOrdinal != null && !stats.baseOrdinal.isEmpty())
