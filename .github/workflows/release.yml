@@ -68,7 +68,7 @@ jobs:
       - name: Generate AI release notes
         id: ai_notes
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_TAG="${{ steps.version.outputs.new_tag }}"
           LATEST_TAG="${{ steps.version.outputs.latest_tag }}"
@@ -81,7 +81,7 @@ jobs:
           fi
 
           python3 - <<PYEOF
-          import urllib.request, json, os, sys
+          import urllib.request, json, os
 
           commits = """${COMMITS}"""
           subtitle = "${SUBTITLE}"
@@ -103,24 +103,22 @@ jobs:
           - Do not include a header, just the bullet points"""
 
           payload = json.dumps({
-            "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 512,
+            "model": "gpt-4o-mini",
             "messages": [{"role": "user", "content": prompt}]
           }).encode()
 
           req = urllib.request.Request(
-            "https://api.anthropic.com/v1/messages",
+            "https://models.inference.ai.azure.com/chat/completions",
             data=payload,
             headers={
-              "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-              "anthropic-version": "2023-06-01",
+              "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
               "content-type": "application/json"
             }
           )
 
           with urllib.request.urlopen(req) as res:
             body = json.loads(res.read())
-            summary = body["content"][0]["text"]
+            summary = body["choices"][0]["message"]["content"]
 
           with open("whats_changed.txt", "w") as f:
             f.write(summary)
