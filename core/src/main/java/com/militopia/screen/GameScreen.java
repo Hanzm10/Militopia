@@ -309,6 +309,11 @@ public class GameScreen implements Screen {
             gameHUD.setDevPanel(devPanel);
         }
 
+        if (gameState.isLanGame && networkManager != null) {
+            String localName = (gameState.localPlayerID == 1) ? gameState.p1Name : gameState.p2Name;
+            gameHUD.buildChatPanel(networkManager, localName);
+        }
+
         int startIncome = calculateIncome(gameState.currentPlayer);
         gameHUD.updateFunding(gameState.currentPlayer, gameState.p1Funding, startIncome);
 
@@ -449,6 +454,23 @@ public class GameScreen implements Screen {
             networkManager.send(NetworkMessage.disconnect());
         }
         game.setScreen(new com.militopia.screen.MenuScreen(game));
+    }
+
+    private boolean isBlitz() { return gameState.mapWidth == 16; }
+
+    private void handleTimerExpired(int losingPlayer) {
+        if (gameState.isGameOver) return;
+        if (gameState.isLanGame && networkManager != null
+                && networkManager.getState() == NetworkManager.State.CONNECTED) {
+            networkManager.send(NetworkMessage.timerOut());
+        }
+        int winnerID = (losingPlayer == 1) ? 2 : 1;
+        gameState.isGameOver = true;
+        gameState.winnerID = winnerID;
+        AudioManager.getInstance().playSFX(winnerID == getActiveLocalPlayer()
+                ? com.militopia.managers.SFXKeys.VICTORY
+                : com.militopia.managers.SFXKeys.DEFEAT);
+        gameHUD.showGameOverPopup(winnerID);
     }
 
     public boolean toggleFog() {
@@ -596,6 +618,22 @@ public class GameScreen implements Screen {
                     endTurnAction();
                 }
             }
+        }
+
+        if (isBlitz() && turnState == TurnState.PLAYING) {
+            boolean networkPaused = gameState.isLanGame && networkManager != null
+                    && networkManager.getState() == NetworkManager.State.DISCONNECTED;
+            if (!networkPaused) {
+                if (gameState.currentPlayer == 1) {
+                    gameState.p1TimeLeft = Math.max(0, gameState.p1TimeLeft - delta);
+                    if (gameState.p1TimeLeft == 0) handleTimerExpired(1);
+                } else {
+                    gameState.p2TimeLeft = Math.max(0, gameState.p2TimeLeft - delta);
+                    if (gameState.p2TimeLeft == 0) handleTimerExpired(2);
+                }
+            }
+            float displayTime = (gameState.currentPlayer == 1) ? gameState.p1TimeLeft : gameState.p2TimeLeft;
+            gameHUD.updateTimer(displayTime, networkPaused);
         }
 
         inputController.update(delta);
@@ -864,6 +902,14 @@ public class GameScreen implements Screen {
                 saveManager.saveGame(gameState, engine, gameMap);
                 gameHUD.showDisconnectPopup("The opponent has disconnected.\nGame has been saved.");
             }
+        } else if (NetworkMessage.TYPE_CHAT.equals(msg.type)) {
+            int idx = msg.payload.indexOf(':');
+            if (idx > 0) {
+                gameHUD.addChatMessage(msg.payload.substring(0, idx), msg.payload.substring(idx + 1));
+            }
+        } else if (NetworkMessage.TYPE_TIMER_OUT.equals(msg.type)) {
+            int opponentID = (gameState.localPlayerID == 1) ? 2 : 1;
+            handleTimerExpired(opponentID);
         }
     }
 

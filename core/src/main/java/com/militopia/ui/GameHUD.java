@@ -22,6 +22,7 @@ import com.militopia.systems.ScavengeSystem;
 import com.militopia.systems.StructurePlacementSystem;
 import com.militopia.data.GameState;
 import com.militopia.factories.UnitFactory;
+import com.militopia.net.NetworkManager;
 
 /**
  * Thin coordinator / facade for all HUD components.
@@ -82,6 +83,9 @@ public class GameHUD {
 
     // Dev Mode panel
     private DevPanel devPanel;
+
+    // LAN Chat panel
+    private ChatPanel chatPanel;
 
     // Tutorial Overlay
     private TutorialOverlay tutorialOverlay;
@@ -298,6 +302,7 @@ public class GameHUD {
             summonMenu.setSize(width, 140);
             summonMenu.setX(0);
         }
+        if (chatPanel != null) chatPanel.resize();
     }
 
     public void dispose() {
@@ -460,5 +465,26 @@ public class GameHUD {
 
     public void showDisconnectPopup(String message) {
         disconnectPopup.show(message);
+    }
+
+    // -------------------------------------------------------------------------
+    // Chat panel
+    // -------------------------------------------------------------------------
+
+    public void buildChatPanel(NetworkManager networkManager, String localPlayerName) {
+        chatPanel = new ChatPanel(game, stage, networkManager, localPlayerName);
+        chatPanel.build();
+    }
+
+    public void toggleChat() {
+        if (chatPanel != null) chatPanel.toggle();
+    }
+
+    public void addChatMessage(String sender, String text) {
+        if (chatPanel != null) chatPanel.addMessage(sender, text);
+    }
+
+    public void updateTimer(float timeLeft, boolean paused) {
+        topBar.updateTimer(timeLeft, paused);
     }
 }

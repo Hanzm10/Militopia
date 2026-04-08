@@ -605,6 +605,10 @@ public class LobbyScreen implements Screen {
                         stateToSend.p1Name = hostPlayerName;
                         stateToSend.p2Name = receivedClientName;
                         stateToSend.lanPassword = hostPasswordField != null ? hostPasswordField.getText().trim() : "";
+                        if (stateToSend.mapWidth == 16) {
+                            stateToSend.p1TimeLeft = 600f;
+                            stateToSend.p2TimeLeft = 600f;
+                        }
                     }
 
                     String stateJson = json.toJson(stateToSend);

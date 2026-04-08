@@ -307,6 +307,19 @@ public class HudBottomBar {
         }
         menuBox.add(soundSettingsBtn).fillX().width(340).pad(10).row();
         menuBox.add(saveExitBtn).fillX().width(340).pad(10).row();
+        if (screen.getGameState().isLanGame) {
+            TextButton chatBtn = new TextButton("Chat", game.skin, "militopia-btn");
+            chatBtn.addListener(new HoverListener());
+            chatBtn.addListener(new ClickListener() {
+                @Override public void clicked(InputEvent event, float x, float y) {
+                    AudioManager.getInstance().playSFX(SFXKeys.UI_TOGGLE);
+                    settingsOverlay.setVisible(false);
+                    inputController.setInputEnabled(true);
+                    gameHud.toggleChat();
+                }
+            });
+            menuBox.add(chatBtn).fillX().width(340).pad(10).row();
+        }
         menuBox.add(resumeBtn).fillX().width(340).pad(10);
         settingsOverlay.add(menuBox).width(400);
         stage.addActor(settingsOverlay);

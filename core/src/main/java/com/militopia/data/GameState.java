@@ -44,6 +44,10 @@ public class GameState {
     // --- Dev Mode ---
     public boolean isDevMode = false;
 
+    // --- Blitz Timer (seconds) ---
+    public float p1TimeLeft = 600f;
+    public float p2TimeLeft = 600f;
+
     public GameState() {
     }
 
