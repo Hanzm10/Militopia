@@ -51,6 +51,10 @@ public class NetworkManager {
     private BufferedReader in;
     private Thread readerThread;
 
+    // Heartbeat
+    private static final int HEARTBEAT_INTERVAL_MS = 5_000;
+    private Thread heartbeatThread;
+
     // UDP discovery
     private DatagramSocket discoverySocket;
     private Thread discoveryThread;
@@ -90,6 +94,7 @@ public class NetworkManager {
                 state = State.CONNECTED;
                 stopDiscovery();
                 startReaderThread();
+                startHeartbeat();
 
             } catch (IOException e) {
                 if (state != State.DISCONNECTED) {
@@ -151,6 +156,7 @@ public class NetworkManager {
                 setupStreams();
                 state = State.CONNECTED;
                 startReaderThread();
+                startHeartbeat();
 
             } catch (IOException e) {
                 Gdx.app.error(TAG, "Client connect error", e);
@@ -206,8 +212,9 @@ public class NetworkManager {
     // -------------------------------------------------------------------------
 
     private void setupStreams() throws IOException {
+        socket.setSoTimeout(15_000);   // 15s timeout — dead connection caught here
         out = new PrintWriter(socket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
     private void startReaderThread() {
@@ -216,15 +223,29 @@ public class NetworkManager {
                 String line;
                 while ((line = in.readLine()) != null) {
                     NetworkMessage msg = json.fromJson(NetworkMessage.class, line);
-                    if (msg != null) {
-                        incomingQueue.add(msg);
-                        Gdx.app.log(TAG, "Received: " + msg.type);
+                    if (msg == null) continue;
 
-                        if (NetworkMessage.TYPE_DISCONNECT.equals(msg.type)) {
-                            state = State.DISCONNECTED;
-                            break;
-                        }
+                    // Handle heartbeat inline — do NOT enqueue
+                    if (NetworkMessage.TYPE_PING.equals(msg.type)) {
+                        send(NetworkMessage.pong());
+                        continue;
                     }
+                    if (NetworkMessage.TYPE_PONG.equals(msg.type)) {
+                        continue; // alive — SO_TIMEOUT reset by receiving data
+                    }
+
+                    incomingQueue.add(msg);
+                    Gdx.app.log(TAG, "Received: " + msg.type);
+
+                    if (NetworkMessage.TYPE_DISCONNECT.equals(msg.type)) {
+                        state = State.DISCONNECTED;
+                        break;
+                    }
+                }
+            } catch (SocketTimeoutException e) {
+                if (state != State.DISCONNECTED) {
+                    Gdx.app.log(TAG, "Socket timeout — connection dead");
+                    state = State.DISCONNECTED;
                 }
             } catch (IOException e) {
                 if (state != State.DISCONNECTED) {
@@ -235,6 +256,22 @@ public class NetworkManager {
         }, "NetworkReader");
         readerThread.setDaemon(true);
         readerThread.start();
+    }
+
+    private void startHeartbeat() {
+        heartbeatThread = new Thread(() -> {
+            while (state == State.CONNECTED) {
+                try {
+                    Thread.sleep(HEARTBEAT_INTERVAL_MS);
+                    if (state != State.CONNECTED) break;
+                    send(NetworkMessage.ping());
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+        }, "NetworkHeartbeat");
+        heartbeatThread.setDaemon(true);
+        heartbeatThread.start();
     }
 
     // -------------------------------------------------------------------------
@@ -312,6 +349,7 @@ public class NetworkManager {
      */
     public void disconnect() {
         state = State.DISCONNECTED;
+        if (heartbeatThread != null) heartbeatThread.interrupt();
         stopDiscovery();
         try {
             if (out != null) {

@@ -39,6 +39,7 @@ public class GameState {
     // --- LAN Multiplayer ---
     public boolean isLanGame = false;
     public int localPlayerID = 1; // 1 or 2. In hotseat, matches currentPlayer.
+    public String lanPassword = "";
 
     // --- Dev Mode ---
     public boolean isDevMode = false;

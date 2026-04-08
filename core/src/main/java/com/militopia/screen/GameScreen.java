@@ -94,6 +94,7 @@ public class GameScreen implements Screen {
     private float fadeTime = 0f;
     private final float FADE_DURATION = 0.4f;
     private ShapeRenderer shapeRenderer;
+    private boolean disconnectHandled = false;
 
     public GameScreen(final MilitopiaGame game, GameState loadedState) {
         this(game, loadedState, null);
@@ -442,14 +443,10 @@ public class GameScreen implements Screen {
     }
 
     public void saveAndExit() {
-        if (gameState.isLanGame) {
-            // LAN: Skip local save, send disconnect msg
-            if (networkManager != null && networkManager.getState() == NetworkManager.State.CONNECTED) {
-                networkManager.send(NetworkMessage.disconnect());
-            }
-        } else {
-            // Hotseat: Save normally
-            saveManager.saveGame(gameState, engine, gameMap);
+        saveManager.saveGame(gameState, engine, gameMap);  // always save
+        if (gameState.isLanGame && networkManager != null
+                && networkManager.getState() == NetworkManager.State.CONNECTED) {
+            networkManager.send(NetworkMessage.disconnect());
         }
         game.setScreen(new com.militopia.screen.MenuScreen(game));
     }
@@ -606,6 +603,14 @@ public class GameScreen implements Screen {
         // --- LAN: Poll for incoming network messages ---
         if (gameState.isLanGame && networkManager != null) {
             pollNetwork();
+        }
+
+        if (gameState.isLanGame && networkManager != null
+                && networkManager.getState() == NetworkManager.State.DISCONNECTED
+                && !disconnectHandled) {
+            disconnectHandled = true;
+            saveManager.saveGame(gameState, engine, gameMap);
+            gameHUD.showDisconnectPopup("Connection lost.\nGame has been saved.");
         }
 
         camera.update();
@@ -854,7 +859,11 @@ public class GameScreen implements Screen {
             processRemoteAction(msg);
         } else if (NetworkMessage.TYPE_DISCONNECT.equals(msg.type)) {
             GameLogger.log(GameLogger.INPUT, "LAN: Opponent disconnected");
-            gameHUD.showDisconnectPopup("The opponent has disconnected.");
+            if (!disconnectHandled) {
+                disconnectHandled = true;
+                saveManager.saveGame(gameState, engine, gameMap);
+                gameHUD.showDisconnectPopup("The opponent has disconnected.\nGame has been saved.");
+            }
         }
     }
 
