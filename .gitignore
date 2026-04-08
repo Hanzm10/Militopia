@@ -19,6 +19,10 @@ scripts/
 Thumbs.db
 .DS_Store
 
+## Saves:
+assets/saves/*.json
+!assets/saves/Tutorial.json
+
 ## Other:
 changes.txt
 status_full.txt
