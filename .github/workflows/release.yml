@@ -65,23 +65,80 @@ jobs:
           cp lwjgl3/build/construo/winX64/Militopia.zip Militopia-${NEW_TAG}-windows.zip
           cp lwjgl3/build/construo/macM1/Militopia.zip Militopia-${NEW_TAG}-mac-arm64.zip
 
-      - name: Build release notes
+      - name: Generate AI release notes
+        id: ai_notes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           NEW_TAG="${{ steps.version.outputs.new_tag }}"
           LATEST_TAG="${{ steps.version.outputs.latest_tag }}"
           SUBTITLE="${{ steps.title.outputs.subtitle }}"
 
           if [ -z "$LATEST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"- %s" | grep -v "^- release:" | head -20)
+            COMMITS=$(git log --pretty=format:"%s" | grep -v "^release:" | head -20)
           else
-            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"- %s" | grep -v "^- release:")
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --pretty=format:"%s" | grep -v "^release:")
           fi
+
+          python3 - <<PYEOF
+          import urllib.request, json, os, sys
+
+          commits = """${COMMITS}"""
+          subtitle = "${SUBTITLE}"
+          version = "${NEW_TAG}"
+
+          prompt = f"""You are writing release notes for Militopia, a turn-based strategy game.
+
+          Version: {version}
+          Release title: {subtitle}
+
+          Raw commits since last release:
+          {commits}
+
+          Write a concise "What's changed" section for the release notes.
+          - Group related changes together if possible
+          - Use plain bullet points (- )
+          - Be player-friendly, not technical jargon
+          - Keep it short and clear
+          - Do not include a header, just the bullet points"""
+
+          payload = json.dumps({
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 512,
+            "messages": [{"role": "user", "content": prompt}]
+          }).encode()
+
+          req = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=payload,
+            headers={
+              "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+              "anthropic-version": "2023-06-01",
+              "content-type": "application/json"
+            }
+          )
+
+          with urllib.request.urlopen(req) as res:
+            body = json.loads(res.read())
+            summary = body["content"][0]["text"]
+
+          with open("whats_changed.txt", "w") as f:
+            f.write(summary)
+
+          print("AI summary generated.")
+          PYEOF
+
+      - name: Build release notes
+        run: |
+          NEW_TAG="${{ steps.version.outputs.new_tag }}"
+          SUBTITLE="${{ steps.title.outputs.subtitle }}"
+          WHATS_CHANGED=$(cat whats_changed.txt)
 
           cat > release_notes.md <<EOF
           ## Militopia ${NEW_TAG} — ${SUBTITLE}
 
           ### What's changed
-          ${COMMITS}
+          ${WHATS_CHANGED}
 
           ### Downloads
 
