@@ -13,6 +13,7 @@ skills-lock.json
 .agent/
 .claude/
 .planning/
+scripts/
 
 ## OS:
 Thumbs.db
