@@ -59,11 +59,16 @@ jobs:
 
       - name: Collect artifacts
         run: |
+          set -euo pipefail
           NEW_TAG="${{ steps.version.outputs.new_tag }}"
           VERSION_NUM="${{ steps.version.outputs.version_num }}"
-          cp lwjgl3/build/libs/Militopia-${VERSION_NUM}.jar Militopia-${NEW_TAG}-universal.jar
-          cp lwjgl3/build/construo/winX64/Militopia.zip Militopia-${NEW_TAG}-windows.zip
-          cp lwjgl3/build/construo/macM1/Militopia.zip Militopia-${NEW_TAG}-mac-arm64.zip
+          cp "lwjgl3/build/libs/Militopia-${VERSION_NUM}.jar" "Militopia-${NEW_TAG}-universal.jar"
+          
+          WIN_ZIP="$(ls -1 lwjgl3/build/construo/winX64/*.zip | head -n 1)"
+          MAC_ZIP="$(ls -1 lwjgl3/build/construo/macM1/*.zip | head -n 1)"
+          
+          cp "$WIN_ZIP" "Militopia-${NEW_TAG}-windows.zip"
+          cp "$MAC_ZIP" "Militopia-${NEW_TAG}-mac-arm64.zip"
 
       - name: Generate AI release notes
         id: ai_notes
