@@ -905,7 +905,8 @@ public class GameScreen implements Screen {
         } else if (NetworkMessage.TYPE_CHAT.equals(msg.type)) {
             int idx = msg.payload.indexOf(':');
             if (idx > 0) {
-                gameHUD.addChatMessage(msg.payload.substring(0, idx), msg.payload.substring(idx + 1));
+                int remoteID = (gameState.localPlayerID == 1) ? 2 : 1;
+                gameHUD.addChatMessage(remoteID, msg.payload.substring(0, idx), msg.payload.substring(idx + 1));
             }
         } else if (NetworkMessage.TYPE_TIMER_OUT.equals(msg.type)) {
             int opponentID = (gameState.localPlayerID == 1) ? 2 : 1;

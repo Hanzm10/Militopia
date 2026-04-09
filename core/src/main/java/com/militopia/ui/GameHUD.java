@@ -480,8 +480,8 @@ public class GameHUD {
         if (chatPanel != null) chatPanel.toggle();
     }
 
-    public void addChatMessage(String sender, String text) {
-        if (chatPanel != null) chatPanel.addMessage(sender, text);
+    public void addChatMessage(int senderID, String sender, String text) {
+        if (chatPanel != null) chatPanel.addMessage(senderID, sender, text);
     }
 
     public void updateTimer(float timeLeft, boolean paused) {

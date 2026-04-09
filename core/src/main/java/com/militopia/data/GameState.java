@@ -67,12 +67,14 @@ public class GameState {
     }
 
     public static class ChatMessage {
+        public int senderID;
         public String sender;
         public String text;
         
         public ChatMessage() {}
         
-        public ChatMessage(String sender, String text) {
+        public ChatMessage(int senderID, String sender, String text) {
+            this.senderID = senderID;
             this.sender = sender;
             this.text = text;
         }

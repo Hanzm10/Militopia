@@ -124,20 +124,25 @@ public class ChatPanel {
         
         if (gameState != null && gameState.chatHistory != null) {
             for (com.militopia.data.GameState.ChatMessage msg : gameState.chatHistory) {
-                renderMessage(msg.sender, msg.text);
+                int resolvedID = msg.senderID;
+                if (resolvedID == 0) {
+                    resolvedID = (gameState.p1Name != null && gameState.p1Name.equals(msg.sender)) ? 1 : 2;
+                    msg.senderID = resolvedID;
+                }
+                renderMessage(resolvedID, msg.sender, msg.text);
             }
         }
     }
 
-    public void addMessage(String sender, String text) {
+    public void addMessage(int senderID, String sender, String text) {
         if (gameState != null) {
-            gameState.chatHistory.add(new com.militopia.data.GameState.ChatMessage(sender, text));
+            gameState.chatHistory.add(new com.militopia.data.GameState.ChatMessage(senderID, sender, text));
         }
-        renderMessage(sender, text);
+        renderMessage(senderID, sender, text);
     }
 
-    private void renderMessage(String sender, String text) {
-        boolean isLocal = sender.equals(localPlayerName);
+    private void renderMessage(int senderID, String sender, String text) {
+        boolean isLocal = (senderID == gameState.localPlayerID);
 
         Table rowTable = new Table();
 
@@ -175,7 +180,7 @@ public class ChatPanel {
             rowTable.add(bubble).left().expandX().padLeft(12).padRight(40).padBottom(8);
         }
 
-        messageList.add(rowTable).width(340f).row();
+        messageList.add(rowTable).width(340f).fillX().row();
         scrollPane.layout();
         scrollPane.setScrollPercentY(1f);
     }
@@ -215,7 +220,7 @@ public class ChatPanel {
         if (networkManager != null) {
             networkManager.send(NetworkMessage.chat(localPlayerName, text));
         }
-        addMessage(localPlayerName, text);
+        addMessage(gameState.localPlayerID, localPlayerName, text);
         inputField.setText("");
     }
 
