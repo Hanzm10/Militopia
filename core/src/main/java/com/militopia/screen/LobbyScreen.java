@@ -17,6 +17,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.militopia.MilitopiaGame;
 import com.militopia.data.GameState;
@@ -82,10 +86,14 @@ public class LobbyScreen implements Screen {
     private boolean transitioning = false;
 
     private final Json json = new Json();
+    private Texture deleteIconTex;
+    private TextureRegionDrawable deleteIconDrawable;
 
     public LobbyScreen(final MilitopiaGame game) {
         this.game = game;
         stage = new Stage(new ScreenViewport());
+        deleteIconTex = new Texture(Gdx.files.internal("ui/circle_ui_delete.png"));
+        deleteIconDrawable = new TextureRegionDrawable(new TextureRegion(deleteIconTex));
         Gdx.input.setInputProcessor(stage);
         showChooseScreen();
     }
@@ -371,8 +379,7 @@ public class LobbyScreen implements Screen {
                     }
                 });
 
-                TextButton delBtn = new TextButton("X", game.skin, "militopia-btn");
-                delBtn.setColor(Color.FIREBRICK);
+                ImageButton delBtn = new ImageButton(deleteIconDrawable);
                 delBtn.addListener(new HoverListener());
                 delBtn.addListener(new ClickListener() {
                     @Override
@@ -384,7 +391,7 @@ public class LobbyScreen implements Screen {
                 });
 
                 rowTable.add(entry).fillX().expandX().padRight(10);
-                rowTable.add(delBtn).width(60).fillY();
+                rowTable.add(delBtn).size(80);
 
                 rootTable.add(rowTable).fillX().width(500).pad(5).row();
             } catch (Exception ignored) {}
@@ -722,6 +729,7 @@ public class LobbyScreen implements Screen {
         if (networkManager != null && !transitioning) {
             networkManager.disconnect();
         }
+        if (deleteIconTex != null) deleteIconTex.dispose();
     }
 
     private void addInputRow(Table t, String labelText, TextField field) {

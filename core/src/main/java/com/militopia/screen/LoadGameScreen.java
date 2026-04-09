@@ -25,6 +25,10 @@ import com.militopia.utils.GameLogger;
 import com.militopia.utils.HoverListener;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
 public class LoadGameScreen implements Screen {
 
@@ -35,11 +39,15 @@ public class LoadGameScreen implements Screen {
     private float fadeTime = 0f;
     private final float FADE_DURATION = 0.3f;
     private GameState selectedState = null;
+    private Texture deleteIconTex;
+    private TextureRegionDrawable deleteIconDrawable;
 
     public LoadGameScreen(final MilitopiaGame game) {
         this.game = game;
         stage = new Stage(new ScreenViewport());
         shapeRenderer = new ShapeRenderer();
+        deleteIconTex = new Texture(Gdx.files.internal("ui/circle_ui_delete.png"));
+        deleteIconDrawable = new TextureRegionDrawable(new TextureRegion(deleteIconTex));
         Gdx.input.setInputProcessor(stage);
 
         Table mainTable = new Table();
@@ -100,8 +108,7 @@ public class LoadGameScreen implements Screen {
                         }
                     });
 
-                    TextButton delBtn = new TextButton("X", game.skin, "militopia-btn");
-                    delBtn.setColor(Color.FIREBRICK);
+                    ImageButton delBtn = new ImageButton(deleteIconDrawable);
                     delBtn.addListener(new HoverListener());
                     delBtn.addListener(new ClickListener() {
                         @Override
@@ -113,7 +120,7 @@ public class LoadGameScreen implements Screen {
                     });
 
                     rowTable.add(entry).fillX().expandX().padRight(10);
-                    rowTable.add(delBtn).width(60).fillY();
+                    rowTable.add(delBtn).size(80);
 
                     listTable.add(rowTable).fillX().width(680).pad(8).row();
 
@@ -194,5 +201,6 @@ public class LoadGameScreen implements Screen {
     public void dispose() {
         stage.dispose();
         shapeRenderer.dispose();
+        if (deleteIconTex != null) deleteIconTex.dispose();
     }
 }
