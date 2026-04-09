@@ -1,6 +1,7 @@
 package com.militopia.screen;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
@@ -88,6 +89,7 @@ public class LobbyScreen implements Screen {
     private final Json json = new Json();
     private Texture deleteIconTex;
     private TextureRegionDrawable deleteIconDrawable;
+    private boolean isJoinResumeMode = false;
 
     public LobbyScreen(final MilitopiaGame game) {
         this.game = game;
@@ -328,7 +330,7 @@ public class LobbyScreen implements Screen {
 
         // Start networking
         networkManager = new NetworkManager();
-        networkManager.startHost();
+        networkManager.startHost(isResumeMode);
     }
 
     // =========================================================================
@@ -517,6 +519,9 @@ public class LobbyScreen implements Screen {
         rootTable.add(new Label("Password:", game.skin)).right().pad(5);
         rootTable.add(joinPasswordField).width(200).pad(5).row();
         rootTable.add(errorLabel).colspan(2).pad(10).row();
+        
+        isJoinResumeMode = false; 
+        clientNameField.setVisible(true);
 
         Table btnRow = new Table();
         btnRow.add(backBtn).fillX().width(150).pad(10);
@@ -536,6 +541,27 @@ public class LobbyScreen implements Screen {
                 attemptConnect(ip);
             }
         });
+
+        InputListener enterListener = new InputListener() {
+            @Override
+            public boolean keyDown(InputEvent event, int keycode) {
+                if (keycode == Keys.ENTER || keycode == Keys.NUMPAD_ENTER) {
+                    String ip = ipField.getText().trim();
+                    if (ip.isEmpty()) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_ERROR);
+                        errorLabel.setText("Enter the host's IP address!");
+                    } else {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CONFIRM);
+                        attemptConnect(ip);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        };
+        clientNameField.addListener(enterListener);
+        ipField.addListener(enterListener);
+        joinPasswordField.addListener(enterListener);
 
         backBtn.addListener(new ClickListener() {
             @Override
@@ -557,7 +583,11 @@ public class LobbyScreen implements Screen {
         errorLabel.setText("");
 
         String cn = clientNameField.getText().trim();
-        clientPlayerName = cn.isEmpty() ? "Player 2" : cn;
+        if (isJoinResumeMode) {
+            clientPlayerName = ""; // Host will use name from save
+        } else {
+            clientPlayerName = cn.isEmpty() ? "Player 2" : cn;
+        }
         clientNameSent = false;
 
         if (networkManager != null) networkManager.disconnect();
@@ -583,7 +613,13 @@ public class LobbyScreen implements Screen {
                     NetworkMessage nameMsg = networkManager.poll();
                     if (nameMsg != null) {
                         if (!clientNameReceived && NetworkMessage.TYPE_PLAYER_NAME.equals(nameMsg.type)) {
-                            receivedClientName = nameMsg.payload.trim().isEmpty() ? "Player 2" : nameMsg.payload.trim();
+                            String payload = nameMsg.payload.trim();
+                            if (!payload.isEmpty()) {
+                                receivedClientName = payload;
+                            } else if (!isResumeMode) {
+                                receivedClientName = "Player 2";
+                            }
+                            // if empty AND isResumeMode, we keep the one initialized in showResumeHostConfig
                             clientNameReceived = true;
                         } else if (isResumeMode && clientNameReceived && !passwordReceived
                                 && NetworkMessage.TYPE_PASSWORD.equals(nameMsg.type)) {
@@ -598,7 +634,7 @@ public class LobbyScreen implements Screen {
                                 passwordReceived = false;
                                 statusLabel.setText("Wrong password. Waiting again...");
                                 networkManager = new NetworkManager();
-                                networkManager.startHost();
+                                networkManager.startHost(isResumeMode);
                             }
                         }
                     }
@@ -652,8 +688,12 @@ public class LobbyScreen implements Screen {
                 String discovered = networkManager.getDiscoveredHostIP();
                 if (discovered != null && (ipField.getText().isEmpty())) {
                     ipField.setText(discovered);
-                    statusLabel.setText("Found host: " + discovered);
+                    statusLabel.setText("Found host (" + (networkManager.isDiscoveredHostResume() ? "RESUME" : "NEW") + "): " + discovered);
                     statusLabel.setColor(Color.GREEN);
+                    
+                    // Auto-update resume mode based on discovery
+                    isJoinResumeMode = networkManager.isDiscoveredHostResume();
+                    clientNameField.setVisible(!isJoinResumeMode);
                 }
 
                 if (networkManager.getState() == NetworkManager.State.CONNECTED) {

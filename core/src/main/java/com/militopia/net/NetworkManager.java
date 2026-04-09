@@ -59,6 +59,7 @@ public class NetworkManager {
     private DatagramSocket discoverySocket;
     private Thread discoveryThread;
     private volatile String discoveredHostIP = null;
+    private volatile boolean discoveredHostIsResume = false;
 
     // Thread-safe incoming message queue (polled on render thread)
     private final ConcurrentLinkedQueue<NetworkMessage> incomingQueue = new ConcurrentLinkedQueue<>();
@@ -73,7 +74,7 @@ public class NetworkManager {
      * Starts listening for a client connection in a background thread.
      * State transitions: IDLE → WAITING → CONNECTED.
      */
-    public void startHost() {
+    public void startHost(boolean isResume) {
         role = Role.HOST;
         state = State.WAITING;
 
@@ -85,7 +86,7 @@ public class NetworkManager {
                 Gdx.app.log(TAG, "Host listening on port " + PORT);
 
                 // Start UDP broadcast so clients can discover us
-                startDiscoveryBroadcast();
+                startDiscoveryBroadcast(isResume);
 
                 socket = serverSocket.accept();
                 Gdx.app.log(TAG, "Client connected: " + socket.getInetAddress());
@@ -109,12 +110,13 @@ public class NetworkManager {
     /**
      * Broadcasts a UDP discovery packet every second so LAN clients can find us.
      */
-    private void startDiscoveryBroadcast() {
+    private void startDiscoveryBroadcast(boolean isResume) {
         discoveryThread = new Thread(() -> {
             try {
                 discoverySocket = new DatagramSocket();
                 discoverySocket.setBroadcast(true);
-                byte[] data = DISCOVERY_MAGIC.getBytes();
+                String msg = DISCOVERY_MAGIC + (isResume ? ":RESUME" : ":NEW");
+                byte[] data = msg.getBytes();
                 InetAddress broadcastAddr = InetAddress.getByName("255.255.255.255");
 
                 while (state == State.WAITING) {
@@ -183,9 +185,10 @@ public class NetworkManager {
                         DatagramPacket packet = new DatagramPacket(buf, buf.length);
                         discoverySocket.receive(packet);
                         String msg = new String(packet.getData(), 0, packet.getLength());
-                        if (DISCOVERY_MAGIC.equals(msg)) {
+                        if (msg.startsWith(DISCOVERY_MAGIC)) {
                             discoveredHostIP = packet.getAddress().getHostAddress();
-                            Gdx.app.log(TAG, "Discovered host at: " + discoveredHostIP);
+                            discoveredHostIsResume = msg.endsWith(":RESUME");
+                            Gdx.app.log(TAG, "Discovered host at: " + discoveredHostIP + " (Resume: " + discoveredHostIsResume + ")");
                         }
                     } catch (SocketTimeoutException e) {
                         // Keep listening
@@ -205,6 +208,10 @@ public class NetworkManager {
 
     public String getDiscoveredHostIP() {
         return discoveredHostIP;
+    }
+
+    public boolean isDiscoveredHostResume() {
+        return discoveredHostIsResume;
     }
 
     // -------------------------------------------------------------------------
