@@ -287,9 +287,9 @@ public class HudBottomBar {
             }
         });
 
-        menuBox.add(title).pad(20).row();
+        menuBox.add(title).padTop(15).padBottom(15).row();
         if (!screen.getGameState().isLanGame) {
-            menuBox.add(fogBtn).fillX().width(340).pad(10).row();
+            menuBox.add(fogBtn).fillX().width(240).pad(6).row();
         }
         TextButton soundSettingsBtn = new TextButton("Sound Settings", game.skin, "militopia-btn");
         soundSettingsBtn.addListener(new HoverListener());
@@ -303,10 +303,10 @@ public class HudBottomBar {
         });
 
         if (!screen.getGameState().isLanGame) {
-            menuBox.add(undoRedoBtn).fillX().width(340).pad(10).row();
+            menuBox.add(undoRedoBtn).fillX().width(240).pad(6).row();
         }
-        menuBox.add(soundSettingsBtn).fillX().width(340).pad(10).row();
-        menuBox.add(saveExitBtn).fillX().width(340).pad(10).row();
+        menuBox.add(soundSettingsBtn).fillX().width(240).pad(6).row();
+        menuBox.add(saveExitBtn).fillX().width(240).pad(6).row();
         if (screen.getGameState().isLanGame) {
             TextButton chatBtn = new TextButton("Chat", game.skin, "militopia-btn");
             chatBtn.addListener(new HoverListener());
@@ -318,10 +318,10 @@ public class HudBottomBar {
                     gameHud.toggleChat();
                 }
             });
-            menuBox.add(chatBtn).fillX().width(340).pad(10).row();
+            menuBox.add(chatBtn).fillX().width(240).pad(6).row();
         }
-        menuBox.add(resumeBtn).fillX().width(340).pad(10);
-        settingsOverlay.add(menuBox).width(400);
+        menuBox.add(resumeBtn).fillX().width(240).pad(6);
+        settingsOverlay.add(menuBox).width(280);
         stage.addActor(settingsOverlay);
     }
 
@@ -358,9 +358,6 @@ public class HudBottomBar {
         boolean isMyTurn = (currentPlayer == localPlayerID);
         endTurnBtn.setVisible(isMyTurn);
         waitingLabel.setVisible(!isMyTurn);
-
-        // EXTRA SECURITY: Block the entire bar if it's not our turn
-        setBlocked(!isMyTurn);
 
         if (!isMyTurn) {
             // Fade effect for the waiting label to make it feel "active"

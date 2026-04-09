@@ -34,6 +34,7 @@ public class ChatPanel {
     private final Stage stage;
     private final NetworkManager networkManager;
     private final String localPlayerName;
+    private final com.militopia.data.GameState gameState;
 
     private Table card;
     private boolean visible = false;
@@ -42,11 +43,12 @@ public class ChatPanel {
     private ScrollPane scrollPane;
     private TextField inputField;
 
-    public ChatPanel(MilitopiaGame game, Stage stage, NetworkManager networkManager, String localPlayerName) {
+    public ChatPanel(MilitopiaGame game, Stage stage, NetworkManager networkManager, String localPlayerName, com.militopia.data.GameState gameState) {
         this.game = game;
         this.stage = stage;
         this.networkManager = networkManager;
         this.localPlayerName = localPlayerName;
+        this.gameState = gameState;
     }
 
     public void build() {
@@ -84,8 +86,15 @@ public class ChatPanel {
         });
         card.add(scrollPane).growX().growY().row();
 
-        // Input row
         inputField = new TextField("", game.skin);
+        inputField.setTextFieldListener(new TextField.TextFieldListener() {
+            @Override
+            public void keyTyped(TextField textField, char c) {
+                if (c == '\r' || c == '\n') {
+                    sendMessage();
+                }
+            }
+        });
         TextButton sendBtn = new TextButton("Send", game.skin, "militopia-btn");
         sendBtn.getLabel().setFontScale(0.6f);
         sendBtn.addListener(new ClickListener() {
@@ -112,14 +121,61 @@ public class ChatPanel {
         card.setBounds(sw, 0, PANEL_WIDTH, sh);
         card.setVisible(false);
         stage.addActor(card);
+        
+        if (gameState != null && gameState.chatHistory != null) {
+            for (com.militopia.data.GameState.ChatMessage msg : gameState.chatHistory) {
+                renderMessage(msg.sender, msg.text);
+            }
+        }
     }
 
     public void addMessage(String sender, String text) {
-        Label lbl = new Label("[" + sender + "]: " + text, game.skin);
-        lbl.setFontScale(0.55f);
-        lbl.setWrap(true);
-        lbl.setColor(sender.equals(localPlayerName) ? Color.CYAN : Color.WHITE);
-        messageList.add(lbl).fillX().padLeft(8).padRight(8).row();
+        if (gameState != null) {
+            gameState.chatHistory.add(new com.militopia.data.GameState.ChatMessage(sender, text));
+        }
+        renderMessage(sender, text);
+    }
+
+    private void renderMessage(String sender, String text) {
+        boolean isLocal = sender.equals(localPlayerName);
+
+        Table rowTable = new Table();
+
+        Table bubble = new Table();
+        Color bubbleColor = isLocal ? new Color(0.1f, 0.45f, 0.8f, 1f) : new Color(0.2f, 0.2f, 0.2f, 1f);
+        bubble.setBackground(makeSolidDrawable(bubbleColor.r, bubbleColor.g, bubbleColor.b, bubbleColor.a));
+        bubble.pad(10);
+
+        Label textLbl = new Label(text, game.skin);
+        textLbl.setFontScale(0.55f);
+        // Do not enable wrap yet so we can measure the single-line width
+        textLbl.setWrap(false);
+        textLbl.setAlignment(Align.left);
+
+        if (!isLocal) {
+            Label nameLbl = new Label(sender, game.skin);
+            nameLbl.setFontScale(0.45f);
+            nameLbl.setColor(Color.LIGHT_GRAY);
+            bubble.add(nameLbl).left().padBottom(4).row();
+        }
+
+        float prefWidth = textLbl.getPrefWidth();
+        float maxWidth = 240f;
+
+        if (prefWidth > maxWidth) {
+            textLbl.setWrap(true);
+            bubble.add(textLbl).width(maxWidth).left();
+        } else {
+            bubble.add(textLbl).left();
+        }
+
+        if (isLocal) {
+            rowTable.add(bubble).right().expandX().padLeft(40).padRight(12).padBottom(8);
+        } else {
+            rowTable.add(bubble).left().expandX().padLeft(12).padRight(40).padBottom(8);
+        }
+
+        messageList.add(rowTable).width(340f).row();
         scrollPane.layout();
         scrollPane.setScrollPercentY(1f);
     }

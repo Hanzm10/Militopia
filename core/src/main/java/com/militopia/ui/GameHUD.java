@@ -472,7 +472,7 @@ public class GameHUD {
     // -------------------------------------------------------------------------
 
     public void buildChatPanel(NetworkManager networkManager, String localPlayerName) {
-        chatPanel = new ChatPanel(game, stage, networkManager, localPlayerName);
+        chatPanel = new ChatPanel(game, stage, networkManager, localPlayerName, gameState);
         chatPanel.build();
     }
 

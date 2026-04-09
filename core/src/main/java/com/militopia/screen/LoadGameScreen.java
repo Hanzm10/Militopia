@@ -70,6 +70,8 @@ public class LoadGameScreen implements Screen {
 
                     TextButton.TextButtonStyle milStyle = game.skin.get("militopia-btn", TextButton.TextButtonStyle.class);
 
+                    Table rowTable = new Table();
+
                     Table entry = new Table();
                     entry.setBackground(milStyle.up);
 
@@ -98,7 +100,22 @@ public class LoadGameScreen implements Screen {
                         }
                     });
 
-                    listTable.add(entry).fillX().width(680).pad(8).row();
+                    TextButton delBtn = new TextButton("X", game.skin, "militopia-btn");
+                    delBtn.setColor(Color.FIREBRICK);
+                    delBtn.addListener(new HoverListener());
+                    delBtn.addListener(new ClickListener() {
+                        @Override
+                        public void clicked(InputEvent event, float x, float y) {
+                            AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
+                            file.delete();
+                            game.setScreen(new LoadGameScreen(game));
+                        }
+                    });
+
+                    rowTable.add(entry).fillX().expandX().padRight(10);
+                    rowTable.add(delBtn).width(60).fillY();
+
+                    listTable.add(rowTable).fillX().width(680).pad(8).row();
 
                 } catch (Exception e) {
                     GameLogger.logScreen("Corrupt save file: " + file.name());

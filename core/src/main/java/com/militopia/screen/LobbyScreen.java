@@ -350,6 +350,8 @@ public class LobbyScreen implements Screen {
                 if (!s.isLanGame || s.isGameOver) continue;
                 anyFound = true;
 
+                Table rowTable = new Table();
+
                 Table entry = new Table();
                 entry.setBackground(game.skin.get("militopia-btn", com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle.class).up);
 
@@ -369,7 +371,22 @@ public class LobbyScreen implements Screen {
                     }
                 });
 
-                rootTable.add(entry).fillX().width(500).pad(5).row();
+                TextButton delBtn = new TextButton("X", game.skin, "militopia-btn");
+                delBtn.setColor(Color.FIREBRICK);
+                delBtn.addListener(new HoverListener());
+                delBtn.addListener(new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        AudioManager.getInstance().playSFX(SFXKeys.UI_CLICK_CANCEL);
+                        file.delete();
+                        showResumeLanList();
+                    }
+                });
+
+                rowTable.add(entry).fillX().expandX().padRight(10);
+                rowTable.add(delBtn).width(60).fillY();
+
+                rootTable.add(rowTable).fillX().width(500).pad(5).row();
             } catch (Exception ignored) {}
         }
 

@@ -65,4 +65,18 @@ public class GameState {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
         this.timestamp = LocalDateTime.now().format(formatter);
     }
+
+    public static class ChatMessage {
+        public String sender;
+        public String text;
+        
+        public ChatMessage() {}
+        
+        public ChatMessage(String sender, String text) {
+            this.sender = sender;
+            this.text = text;
+        }
+    }
+    
+    public ArrayList<ChatMessage> chatHistory = new ArrayList<>();
 }
