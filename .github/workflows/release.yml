@@ -64,11 +64,8 @@ jobs:
           VERSION_NUM="${{ steps.version.outputs.version_num }}"
           cp "lwjgl3/build/libs/Militopia-${VERSION_NUM}.jar" "Militopia-${NEW_TAG}-universal.jar"
           
-          WIN_ZIP="$(ls -1 lwjgl3/build/construo/winX64/*.zip | head -n 1)"
-          MAC_ZIP="$(ls -1 lwjgl3/build/construo/macM1/*.zip | head -n 1)"
-          
-          cp "$WIN_ZIP" "Militopia-${NEW_TAG}-windows.zip"
-          cp "$MAC_ZIP" "Militopia-${NEW_TAG}-mac-arm64.zip"
+          (cd lwjgl3/build/construo/winX64 && zip -r "../../../../Militopia-${NEW_TAG}-windows.zip" roast)
+          (cd lwjgl3/build/construo/macM1 && zip -r "../../../../Militopia-${NEW_TAG}-mac-arm64.zip" Militopia.app)
 
       - name: Generate AI release notes
         id: ai_notes
