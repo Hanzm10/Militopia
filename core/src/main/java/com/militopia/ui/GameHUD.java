@@ -244,7 +244,7 @@ public class GameHUD {
         for (int i = undoSnaps.size() - 1; i >= 0; i--) {
             com.militopia.data.TurnSnapshot snap = undoSnaps.get(i);
             final int index = i;
-            TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
+            TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin, "militopia-btn");
             btn.getLabel().setFontScale(0.55f);
             btn.getLabel().setColor(snap.currentPlayer == 1 ? Color.SKY : Color.SALMON);
             btn.addListener(new ClickListener() {
@@ -268,7 +268,7 @@ public class GameHUD {
         for (int i = 0; i < redoSnaps.size(); i++) {
             com.militopia.data.TurnSnapshot snap = redoSnaps.get(i);
             final int index = i;
-            TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin);
+            TextButton btn = new TextButton("P" + snap.currentPlayer + " T" + snap.turn, game.skin, "militopia-btn");
             btn.getLabel().setFontScale(0.55f);
             btn.getLabel().setColor(Color.DARK_GRAY);
             btn.addListener(new ClickListener() {
