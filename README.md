@@ -30,8 +30,7 @@
 20. [HUD](#hud)
 21. [Tech Stack](#tech-stack)
 22. [Developer Notes](#developer-notes)
-23. [Roadmap](#roadmap)
-24. [License](#license)
+23. [License](#license)
 
 ---
 
@@ -149,6 +148,14 @@ Militopia supports **LAN play** — each player runs the game on their own machi
 4. The host sends the initial game state and both players enter the game.
 
 > **Note:** In LAN mode each player sees only their own fog of war — there is no shared screen like hot-seat.
+
+### Additional LAN Features
+
+- **Password Protection** — Hosts can set a password; clients must enter it to join.
+- **In-Game Chat** — A chat panel lets players communicate during the match.
+- **Blitz Chess Clock** — Optional turn timer for faster-paced games.
+- **Auto-Save on Disconnect** — Game state is saved automatically if a player disconnects.
+- **Resume Game** — Reconnect and resume a previously disconnected LAN session.
 
 ---
 
@@ -431,8 +438,9 @@ When a unit stands on a **Ruins** tile, they can perform a **Scavenge** action (
 | **Capture Menu** | Slide-in panel for capturing adjacent structures |
 | **Level-Up Popup** | Animated popup on base promotion with bonuses and unlocks |
 | **Super Unit Popup** | Choice popup at Level 5 to select and spawn a super unit |
+| **Chat Panel** | In-game chat for LAN multiplayer communication |
 | **Floating Text** | XP, Funding, and event text floats above tiles during gameplay |
-| **Game Over Screen** | Displayed when all enemy bases are captured; returns to main menu |
+| **Game Over Popup** | Displayed when all enemy bases are captured; returns to main menu |
 
 ---
 
@@ -468,8 +476,13 @@ Militopia/
 │       ├── components/     # Ashley ECS components
 │       ├── systems/        # ECS systems (combat, fog, render, economy...)
 │       ├── factories/      # Entity creation (UnitFactory, EntityFactory)
-│       ├── screen/         # Screens (Menu, Game, NewGame, LoadGame, GameOver)
-│       ├── managers/       # Asset, Audio, Save, Turn managers
+│       ├── screen/         # Screens (Splash, Menu, NewGame, LoadGame, Lobby, Game, Tutorial)
+│       ├── managers/       # Asset, Audio, Save, Turn History, Tutorial managers
+│       ├── controller/     # Input handling (GameInputController, UnitSelectionHandler)
+│       ├── net/            # LAN networking (TCP/UDP, NetworkManager)
+│       ├── ui/             # HUD components, popups, slide menus, chat panel
+│       ├── map/            # Map generation (Simplex noise)
+│       ├── utils/          # Rendering utilities, sorting, logging
 │       └── data/           # Game state and save data models
 ├── lwjgl3/                 # Desktop launcher
 ├── assets/                 # Textures, sounds, fonts, skins
@@ -489,24 +502,9 @@ Militopia/
 | `systems/ScavengeSystem.java` | Ruins scavenging rewards logic |
 | `factories/UnitFactory.java` | Unit/structure/base entity creation and level-up |
 | `screen/GameScreen.java` | Main gameplay screen and systems orchestration |
-
----
-
-## Roadmap
-
-| Phase | Description | Status |
-|---|---|---|
-| 0 | Foundation — libGDX + Ashley ECS + isometric renderer | Complete |
-| 1 | Turn Engine & Economy | Complete |
-| 2 | Base Progression & Level-Up | Complete |
-| 3 | Capture & Territory + Fog of War | Complete |
-| 4 | Full Unit Roster & Combat | Complete |
-| 4.1 | Unit & Building Abilities | Complete |
-| 5 | Specialized Structures | Complete |
-| 6 | Win / Loss Conditions | Complete |
-| 7 | Exploration & Persistence (Ruins, Oil, Save/Load) | Complete |
-| 8 | Polish & UX (Animations, SFX, BGM, Floating Text) | In Progress |
-| 9 | Advanced Mechanics (Railways) | Planned |
+| `net/NetworkManager.java` | TCP socket communication and UDP LAN discovery |
+| `ui/GameHUD.java` | Main game HUD layout and interaction |
+| `controller/UnitSelectionHandler.java` | Unit selection and action routing |
 
 ---
 

@@ -6,11 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Custom implementation of Counting Sort specifically tailored for 
+ * implementation of Counting Sort specifically tailored for 
  * sorting economy breakdown maps (String keys, Integer values).
- * 
- * Counting Sort provides O(n + k) performance where n is the number 
- * of items and k is the range of values.
  */
 public class CountingSort {
 
